@@ -1,14 +1,15 @@
-CREATE OR REPLACE PACKAGE xml_to_XSLX
+CREATE OR REPLACE package xml_to_xslx
+-- ver 1.0.
 IS
-  procedure download_file(p_app_id      in number,
-                    p_page_id     in number,
-                    --p_plugin_name in varchar2,
-                    p_max_rows    in number); 
+  procedure download_file(p_app_id in number,
+                    p_page_id      in number,
+                    p_max_rows     in number,
+                    p_file_name    in varchar2 default 'Excel'); 
 end;
 /
 
 
-CREATE OR REPLACE PACKAGE body xml_to_XSLX
+CREATE OR REPLACE PACKAGE body XML_TO_XSLX
 is
   ------------------------------------------------------------------------------
   t_sheet_rels clob default '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -55,21 +56,43 @@ is
   RETURN varchar2
   IS   
   BEGIN
-   IF p_coll > 26 THEN
-     return to_char(trunc(p_coll/26))||chr(64 + p_coll - trunc(p_coll/26)*26)||p_row;
+   if p_coll > 26 then
+     return chr(64 + trunc(p_coll/26))||chr(64 + p_coll - trunc(p_coll/26)*26 +1)||p_row;
    ELSE
      return chr( 64 + p_coll)||p_row;
    end if;  
   end get_cell_name;
+ 
+  ------------------------------------------------------------------------------  
+  procedure add1file
+    ( p_zipped_blob in out blob
+    , p_name in varchar2
+    , p_content in clob
+    )
+  is
+   v_desc_offset pls_integer := 1;
+   v_src_offset  PLS_INTEGER := 1;
+   v_lang        pls_integer := 0;
+   v_warning     pls_integer := 0;
+   v_blob        BLOB;
+  begin
+    dbms_lob.createtemporary(v_blob,true);    
+    dbms_lob.converttoblob(v_blob,p_content, dbms_lob.getlength(p_content), v_desc_offset, v_src_offset, dbms_lob.default_csid, v_lang, v_warning);
+    as_zip.add1file( p_zipped_blob, p_name, v_blob);
+    dbms_lob.freetemporary(v_blob);
+  end add1file;  
+
   ------------------------------------------------------------------------------
   procedure get_excel(p_xml in xmltype,v_clob in out nocopy clob,v_strings_clob in out nocopy clob)
   IS
-    v_strings         APEX_APPLICATION_GLOBAL.VC_ARR2;
-    v_rownum          binary_integer default 1;
-    v_colls_count     binary_integer default 0;
-    v_agg_clob        clob;
-    v_agg_strings_cnt binary_integer default 1; 
-    string_height     constant number default 14.4; 
+    v_strings          apex_application_global.vc_arr2;
+    v_rownum           binary_integer default 1;
+    v_colls_count      binary_integer default 0;
+    v_agg_clob         clob;
+    v_agg_strings_cnt  binary_integer default 1; 
+    string_height      constant number default 14.4; 
+    aggregate_style_id constant number default 5;
+    HEADER_STYLE_ID    constant number default 6;
     --
     procedure print_char_cell(p_coll in binary_integer, p_row in binary_integer, p_string in varchar2,p_clob in out nocopy CLOB,p_style_id in number default null)
     is
@@ -85,10 +108,15 @@ is
       v_strings(v_strings.count + 1) := p_string;
     end print_char_cell;
     --
-    procedure print_number_cell(p_coll in binary_integer, p_row in binary_integer, p_value in varchar2,p_clob in out nocopy CLOB)
+    procedure print_number_cell(p_coll in binary_integer, p_row in binary_integer, p_value in varchar2,p_clob in out nocopy clob,p_style_id in number default null)
     is
+      v_style varchar2(20);
     begin
-      add(p_clob,'<c r="'||get_cell_name(p_coll,p_row)||'">'||chr(10)
+      if p_style_id is not null then
+       v_style := ' s="'||p_style_id||'" ';
+      end if;
+
+      add(p_clob,'<c r="'||get_cell_name(p_coll,p_row)||'" '||v_style||'>'||chr(10)
                          ||'<v>'||p_value|| '</v>'||chr(10)
                          ||'</c>'||chr(10));
     
@@ -129,9 +157,13 @@ is
                         from table (select xmlsequence(extract(p_xml,'DOCUMENT/DATA/ROWSET')) from dual)
                        ) 
      loop
+       --header
        if rowset_xml.break_header is not null then
          add(v_clob,'<row>'||chr(10));
-         print_char_cell(p_coll => 1,p_row => v_rownum,p_string => rowset_xml.break_header,p_clob => v_clob);
+         print_char_cell(p_coll => 1,p_row => v_rownum,p_string => rowset_xml.break_header,p_clob => v_clob,p_style_id => header_style_id);         
+         --for u in 2..v_colls_count loop
+         --  print_char_cell(p_coll => 1,p_row => v_rownum,p_string => '',p_clob => v_clob,p_style_id => HEADER_STYLE_ID);
+         --end loop;
          v_rownum := v_rownum + 1;
          add(v_clob,'</row>'||chr(10));
        end if;
@@ -182,12 +214,13 @@ is
                              p_row => v_rownum,
                              p_string => rtrim(cell_xml_agg.cell_text,chr(10)),
                              p_clob => v_agg_clob,
-                             p_style_id => 5);
+                             p_style_id => aggregate_style_id);
            else
              print_number_cell(p_coll => cell_xml_agg.coll_num, 
                                p_row => v_rownum, 
                                p_value => cell_xml_agg.cell_value,
-                               p_clob => v_agg_clob);
+                               p_clob => v_agg_clob,
+                               p_style_id => aggregate_style_id);
            end if;
          end loop;
          add(v_clob,'<row ht="'||v_agg_strings_cnt*string_height||'">'||chr(10));
@@ -221,15 +254,15 @@ is
   ------------------------------------------------------------------------------
   procedure download_file(p_app_id      in number,
                           p_page_id     in number,
-                          --p_plugin_name in varchar2,
-                          p_max_rows    in number)
+                          p_max_rows    in number,
+                          p_file_name   in varchar2 default 'Excel')
   is
     t_template blob;
     t_excel    blob;
     v_cells    clob;
     v_strings  clob;
     v_xml_data xmltype;
-    zip_files  zip_archive.file_list;
+    zip_files  as_zip.file_list;
   begin
     pragma inline(get_excel,'YES');     
     dbms_lob.createtemporary(t_excel,true);    
@@ -237,14 +270,15 @@ is
     dbms_lob.createtemporary(v_strings,true);
     
     
-    select blob_content
+    select file_content
     into t_template
-    from wwv_flow_files 
-    where filename = 'ExcelTemplate.zip';
+    from apex_appl_plugin_files 
+    where file_name = 'ExcelTemplate.zip'
+      and application_id = p_app_id;
     
-    zip_files  := zip_archive.get_file_list( t_template );
+    zip_files  := as_zip.get_file_list( t_template );
     for i in zip_files.first() .. zip_files.last loop
-      zip_archive.add1file( t_excel, zip_files( i ), zip_archive.get_file( t_template, zip_files( i ) ) );
+      as_zip.add1file( t_excel, zip_files( i ), as_zip.get_file( t_template, zip_files( i ) ) );
     end loop;
     
     v_xml_data := IR_TO_XML.get_report_xml(p_app_id => p_app_id,
@@ -256,21 +290,17 @@ is
     
     
     get_excel(v_xml_data,v_cells,v_strings);
-    zip_archive.add1file( t_excel, 'xl/worksheets/Sheet1.xml', v_cells);
-    zip_archive.add1file( t_excel, 'xl/sharedStrings.xml',v_strings);
-    zip_archive.add1file( t_excel, 'xl/_rels/workbook.xml.rels',t_sheet_rels);    
-    zip_archive.add1file( t_excel, 'xl/workbook.xml',t_workbook);    
+    add1file( t_excel, 'xl/worksheets/Sheet1.xml', v_cells);
+    add1file( t_excel, 'xl/sharedStrings.xml',v_strings);
+    add1file( t_excel, 'xl/_rels/workbook.xml.rels',t_sheet_rels);    
+    add1file( t_excel, 'xl/workbook.xml',t_workbook);    
     
-    delete from xml_temp;
-    insert into xml_temp(clobdata) values (v_cells);
-
-
-    zip_archive.finish_zip( t_excel );
+    as_zip.finish_zip( t_excel );
       
     htp.flush;
     owa_util.mime_header( wwv_flow_utilities.get_excel_mime_type, false );
     htp.print( 'Content-Length: ' || dbms_lob.getlength( t_excel ) );
-    htp.print( 'Content-disposition: attachment; filename=Excel.xlsx;' );
+    htp.print( 'Content-disposition: attachment; filename='||p_file_name||'.xlsx;' );
     owa_util.http_header_close;
     wpg_docload.download_file( t_excel );
     dbms_lob.freetemporary(t_excel);

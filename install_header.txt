@@ -1,0 +1,12 @@
+/**********************************************
+**
+** Author: Pavel Glebov
+** Date: 08-2014
+**
+** This all in one install script contains headrs and bodies of 3 packages
+**
+** IR_TO_XML.sql 
+** AS_ZIP.sql  
+** XML_TO_XSLX.sql
+**
+**********************************************/
