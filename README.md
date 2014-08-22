@@ -13,6 +13,7 @@ Many features of Interactive Reports are supported:
  $  Control Break
  $  Computations
  $  Aggregations
+ $  No BI Publishe Required
 
 The minimum required APEX-version is 4.1.
 Documentation, downloads, and other useful information can be found [here](http://glebovpavel.github.io/page_IR_TO_XSLX/).
