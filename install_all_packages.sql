@@ -98,13 +98,11 @@ CREATE OR REPLACE package body ir_to_xml as
     column_alignment          t_column_alignment,
     column_types              t_column_types  
    );  
-
    TYPE t_cell_data IS record
    (
      VALUE           VARCHAR2(100),
      text            CLOB
    );  
-
   l_report    ir_report;   
   v_debug     clob;
   ------------------------------------------------------------------------------
@@ -259,7 +257,7 @@ CREATE OR REPLACE package body ir_to_xml as
   return varchar2
   is   
   begin
-    return dbms_xmlgen.convert(p_str);
+    return dbms_xmlgen.convert(convert(p_str,'UTF8'));
     --RETURN REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(p_str,'<','%26lt;'),'>','%26gt;'),'&','%26amp;'),'"','%26quot;'),'''','%26apos;');
   end get_xmlval;  
   ------------------------------------------------------------------------------  
@@ -301,7 +299,6 @@ CREATE OR REPLACE package body ir_to_xml as
     l_new_report    ir_report;
   begin
     l_report := l_new_report;
-
     select region_id 
     into l_region_id 
     from APEX_APPLICATION_PAGE_REGIONS 
@@ -384,7 +381,6 @@ CREATE OR REPLACE package body ir_to_xml as
       log('column='||i.column_alias||' l_report.column_alignment='||i.column_alignment);
       log('column='||i.column_alias||' l_report.column_types='||i.column_type);
     end loop;    
-
     --l_report.break_on := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.break_enabled_on));    
     l_report.sum_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.sum_columns_on_break));  
     l_report.avg_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.avg_columns_on_break));  
@@ -487,7 +483,7 @@ CREATE OR REPLACE package body ir_to_xml as
     v_data t_cell_data;
   BEGIN
      begin
-       v_data.value := trim(to_char(to_number(p_query_value),'9999999999999999999999990D0000000000000000000000000','NLS_NUMERIC_CHARACTERS = ''.,'''));
+       v_data.value := trim(to_char(to_number(p_query_value),'9999999999999999999999990D0000000000','NLS_NUMERIC_CHARACTERS = ''.,'''));
        
        if p_format_mask is not null then
          v_data.text := trim(to_char(to_number(p_query_value),p_format_mask));
@@ -534,7 +530,6 @@ CREATE OR REPLACE package body ir_to_xml as
       v_cell_back_color  := NULL;
       v_cell_data.VALUE  := NULL;  
       v_cell_data.text   := NULL; 
-
       v_column_alias := get_column_alias_sql(i);
       v_column_type := get_column_types(v_column_alias);
       v_format_mask := get_col_format_mask(v_column_alias);
@@ -835,7 +830,6 @@ CREATE OR REPLACE package body ir_to_xml as
         DBMS_SQL.BIND_VARIABLE (v_cur,l_report.report.binds(i).name,l_report.report.binds(i).value);      
       end if;
     end loop bind_variables;
-
     <<query_columns>>
     for i in 1..v_colls_count loop
      v_row(i) := '';
@@ -933,7 +927,6 @@ CREATE OR REPLACE package body ir_to_xml as
     THEN
       apex_collection.create_collection (p_collection_name);
     END IF;
-
    begin
      select '1' --clob001
      into v_tmp
@@ -1023,7 +1016,6 @@ CREATE OR REPLACE package body ir_to_xml as
     
     return xmltype(v_data);    
   end get_report_xml; 
-
 begin
   dbms_lob.createtemporary(v_debug,true, DBMS_LOB.CALL);  
 END IR_TO_XML;
