@@ -11,7 +11,7 @@
 **
 **********************************************/
 CREATE OR REPLACE package ir_to_xml as    
-  --ver 1.3.
+  --ver 1.4.
   -- download interactive report as PDF
   PROCEDURE get_report_xml(p_app_id          IN NUMBER,
                            p_page_id         in number,                                
@@ -35,7 +35,6 @@ CREATE OR REPLACE package ir_to_xml as
   return xmltype;     
                               
 END IR_TO_XML;
-
 /
 
 
@@ -137,7 +136,8 @@ CREATE OR REPLACE package body ir_to_xml as
                  p_column_alias  IN VARCHAR2 DEFAULT NULL,
                  p_colmn_type    IN VARCHAR2 DEFAULT NULL,
                  p_value         IN VARCHAR2 DEFAULT NULL,
-                 p_format_mask   IN VARCHAR2 DEFAULT NULL) 
+                 p_format_mask   IN VARCHAR2 DEFAULT NULL,
+                 p_header_align  in varchar2 default null) 
   return varchar2
   is
     v_str varchar2(500);
@@ -151,6 +151,7 @@ CREATE OR REPLACE package body ir_to_xml as
     IF p_width IS NOT NULL THEN v_str := v_str||'width="'||p_width||'" '; END IF;        
     IF p_value IS NOT NULL THEN v_str := v_str||'value="'||p_value||'" '; END IF;
     if p_format_mask is not null then v_str := v_str||'format_mask="'||p_format_mask||'" '; end if;
+    if p_header_align is not null then V_STR := V_STR||'header_align="'||lower(p_header_align)||'" '; end if;
     v_str := v_str||'>'; 
     
     return v_str;
@@ -177,7 +178,7 @@ CREATE OR REPLACE package body ir_to_xml as
   return APEX_APPLICATION_PAGE_IR_COMP.computation_format_mask%TYPE
   is
   begin
-    return l_report.col_format_mask(p_column_alias);
+    return replace(l_report.col_format_mask(p_column_alias),'"','');
   exception
     when others then
        raise_application_error(-20001,'get_column_names: p_column_alias='||p_column_alias||' '||SQLERRM);
@@ -381,7 +382,7 @@ CREATE OR REPLACE package body ir_to_xml as
       log('column='||i.column_alias||' l_report.column_alignment='||i.column_alignment);
       log('column='||i.column_alias||' l_report.column_types='||i.column_type);
     end loop;    
-    --l_report.break_on := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.break_enabled_on));    
+    -- calculate columns count with aggregation separately
     l_report.sum_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.sum_columns_on_break));  
     l_report.avg_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.avg_columns_on_break));  
     l_report.max_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.max_columns_on_break));  
@@ -390,6 +391,7 @@ CREATE OR REPLACE package body ir_to_xml as
     l_report.count_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.count_columns_on_break));  
     l_report.count_distnt_col_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.count_distnt_col_on_break)); 
       
+    -- calculate total count of columns with aggregation
     l_report.agg_cols_cnt := l_report.sum_columns_on_break.count + 
                              l_report.avg_columns_on_break.count +
                              l_report.max_columns_on_break.count + 
@@ -563,11 +565,10 @@ CREATE OR REPLACE package body ir_to_xml as
       
       v_clob := v_clob ||bcoll(p_font_color   => nvl(v_cell_color,v_row_color),
                                p_back_color   => nvl(v_cell_back_color,v_row_back_color),
-                               p_align        => get_column_alignment(v_column_alias),
                                p_column_alias => v_column_alias,
                                p_colmn_type   => v_column_type,
                                p_value        => v_cell_data.value,
-                               p_format_mask  => replace(v_format_mask,'"','')
+                               p_format_mask  => v_format_mask
                               )
                        ||get_xmlval(v_cell_data.text)
                        ||ecoll(i);
@@ -588,7 +589,12 @@ CREATE OR REPLACE package body ir_to_xml as
       V_COLUMN_ALIAS := get_column_alias(i);
       -- if current column is not control break column
       if apex_plugin_util.get_position_in_list(l_report.break_on,v_column_alias) is null then      
-        v_header_xml := v_header_xml ||bcoll(p_column_alias=>v_column_alias,p_align=>get_header_alignment(v_column_alias))
+        v_header_xml := v_header_xml ||bcoll(p_column_alias => v_column_alias,
+                                             p_header_align => get_header_alignment(v_column_alias),
+                                             p_align        => get_column_alignment(v_column_alias),
+                                             p_colmn_type   => get_column_types(v_column_alias),
+                                             p_format_mask  => get_col_format_mask(v_column_alias)
+                                             )
                                      ||get_xmlval(regexp_replace(get_column_names(v_column_alias),'<[^>]*>',' '))
                                      ||ecoll(i);
       end if;  
@@ -805,7 +811,7 @@ CREATE OR REPLACE package body ir_to_xml as
    v_desc_tab    DBMS_SQL.DESC_TAB2;
    v_inside      boolean default false;
   begin
-    v_cur := dbms_sql.open_cursor; 
+    v_cur := dbms_sql.open_cursor(2); 
     dbms_sql.parse(v_cur,l_report.report.sql_query,dbms_sql.native);     
     dbms_sql.describe_columns2(v_cur,v_colls_count,v_desc_tab);    
     --skip internal primary key if need
@@ -819,7 +825,7 @@ CREATE OR REPLACE package body ir_to_xml as
     log('l_report.skipped_columns='||l_report.skipped_columns);
     
     add(v_data,print_header); 
-    
+    log('<<bind_variables>>');
     <<bind_variables>>
     for i in 1..l_report.report.binds.count loop
       --remove MAX_ROWS
@@ -829,14 +835,18 @@ CREATE OR REPLACE package body ir_to_xml as
       else
         DBMS_SQL.BIND_VARIABLE (v_cur,l_report.report.binds(i).name,l_report.report.binds(i).value);      
       end if;
-    end loop bind_variables;
+    end loop bind_variables;   
+    
+    log('<<query_columns>>');
     <<query_columns>>
     for i in 1..v_colls_count loop
-     v_row(i) := '';
-     dbms_sql.define_column(v_cur, i, v_row(i),32767);
+       v_row(i) := '';
+       dbms_sql.define_column(v_cur, i, v_row(i),32767);
     end loop query_columns;
     
     v_result := dbms_sql.execute(v_cur);         
+    
+    log('<<main_cycle>>');
     <<main_cycle>>
     LOOP 
          IF DBMS_SQL.FETCH_ROWS(v_cur)>0 THEN          
@@ -874,11 +884,13 @@ CREATE OR REPLACE package body ir_to_xml as
        add(v_data,'</ROWSET>');
        v_inside := false;
     end if;
-   dbms_sql.close_cursor(v_cur); 
-   
+   dbms_sql.close_cursor(v_cur);   
+  exception
+    when others then
+      dbms_sql.close_cursor(v_cur);   
   end get_xml_from_ir;
   ------------------------------------------------------------------------------
-  procedure get_final_xml( p_clob           in out nocopy clob,
+  procedure get_final_xml_( p_clob           in out nocopy clob,
                           p_app_id         in number,
                           p_page_id        in number,
                           p_items_list     in varchar2,
@@ -889,14 +901,32 @@ CREATE OR REPLACE package body ir_to_xml as
   begin
     add(p_clob,'<?xml version="1.0" encoding="UTF-8"?>'||chr(10)||'<DOCUMENT>'||chr(10));    
     add(p_clob,get_page_items(p_app_id,p_page_id,p_items_list,p_get_page_items));
-    add(p_clob,'<DATA>'||chr(10));
-   
+    add(p_clob,'<DATA>'||chr(10));   
     get_xml_from_ir(p_clob,p_max_rows);    
    
     add(p_clob,'</DATA>'||chr(10));
-    add(p_clob,'</DOCUMENT>'||chr(10));
+    add(p_clob,'</DOCUMENT>'||chr(10));  
+  end get_final_xml_;
+  ------------------------------------------------------------------------------
+  procedure get_final_xml( p_clob           in out nocopy clob,
+                          p_app_id         in number,
+                          p_page_id        in number,
+                          p_items_list     in varchar2,
+                          p_get_page_items in char,
+                          p_max_rows       in number)
+  is
+  begin
+     get_final_xml_(p_clob,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);
+  exception
+    when others then
+      --some dark magic - internal oracle bug????
+      begin
+        get_final_xml_(p_clob,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);
+       exception
+         when others then
+          get_final_xml_(p_clob,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);
+      end;    
   end get_final_xml;
- 
   ------------------------------------------------------------------------------
   procedure download_file(p_data        in clob,
                           p_mime_header in varchar2,
