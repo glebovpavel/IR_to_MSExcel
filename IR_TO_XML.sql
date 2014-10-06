@@ -33,24 +33,28 @@ CREATE OR REPLACE package body ir_to_xml as
   cursor cur_highlight(p_report_id in APEX_APPLICATION_PAGE_IR_RPT.REPORT_ID%TYPE,
                        p_delimetered_column_list in varchar2) 
   IS
-  select replace(replace(replace(replace(condition_sql,'#APXWS_EXPR#',''''||CONDITION_EXPRESSION||''''),'#APXWS_EXPR2#',''''||CONDITION_EXPRESSION2||''''),'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||CONDITION_COLUMN_NAME||'"')  condition_sql,
-       CONDITION_COLUMN_NAME,
-       CONDITION_ENABLED,
-       HIGHLIGHT_ROW_COLOR,
-       HIGHLIGHT_ROW_FONT_COLOR,
-       HIGHLIGHT_CELL_COLOR,
-       HIGHLIGHT_CELL_FONT_COLOR,
+  select rez.* ,
        rownum COND_NUMBER,
        'HIGHLIGHT_'||rownum COND_NAME
-  from APEX_APPLICATION_PAGE_IR_COND
-  where condition_type = 'Highlight'
-    and report_id = p_report_id
-    and condition_enabled = 'Yes'
-    and instr(':'||p_delimetered_column_list||':',':'||CONDITION_COLUMN_NAME||':') > 0
-    order by --rows highlights first 
-           nvl2(HIGHLIGHT_ROW_COLOR,1,0) desc, 
-           nvl2(HIGHLIGHT_ROW_FONT_COLOR,1,0) desc,
-           HIGHLIGHT_SEQUENCE;
+  from (
+  select report_id,
+         replace(replace(replace(replace(condition_sql,'#APXWS_EXPR#',''''||CONDITION_EXPRESSION||''''),'#APXWS_EXPR2#',''''||CONDITION_EXPRESSION2||''''),'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||CONDITION_COLUMN_NAME||'"')  condition_sql,
+         CONDITION_COLUMN_NAME,
+         CONDITION_ENABLED,
+         HIGHLIGHT_ROW_COLOR,
+         HIGHLIGHT_ROW_FONT_COLOR,
+         HIGHLIGHT_CELL_COLOR,
+         HIGHLIGHT_CELL_FONT_COLOR      
+    from APEX_APPLICATION_PAGE_IR_COND
+    where condition_type = 'Highlight'
+      and report_id = p_report_id
+      and instr(':'||p_delimetered_column_list||':',':'||CONDITION_COLUMN_NAME||':') > 0
+      and condition_enabled = 'Yes'
+      order by --rows highlights first 
+             nvl2(HIGHLIGHT_ROW_COLOR,1,0) desc, 
+             nvl2(HIGHLIGHT_ROW_FONT_COLOR,1,0) desc,
+             HIGHLIGHT_SEQUENCE 
+    ) rez;
   
   type t_col_names is table of apex_application_page_ir_col.report_label%type index by apex_application_page_ir_col.column_alias%type;
   type t_col_format_mask is table of APEX_APPLICATION_PAGE_IR_COMP.computation_format_mask%TYPE index by APEX_APPLICATION_PAGE_IR_COL.column_alias%TYPE;
@@ -400,7 +404,7 @@ CREATE OR REPLACE package body ir_to_xml as
     log('l_report.break_really_on='||APEX_UTIL.TABLE_TO_STRING(l_report.break_really_on));
     log('l_report.agg_cols_cnt='||l_report.agg_cols_cnt);
     
-    v_query_targets(v_query_targets.count + 1) := 'rez.*';
+    --v_query_targets(v_query_targets.count + 1) := 'rez.*';
      
     for c in cur_highlight(p_report_id => l_report_id,
                            p_delimetered_column_list => l_report.ir_data.report_columns
@@ -412,11 +416,11 @@ CREATE OR REPLACE package body ir_to_xml as
         else
           l_report.col_highlight(l_report.col_highlight.count + 1) := c;           
         end if;  
-        v_query_targets(v_query_targets.count + 1) := c.condition_sql;
+        v_query_targets(v_query_targets.count + 1) := c.condition_sql||' as HLIGHTS_'||(v_query_targets.count + 1);
     end loop;    
         
-    l_report.report.sql_query := 'SELECT '||APEX_UTIL.TABLE_TO_STRING(v_query_targets,',')||' from ( '
-                                          ||l_report.report.sql_query||' ) rez';
+    l_report.report.sql_query := regexp_replace(l_report.report.sql_query,'^SELECT','SELECT '||APEX_UTIL.TABLE_TO_STRING(v_query_targets,','||chr(10))||',',1,1,'i');
+    l_report.report.sql_query := l_report.report.sql_query;
     log('l_report.report.sql_query='||chr(10)||l_report.report.sql_query||chr(10));
   exception
     when no_data_found then
@@ -437,8 +441,15 @@ CREATE OR REPLACE package body ir_to_xml as
     if nvl(l_report.break_really_on.count,0) = 0  then
       return false; --no control break
     end if;
-    v_start_with := 1 + l_report.skipped_columns;    
-    v_end_with   := l_report.skipped_columns + nvl(l_report.break_really_on.count,0);
+    v_start_with := 1 + 
+                    l_report.skipped_columns + 
+                    l_report.row_highlight.count + 
+                    l_report.col_highlight.count;    
+    v_end_with   := l_report.skipped_columns + 
+                    l_report.row_highlight.count + 
+                    l_report.col_highlight.count +
+                    nvl(l_report.break_really_on.count,0);
+
     for i in v_start_with..v_end_with loop
       if p_curr_row(i) != p_prev_row(i) then
         return true;
@@ -504,7 +515,7 @@ CREATE OR REPLACE package body ir_to_xml as
     <<row_highlights>>
     for h in 1..l_report.row_highlight.count loop
      BEGIN 
-      IF get_current_row(p_current_row,l_report.end_with + l_report.agg_cols_cnt + l_report.row_highlight(h).COND_NUMBER) IS NOT NULL THEN
+      IF get_current_row(p_current_row,l_report.skipped_columns + l_report.row_highlight(h).COND_NUMBER) IS NOT NULL THEN
          v_row_color       := l_report.row_highlight(h).HIGHLIGHT_ROW_FONT_COLOR;
          v_row_back_color  := l_report.row_highlight(h).HIGHLIGHT_ROW_COLOR;
       END IF;
@@ -535,11 +546,11 @@ CREATE OR REPLACE package body ir_to_xml as
       end if; 
        
       --check that cell need to be highlighted
-      <<column_highlights>>
+      <<cell_highlights>>
       for h in 1..l_report.col_highlight.count loop
         begin
           --debug
-          if get_current_row(p_current_row,l_report.end_with + l_report.agg_cols_cnt + l_report.col_highlight(h).COND_NUMBER) is not null 
+          if get_current_row(p_current_row,l_report.skipped_columns + l_report.col_highlight(h).COND_NUMBER) is not null 
              and v_column_alias = l_report.col_highlight(h).CONDITION_COLUMN_NAME 
           then
             v_cell_color       := l_report.col_highlight(h).HIGHLIGHT_CELL_FONT_COLOR;
@@ -549,7 +560,7 @@ CREATE OR REPLACE package body ir_to_xml as
        when no_data_found then
          log('col_highlights: ='||' end_with='||l_report.end_with||' agg_cols_cnt='||l_report.agg_cols_cnt||' COND_NUMBER='||l_report.col_highlight(h).cond_number||' h='||h); 
        end;
-      END loop column_highlights;
+      END loop cell_highlights;
       
       v_clob := v_clob ||bcoll(p_font_color   => nvl(v_cell_color,v_row_color),
                                p_back_color   => nvl(v_cell_back_color,v_row_back_color),
@@ -602,7 +613,13 @@ CREATE OR REPLACE package body ir_to_xml as
     <<break_columns>>
     for i in 1..nvl(l_report.break_really_on.count,0) loop
       --TODO: Add column header
-      v_cb_xml := v_cb_xml ||get_column_names(l_report.break_really_on(i))||': '||get_current_row(p_current_row,i + l_report.skipped_columns)||',';
+      v_cb_xml := v_cb_xml ||
+                  get_column_names(l_report.break_really_on(i))||': '||
+                  get_current_row(p_current_row,i + 
+                                                l_report.skipped_columns + 
+                                                l_report.row_highlight.count + 
+                                                l_report.col_highlight.count
+                                 )||',';
     end loop visible_columns;
     
     return  '<BREAK_HEADER>'||get_xmlval(rtrim(v_cb_xml,',')) || '</BREAK_HEADER>'||chr(10);    
@@ -806,12 +823,35 @@ CREATE OR REPLACE package body ir_to_xml as
     if lower(v_desc_tab(1).col_name) = 'apxws_row_pk' then
       l_report.skipped_columns := 1;
     end if;
-    l_report.start_with := l_report.skipped_columns + 1 + nvl(l_report.break_really_on.count,0);
-    l_report.end_with   := l_report.skipped_columns + nvl(l_report.break_really_on.count,0) + l_report.displayed_columns.count;    
+    
+    l_report.start_with := 1 + l_report.skipped_columns +
+                           nvl(l_report.break_really_on.count,0) + 
+                           l_report.row_highlight.count + 
+                           l_report.col_highlight.count;
+    l_report.end_with   := l_report.skipped_columns + 
+                           nvl(l_report.break_really_on.count,0) + 
+                           l_report.displayed_columns.count  + 
+                           l_report.row_highlight.count + 
+                           l_report.col_highlight.count;    
+                           
     log('l_report.start_with='||l_report.start_with);
     log('l_report.end_with='||l_report.end_with);
     log('l_report.skipped_columns='||l_report.skipped_columns);
     
+    /*
+    for i in 1..v_colls_count loop
+      log('col_type            =    '|| v_desc_tab(i).col_type);
+      log('col_maxlen          =    '|| v_desc_tab(i).col_max_len);
+      log('col_name            =    '|| v_desc_tab(i).col_name);
+      log('col_name_len        =    '|| v_desc_tab(i).col_name_len);
+      log('col_schema_name     =    '|| v_desc_tab(i).col_schema_name);
+      log('col_schema_name_len =    '|| v_desc_tab(i).col_schema_name_len);
+      log('col_precision       =    '|| v_desc_tab(i).col_precision);
+      log('col_scale           =    '|| v_desc_tab(i).col_scale);
+    end loop;
+    */
+
+
     add(v_data,print_header); 
     log('<<bind_variables>>');
     <<bind_variables>>
@@ -825,12 +865,16 @@ CREATE OR REPLACE package body ir_to_xml as
       end if;
     end loop bind_variables;   
     
-    log('<<query_columns>>');
-    <<query_columns>>
+    
     for i in 1..v_colls_count loop
-       v_row(i) := '';
+       v_row(i) := ' ';
+    end loop;
+    
+    log('<<define_columns>>');
+    for i in 1..v_colls_count loop
+       log('define column '||i);
        dbms_sql.define_column(v_cur, i, v_row(i),32767);
-    end loop query_columns;
+    end loop define_columns;
     
     v_result := dbms_sql.execute(v_cur);         
     
@@ -838,6 +882,7 @@ CREATE OR REPLACE package body ir_to_xml as
     <<main_cycle>>
     LOOP 
          IF DBMS_SQL.FETCH_ROWS(v_cur)>0 THEN          
+         log('<<fetch>>');
            -- get column values of the row 
             v_current_row := v_current_row + 1;
             <<query_columns>>
@@ -875,10 +920,13 @@ CREATE OR REPLACE package body ir_to_xml as
    dbms_sql.close_cursor(v_cur);   
   exception
     when others then
-      dbms_sql.close_cursor(v_cur);   
+      if dbms_sql.is_open(v_cur) then
+        dbms_sql.close_cursor(v_cur);   
+      end if;  
+      raise_application_error(-20001,SQLERRM);
   end get_xml_from_ir;
   ------------------------------------------------------------------------------
-  procedure get_final_xml_( p_clob           in out nocopy clob,
+  procedure get_final_xml( p_clob           in out nocopy clob,
                           p_app_id         in number,
                           p_page_id        in number,
                           p_items_list     in varchar2,
@@ -894,26 +942,6 @@ CREATE OR REPLACE package body ir_to_xml as
    
     add(p_clob,'</DATA>'||chr(10));
     add(p_clob,'</DOCUMENT>'||chr(10));  
-  end get_final_xml_;
-  ------------------------------------------------------------------------------
-  procedure get_final_xml( p_clob           in out nocopy clob,
-                          p_app_id         in number,
-                          p_page_id        in number,
-                          p_items_list     in varchar2,
-                          p_get_page_items in char,
-                          p_max_rows       in number)
-  is
-  begin
-     get_final_xml_(p_clob,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);
-  exception
-    when others then
-      --some dark magic - internal oracle bug????
-      begin
-        get_final_xml_(p_clob,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);
-       exception
-         when others then
-          get_final_xml_(p_clob,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);
-      end;    
   end get_final_xml;
   ------------------------------------------------------------------------------
   procedure download_file(p_data        in clob,
@@ -1009,6 +1037,9 @@ CREATE OR REPLACE package body ir_to_xml as
       dbms_lob.freetemporary(v_data);
     end if;
     dbms_lob.freetemporary(v_data);
+  exception
+   when others then
+     raise_application_error(-20001,'get_report_xml:'||SQLERRM);
   end get_report_xml; 
   ------------------------------------------------------------------------------
   function get_report_xml(p_app_id          IN NUMBER,
