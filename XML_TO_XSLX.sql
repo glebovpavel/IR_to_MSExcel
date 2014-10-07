@@ -6,7 +6,6 @@ IS
                     p_max_rows     in number,
                     p_file_name    in varchar2 default 'Excel'); 
 end;
-
 /
 
 
@@ -570,6 +569,7 @@ is
     as_zip.finish_zip( t_excel );
       
     htp.flush;
+    htp.init();
     owa_util.mime_header( wwv_flow_utilities.get_excel_mime_type, false );
     htp.print( 'Content-Length: ' || dbms_lob.getlength( t_excel ) );
     htp.print( 'Content-disposition: attachment; filename='||p_file_name||'.xlsx;' );

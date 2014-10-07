@@ -419,7 +419,9 @@ CREATE OR REPLACE package body ir_to_xml as
         v_query_targets(v_query_targets.count + 1) := c.condition_sql||' as HLIGHTS_'||(v_query_targets.count + 1);
     end loop;    
         
-    l_report.report.sql_query := regexp_replace(l_report.report.sql_query,'^SELECT','SELECT '||APEX_UTIL.TABLE_TO_STRING(v_query_targets,','||chr(10))||',',1,1,'i');
+    if v_query_targets.count  > 0 then
+      l_report.report.sql_query := regexp_replace(l_report.report.sql_query,'^SELECT','SELECT '||APEX_UTIL.TABLE_TO_STRING(v_query_targets,','||chr(10))||',',1,1,'i');
+    end if;
     l_report.report.sql_query := l_report.report.sql_query;
     log('l_report.report.sql_query='||chr(10)||l_report.report.sql_query||chr(10));
   exception
