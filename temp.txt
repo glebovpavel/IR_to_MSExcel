@@ -1,0 +1,10 @@
+var colWidthsDelimeteredString = "";
+var colWidthsArray = Array ();
+
+$( ".apexir_WORKSHEET_DATA th" ).each(function( index,elmt ) {    
+  colWidthsArray[elmt.id] = $(elmt).width();  
+});
+for (var i in colWidthsArray) {
+ colWidthsDelimeteredString = colWidthsDelimeteredString + i + '+' + colWidthsArray[i] + "=";  
+}
+console.log(colWidthsDelimeteredString);
