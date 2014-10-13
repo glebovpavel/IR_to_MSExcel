@@ -1,41 +1,10 @@
 CREATE OR REPLACE package xml_to_xslx
 -- ver 1.0.
 IS
-  WIDTH_COEFFICIENT constant number := 6;
-  
   procedure download_file(p_app_id in number,
                     p_page_id      in number,
                     p_max_rows     in number,
-                    p_file_name    in varchar2 default 'Excel',
-                    p_col_length   in varchar2 default null,
-                    p_coefficient  in number  default WIDTH_COEFFICIENT); 
-  -- p_col_length is delimetered string COLUMN_NAME,COLUMN_WIDTH=COLUMN_NAME,COLUMN_WIDTH=  etc.
-  -- sample: BREAK_ASSIGNED_TO_1,1325=PROJECT,151=TASK_NAME,319=START_DATE,133=                    
-  
-  function convert_date_format(p_format in varchar2)
-  return varchar2;
-
-  function convert_number_format(p_format in varchar2)
-  return varchar2;
-  
-  /*
-  select xml_to_xslx.convert_date_format('dd.mm.yyyy hh24:mi:ss'),to_char(sysdate,'dd.mm.yyyy hh24:mi:ss') from dual
-  union
-  select xml_to_xslx.convert_date_format('dd.mm.yyyy hh12:mi:ss'),to_char(sysdate,'dd.mm.yyyy hh12:mi:ss') from dual
-  union
-  select xml_to_xslx.convert_date_format('day-mon-yyyy'),to_char(sysdate,'day-mon-yyyy') from dual
-  union
-  select xml_to_xslx.convert_date_format('month'),to_char(sysdate,'month') from dual
-  union
-  select xml_to_xslx.convert_date_format('RR-MON-DD'),to_char(sysdate,'RR-MON-DD') from dual 
-  union
-  select xml_to_xslx.convert_number_format('FML999G999G999G999G990D0099'),to_char(123456789/451,'FML999G999G999G999G990D0099') from dual
-  union
-  select xml_to_xslx.convert_date_format('DD-MON-YYYY HH:MIPM'),to_char(sysdate,'DD-MON-YYYY HH:MIPM') from dual 
-  union
-  select xml_to_xslx.convert_date_format('fmDay, fmDD fmMonth, YYYY'),to_char(sysdate,'fmDay, fmDD fmMonth, YYYY') from dual 
-  */
-                    
+                    p_file_name    in varchar2 default 'Excel'); 
 end;
 /
 
@@ -47,24 +16,18 @@ is
 
   
   subtype t_color is varchar2(7);
-  subtype t_style_string  is varchar2(300);
-  subtype t_format_mask  is varchar2(100);
-  subtype t_font  is varchar2(50);
+  subtype t_style_string  is varchar2(100);
   subtype t_large_varchar2  is varchar2(32000);
   
   
   type t_styles is table of binary_integer index by t_style_string;
   a_styles t_styles;
   type  t_color_list is table of binary_integer index by t_color;
-  type  t_font_list is table of binary_integer index by t_font;
-  a_font       t_font_list;
+  a_font_color t_color_list;
   a_back_color t_color_list;
   v_fonts_xml  t_large_varchar2;
   v_back_xml   t_large_varchar2;
   v_styles_xml clob;
-  type  t_format_mask_list is table of binary_integer index by t_format_mask;
-  a_format_mask_list t_format_mask_list;
-  v_format_mask_xml clob;
   
   ------------------------------------------------------------------------------
   t_sheet_rels clob default '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -92,7 +55,10 @@ is
   
   t_style_template clob default '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac">
-    #FORMAT_MASKS#
+    <numFmts count="2">
+      <numFmt numFmtId="164" formatCode="m/d/yy\ h:mm;@"/>
+      <numFmt numFmtId="165" formatCode="dd.mm.yyyy"/>
+    </numFmts>
     #FONTS#
     #FILLS#
     <borders count="2">
@@ -159,31 +125,24 @@ is
       <patternFill patternType="gray125" />
     </fill>'; 
   DEFAULT_FILL_CNT constant  binary_integer := 2; 
-  
+
+ 
   DEFAULT_STYLE constant varchar2(200) := '
       <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>';
 
-  AGGREGATE_STYLE constant varchar2(250) := '
-      <xf numFmtId="#FMTID#" borderId="1" fillId="0" fontId="1" xfId="0" applyAlignment="1" applyFont="1" applyBorder="1">
-         <alignment wrapText="1" horizontal="right"  vertical="top"/>
+  AGGREGATE_STYLE constant varchar2(200) := '
+      <xf numFmtId="0" borderId="1" fillId="0" fontId="1" xfId="0" applyAlignment="1" applyFont="1" applyBorder="1">
+         <alignment wrapText="1" horizontal="right"/>
      </xf>';
-  
+  AGGREGATE_STYLE_ID constant number default 1;
      
   HEADER_STYLE constant varchar2(200) := '     
       <xf numFmtId="0" borderId="0" fillId="0" fontId="1" xfId="0" applyAlignment="1" applyFont="1" >
-         <alignment wrapText="0" horizontal="#ALIGN#"/>
+         <alignment wrapText="0" horizontal="left"/>
      </xf>';  
+  HEADER_STYLE_ID    constant number default 2;
   
-  
-  DEFAULT_STYLES_CNT constant  binary_integer := 1;     
-
-  FORMAT_MASK_START_WITH  constant  binary_integer := 164;  
-  
-  FORMAT_MASK constant varchar2(100) := '
-      <numFmt numFmtId="'||FORMAT_MASK_START_WITH||'" formatCode="dd.mm.yyyy"/>';
-  
-  FORMAT_MASK_CNT constant binary_integer default 1; 
-  
+  DEFAULT_STYLES_CNT constant  binary_integer := 3;   
   
   cursor cur_row(p_xml xmltype) is 
   SELECT rownum coll_num,
@@ -194,59 +153,12 @@ is
                                  extractvalue(column_value, 'CELL') as cell_text
                           from table (select xmlsequence(extract(p_xml,'DOCUMENT/DATA/ROWSET/ROW/CELL')) from dual);
   ------------------------------------------------------------------------------
-  function convert_date_format(p_format in varchar2)
-  return varchar2
-  is
-    v_str      varchar2(100);
-  begin
-    v_str := p_format;
-    v_str := upper(v_str);
-    --date
-    v_str := replace(v_str,'DAY','DDDD');
-    v_str := replace(v_str,'MONTH','MMMM');
-    v_str := replace(v_str,'MON','MMM');
-    v_str := replace(v_str,'R','Y');    
-    v_str := replace(v_str,'FM','');
-    v_str := replace(v_str,'PM',' AM/PM');
-    --time
-    v_str := replace(v_str,'MI','mm');
-    v_str := replace(v_str,'SS','ss');
-    
-    v_str := replace(v_str,'HH24','h');
-    v_str := regexp_replace(v_str,'(\W)','\\\1');
-    v_str := regexp_replace(v_str,'HH12([^ ]+)','h\1 AM/PM');    
-    v_str := replace(v_str,'AM\/PM',' AM/PM');
-    
-    
-    return v_str;
-  end convert_date_format;
-  ------------------------------------------------------------------------------
-  function convert_number_format(p_format in varchar2)
-  return varchar2
-  is
-    v_str      varchar2(100);
-  begin
-    v_str := p_format;
-    v_str := upper(v_str);
-    --number
-    v_str := replace(v_str,'9','#');
-    v_str := replace(v_str,'D','.');
-    v_str := replace(v_str,'G',',');
-    --currency
-    v_str := replace(v_str,'FML',convert('&quot;'||rtrim(to_char(0,'FML0'),'0')||'&quot;','UTF8'));    
-    
-    return v_str;
-  end convert_number_format;  
-  ------------------------------------------------------------------------------
-  function add_font(p_font in t_color,p_bold in varchar2 default null)
+  function add_font_color(p_font in t_color)
   return binary_integer 
-  is  
-   v_index t_font;
+  is
   begin
-    v_index := p_font||p_bold;
-    
-    if not a_font.exists(v_index) then
-      a_font(v_index) := a_font.count + 1;
+    if not a_font_color.exists(p_font) then
+      a_font_color(p_font) := a_font_color.count + 1;
       v_fonts_xml := v_fonts_xml||
         '<font>'||chr(10)||
         '   <sz val="11" />'||chr(10)||
@@ -256,11 +168,11 @@ is
         '   <scheme val="minor" />'||
         '</font>'||chr(10);
         
-        return a_font.count + FONTS_CNT - 1; --start with 0
+        return a_font_color.count + FONTS_CNT - 1; --start with 0
      else
-       return a_font(v_index) + FONTS_CNT - 1;
+       return a_font_color(p_font) + FONTS_CNT - 1;
      end if;
-  end add_font;
+  end add_font_color;
   ------------------------------------------------------------------------------
   function  add_back_color(p_back in t_color)
   return binary_integer 
@@ -282,26 +194,11 @@ is
      end if;
   end add_back_color;
   ------------------------------------------------------------------------------
-  function  add_format_mask(p_mask in varchar2)
-  return binary_integer 
-  is
-  begin
-    if not a_format_mask_list.exists(p_mask) then
-      a_format_mask_list(p_mask) := a_format_mask_list.count + 1;
-      v_format_mask_xml := v_format_mask_xml||
-        '<numFmt numFmtId="'||(FORMAT_MASK_START_WITH + a_format_mask_list.count)||'" formatCode="'||p_mask||'"/>'||chr(10);
-
-        return  a_format_mask_list.count + FORMAT_MASK_CNT + FORMAT_MASK_START_WITH - 1; 
-     else
-       return a_format_mask_list(p_mask) + FORMAT_MASK_CNT + FORMAT_MASK_START_WITH - 1;
-     end if;
-  end add_format_mask;  
-  ------------------------------------------------------------------------------
   function get_font_colors_xml 
   return clob
   is
   begin
-    return to_clob('<fonts count="'||(a_font.count + FONTS_CNT)||'" x14ac:knownFonts="1">'||
+    return to_clob('<fonts count="'||(a_font_color.count + FONTS_CNT)||'" x14ac:knownFonts="1">'||
                    DEFAULT_FONT||chr(10)||
                    BOLD_FONT||chr(10)||
                    v_fonts_xml||chr(10)||
@@ -318,58 +215,23 @@ is
                    '</fills>'||chr(10));
   end get_back_colors_xml;  
   ------------------------------------------------------------------------------  
-  function get_format_mask_xml 
-  return clob
-  is
-  begin
-    return to_clob('<numFmts count="'||(a_format_mask_list.count + FORMAT_MASK_CNT)||'">'||
-                   FORMAT_MASK||
-                   v_format_mask_xml||chr(10)||
-                   '</numFmts>'||chr(10));
-  end get_format_mask_xml;  
-  ------------------------------------------------------------------------------  
   function get_cellXfs_xml
   return clob
   is
   begin
     return to_clob('<cellXfs count="'||(a_styles.count + DEFAULT_STYLES_CNT)||'">'||
                    DEFAULT_STYLE||chr(10)||
-                   --AGGREGATE_STYLE||chr(10)||
-                   --HEADER_STYLE||chr(10)||
+                   AGGREGATE_STYLE||chr(10)||
+                   HEADER_STYLE||chr(10)||
                    v_styles_xml||chr(10)||
                    '</cellXfs>'||chr(10));
   end get_cellXfs_xml;
   ------------------------------------------------------------------------------  
-  function get_num_fmt_id(p_data_type   in varchar2,
-                          p_format_mask in varchar2)
-  return binary_integer
-  is
-  begin
-      if p_data_type = 'NUMBER' then 
-       if p_format_mask is null then
-          return 0;
-        else
-          return add_format_mask(convert_number_format(p_format_mask)); 
-        end if;
-      elsif p_data_type = 'DATE' then 
-        if p_format_mask is null then
-          return FORMAT_MASK_START_WITH;  -- default date format
-        else
-          return add_format_mask(convert_date_format(p_format_mask)); 
-        end if;
-      else
-        return 2;  -- default  string format
-      end if;  
-  
-  end get_num_fmt_id;  
-  ------------------------------------------------------------------------------  
   -- get style_id for existent styles or 
   -- add new style and return style_id
-  function get_style_id(p_font        in t_color,
-                        p_back        in t_color,
-                        p_data_type   in varchar2,
-                        p_format_mask in varchar2,
-                        p_align       in varchar2)
+  function get_style_id(p_font      in t_color,
+                        p_back      in t_color,
+                        p_data_type in varchar2)
   return binary_integer
   is
     v_style           t_style_string;
@@ -377,19 +239,25 @@ is
     v_back_color_id   binary_integer;
     v_style_xml       t_large_varchar2;
   begin
-    v_style := nvl(p_font,'      ')||nvl(p_back,'       ')||p_data_type||p_format_mask||p_align;
+    v_style := nvl(p_font,'      ')||nvl(p_back,'       ')||p_data_type;
     --   
     if a_styles.exists(v_style) then
-      return a_styles(v_style)   - 1 + DEFAULT_STYLES_CNT;
+      return a_styles(v_style);
     else
       a_styles(v_style) := a_styles.count + 1;
       
       v_style_xml := '<xf borderId="0" xfId="0" ';
-
-      v_style_xml := v_style_xml||replace(' numFmtId="#FMTID#" ','#FMTID#',get_num_fmt_id(p_data_type,p_format_mask));
+      
+      if p_data_type = 'NUMBER' then 
+        v_style_xml := v_style_xml||' numFmtId="0" ';
+      elsif p_data_type = 'DATE' then 
+        v_style_xml := v_style_xml||' numFmtId="165" ';
+      else
+        v_style_xml := v_style_xml||' numFmtId="2" ';
+      end if;
       
       if p_font is not null then
-        v_font_color_id := add_font(p_font);
+        v_font_color_id := add_font_color(p_font);
         v_style_xml := v_style_xml||' fontId="'||v_font_color_id||'"  applyFont="1" ';
       else
         v_style_xml := v_style_xml||' fontId="0" '; --default font
@@ -401,77 +269,21 @@ is
       else
         v_style_xml := v_style_xml||' fillId="0" '; --default fill 
       end if;
-      
-      v_style_xml := v_style_xml||'>'||chr(10);
-      v_style_xml := v_style_xml||'<alignment wrapText="1"';
-      if p_align is not null then
-        v_style_xml := v_style_xml||' horizontal="'||lower(p_align)||'" ';
-      end if;
-      v_style_xml := v_style_xml||'/>'||chr(10);
-      
-      v_style_xml := v_style_xml||'</xf>'||chr(10);      
+
+      v_style_xml := v_style_xml||'></xf>'||chr(10);      
       v_styles_xml := v_styles_xml||v_style_xml;      
-      return a_styles.count  - 1 + DEFAULT_STYLES_CNT;
+      return a_styles.count;
     end if;  
   
   end get_style_id;
-  ------------------------------------------------------------------------------  
-  -- get style_id for existent styles or 
-  -- add new style and return style_id
-  function get_aggregate_style_id(p_font        in t_color,
-                                  p_back        in t_color,
-                                  p_data_type   in varchar2,
-                                  p_format_mask in varchar2)
-  return binary_integer
-  is
-    v_style           t_style_string;
-    v_style_xml       t_large_varchar2;
-    v_num_fmt_id        binary_integer;
-  begin
-    v_style := nvl(p_font,'      ')||nvl(p_back,'       ')||p_data_type||p_format_mask||'AGGREGATE';
-    --   
-    if a_styles.exists(v_style) then
-      return a_styles(v_style)  - 1 + DEFAULT_STYLES_CNT;
-    else
-      a_styles(v_style) := a_styles.count + 1;
-
-      v_style_xml  := replace(AGGREGATE_STYLE,'#FMTID#',get_num_fmt_id(p_data_type,p_format_mask)) ||chr(10);      
-      v_styles_xml := v_styles_xml||v_style_xml;      
-      return a_styles.count  - 1 + DEFAULT_STYLES_CNT;
-    end if;  
   
-  end get_aggregate_style_id;  
   ------------------------------------------------------------------------------
-  function get_header_style_id(p_align       in varchar2,
-                               p_border      in boolean default false)
-  return binary_integer
-  is
-    v_style           t_style_string;
-    v_style_xml       t_large_varchar2;
-    v_num_fmt_id        binary_integer;
-  begin
-    v_style := '             CHARHEADER'||p_align;
-    --   
-    if a_styles.exists(v_style) then
-      return a_styles(v_style)  - 1 + DEFAULT_STYLES_CNT;
-    else
-      a_styles(v_style) := a_styles.count + 1;
-
-      v_style_xml  := replace(HEADER_STYLE,'#ALIGN#',lower(p_align))||chr(10);
-      v_styles_xml := v_styles_xml||v_style_xml;      
-      return a_styles.count  - 1 + DEFAULT_STYLES_CNT;
-    end if;  
-  
-  end get_header_style_id;    
-  ------------------------------------------------------------------------------
-  
   function  get_styles_xml
   return clob
   is
     v_template clob;
   begin
-     v_template := replace(t_style_template,'#FORMAT_MASKS#',get_format_mask_xml);     
-     v_template := replace(v_template,'#FONTS#',get_font_colors_xml);
+     v_template := replace(t_style_template,'#FONTS#',get_font_colors_xml);
      v_template := replace(v_template,'#FILLS#',get_back_colors_xml);
      v_template := replace(v_template,'#STYLES#',get_cellXfs_xml);
      
@@ -495,69 +307,6 @@ is
      return chr( 64 + p_coll)||p_row;
    end if;  
   end get_cell_name;
-  ------------------------------------------------------------------------------  
-  function get_colls_width_xml(p_width_str    in varchar2,
-                               p_xml          in xmltype,
-                               p_coefficient  in number)
-  return clob
-  is
-    subtype t_column_alias is varchar2(255);
-    v_xml                  clob;    
-    a_col_name_plus_width  apex_application_global.vc_arr2;    
-    v_col_alias            t_column_alias;
-    v_col_width            number;
-    type   t_width_list    is table of integer index by t_column_alias;
-    a_width_list           t_width_list;
-    v_coefficient          number;
-    v_is_custom            boolean default false;
-  begin      
-    a_col_name_plus_width := APEX_UTIL.STRING_TO_TABLE(p_width_str,'='); 
-    
-    v_coefficient := nvl(p_coefficient,WIDTH_COEFFICIENT);
-    if v_coefficient =  0 then
-      v_coefficient := WIDTH_COEFFICIENT;
-    end if;     
-    
-    -- init associative array by colunn width
-    for i in 1..a_col_name_plus_width.count loop      
-      
-      if a_col_name_plus_width(i) is not null then
-        begin                    
-          v_col_alias  := regexp_replace(a_col_name_plus_width(i),'\,\d+=?$','');
-          v_col_width  := ltrim(regexp_substr(a_col_name_plus_width(i),'\,\d+=?$'),',');          
-          if v_col_width is not null and v_col_alias is not null then            
-            a_width_list(v_col_alias) := round(to_number(v_col_width) / v_coefficient);            
-          end if;
-         exception
-           when others then             
-             null;  -- this functionality is not important
-         end ;
-      end if;
-    end loop;
-    --set column width
-    v_xml:= v_xml||to_clob('<cols>'||chr(10));
-    for i in (select  rownum rn,
-                      extractvalue(column_value, 'CELL') as column_header,
-                      extractvalue(COLUMN_VALUE, 'CELL/@column-alias') AS column_alias,  
-                      extractvalue(COLUMN_VALUE, 'CELL/@data-type') AS data_type
-               from table (select xmlsequence(extract(p_xml,'DOCUMENT/DATA/HEADER/CELL')) from dual))
-    loop                    
-      if a_width_list.exists(i.column_alias) and i.data_type != 'DATE' then        
-        v_xml:= v_xml||to_clob('<col min="'||i.rn||'" max="'||i.rn||'" width="'||a_width_list(i.column_alias)||'" customWidth="1" />'||chr(10));        
-        v_is_custom := true;        
-      end if;  
-    end loop;
-    v_xml:= v_xml||to_clob('</cols>'||chr(10));       
-    
-    if v_is_custom then
-      return v_xml;      
-    else
-      return to_clob('');
-    end if; 
-  exception
-    when others then 
-      raise_application_error(-20001,'get_colls_width_xml: '||SQLERRM);
-  end get_colls_width_xml;
  
   ------------------------------------------------------------------------------  
   procedure add1file
@@ -578,10 +327,7 @@ is
     dbms_lob.freetemporary(v_blob);
   end add1file;  
   ------------------------------------------------------------------------------
-  procedure get_excel(p_xml in xmltype,v_clob in out nocopy clob,
-                      v_strings_clob in out nocopy clob,
-                      p_width_str in varchar2,
-                      p_coefficient  in number)
+  procedure get_excel(p_xml in xmltype,v_clob in out nocopy clob,v_strings_clob in out nocopy clob)
   IS
     v_strings          apex_application_global.vc_arr2;
     v_rownum           binary_integer default 1;
@@ -643,15 +389,11 @@ is
            </sheetView>
           </sheetViews>
         <sheetFormatPr baseColWidth="10" defaultColWidth="10" defaultRowHeight="15"/>'||chr(10));
-
-     v_clob := v_clob||get_colls_width_xml(p_width_str,p_xml,p_coefficient);
-     
      add(v_clob,'<sheetData>'||chr(10));
      
      --header
      add(v_clob,'<row>'||chr(10));     
-     for i in (select  extractvalue(column_value, 'CELL') as column_header,
-                       extractvalue(COLUMN_VALUE, 'CELL/@header_align') AS align
+     for i in (select  extractvalue(column_value, 'CELL') as column_header
                from table (select xmlsequence(extract(p_xml,'DOCUMENT/DATA/HEADER/CELL')) from dual))
      loop          
        v_colls_count := v_colls_count + 1;
@@ -659,7 +401,7 @@ is
                         p_row       => v_rownum, 
                         p_string    => i.column_header,
                         p_clob      => v_clob,
-                        p_style_id  => get_header_style_id(p_align  => i.align)
+                        p_style_id  => HEADER_STYLE_ID
                       );
      end loop; 
      v_rownum := v_rownum + 1;
@@ -678,8 +420,7 @@ is
                           p_row       => v_rownum,
                           p_string    => rowset_xml.break_header,
                           p_clob      => v_clob,
-                          p_style_id  => get_header_style_id(p_align  => 'left')
-                         );         
+                          p_style_id  => HEADER_STYLE_ID);         
          v_rownum := v_rownum + 1;
          add(v_clob,'</row>'||chr(10));
        end if;
@@ -692,18 +433,13 @@ is
                                  extractvalue(COLUMN_VALUE, 'CELL/@color') AS font_color, 
                                  extractvalue(COLUMN_VALUE, 'CELL/@data-type') AS data_type,
                                  extractvalue(COLUMN_VALUE, 'CELL/@value') AS cell_value,
-                                 extractvalue(COLUMN_VALUE, 'CELL/@format_mask') AS format_mask,
-                                 extractvalue(COLUMN_VALUE, 'CELL/@align') AS align,
                                  extractvalue(COLUMN_VALUE, 'CELL') AS cell_text
                           from table (select xmlsequence(extract(row_xml.row_,'ROW/CELL')) from dual))
           loop
             begin            
-              v_style_id := get_style_id(p_font         => cell_xml.font_color,
-                                         p_back         => cell_xml.background_color,
-                                         p_data_type    => cell_xml.data_type,
-                                         p_format_mask  => cell_xml.format_mask,
-                                         p_align        => cell_xml.align
-                                        );
+              v_style_id := get_style_id(p_font      => cell_xml.font_color,
+                                         p_back      => cell_xml.background_color,
+                                         p_data_type => cell_xml.data_type) - 1 + DEFAULT_STYLES_CNT; --start with 0
               if cell_xml.data_type in ('NUMBER') then
                   print_number_cell(p_coll      => cell_xml.coll_num, 
                                     p_row       => v_rownum, 
@@ -740,33 +476,22 @@ is
        for row_xml in (select column_value as row_ from table (select xmlsequence(extract(rowset_xml.rowset,'ROWSET/AGGREGATE')) from dual)) loop
          for cell_xml_agg in (select rownum coll_num,
                                  extractvalue(COLUMN_VALUE, 'CELL') AS cell_text,
-                                 extractvalue(COLUMN_VALUE, 'CELL/@value') AS cell_value,
-                                 extractvalue(COLUMN_VALUE, 'CELL/@format_mask') AS format_mask
+                                 extractvalue(COLUMN_VALUE, 'CELL/@value') AS cell_value
                           from table (select xmlsequence(extract(row_xml.row_,'AGGREGATE/CELL')) from dual))
-         loop           
+         loop
            v_agg_strings_cnt := greatest(length(regexp_replace('[^:]','')) + 1,v_agg_strings_cnt);
-           if instr(cell_xml_agg.cell_text,':') > 0 or  -- 2 or more aggregates
-              cell_xml_agg.cell_text is null            -- empty cell
-           then
-             v_style_id := get_aggregate_style_id(p_font         => '',
-                                        p_back         => '',
-                                        p_data_type    => 'CHAR',
-                                        p_format_mask  => '');
-             print_char_cell(p_coll       => cell_xml_agg.coll_num,
-                             p_row        => v_rownum,
-                             p_string     => rtrim(cell_xml_agg.cell_text,chr(10)),
-                             p_clob       => v_agg_clob,
-                             p_style_id   => v_style_id);
+           if instr(cell_xml_agg.cell_text,':') > 0 then
+             print_char_cell(p_coll => cell_xml_agg.coll_num,
+                             p_row => v_rownum,
+                             p_string => rtrim(cell_xml_agg.cell_text,chr(10)),
+                             p_clob => v_agg_clob,
+                             p_style_id => AGGREGATE_STYLE_ID);
            else
-             v_style_id := get_aggregate_style_id(p_font         => '',
-                                        p_back         => '',
-                                        p_data_type    => 'NUMBER',
-                                        p_format_mask  => cell_xml_agg.format_mask); --start with 0
              print_number_cell(p_coll => cell_xml_agg.coll_num, 
                                p_row => v_rownum, 
                                p_value => cell_xml_agg.cell_value,
                                p_clob => v_agg_clob,
-                               p_style_id => v_style_id);
+                               p_style_id => AGGREGATE_STYLE_ID);
            end if;
          end loop;
          add(v_clob,'<row ht="'||(v_agg_strings_cnt * STRING_HEIGHT)||'">'||chr(10));
@@ -800,9 +525,7 @@ is
   procedure download_file(p_app_id      in number,
                           p_page_id     in number,
                           p_max_rows    in number,
-                          p_file_name   in varchar2 default 'Excel',
-                          p_col_length   in varchar2 default null,
-                          p_coefficient  in number  default WIDTH_COEFFICIENT)
+                          p_file_name   in varchar2 default 'Excel')
   is
     t_template blob;
     t_excel    blob;
@@ -810,7 +533,7 @@ is
     v_strings  clob;
     v_xml_data xmltype;
     zip_files  as_zip.file_list;
-  begin    
+  begin
     pragma inline(get_excel,'YES');     
     dbms_lob.createtemporary(t_excel,true);    
     dbms_lob.createtemporary(v_cells,true);
@@ -836,7 +559,7 @@ is
                          );
     
     
-    get_excel(v_xml_data,v_cells,v_strings,p_col_length,p_coefficient);
+    get_excel(v_xml_data,v_cells,v_strings);
     add1file( t_excel, 'xl/styles.xml', get_styles_xml);
     add1file( t_excel, 'xl/worksheets/Sheet1.xml', v_cells);
     add1file( t_excel, 'xl/sharedStrings.xml',v_strings);

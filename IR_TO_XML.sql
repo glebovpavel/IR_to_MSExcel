@@ -89,7 +89,6 @@ CREATE OR REPLACE package body ir_to_xml as
     column_alignment          t_column_alignment,
     column_types              t_column_types  
    );  
-   
    TYPE t_cell_data IS record
    (
      VALUE           VARCHAR2(100),
@@ -283,35 +282,6 @@ CREATE OR REPLACE package body ir_to_xml as
     return v_rez.count;
   end intersect_count; 
   ------------------------------------------------------------------------------
-  function get_query_column_list
-  return APEX_APPLICATION_GLOBAL.VC_ARR2
-  is
-   v_cur         INTEGER; 
-   v_colls_count INTEGER; 
-   v_columns     APEX_APPLICATION_GLOBAL.VC_ARR2;
-   v_desc_tab    DBMS_SQL.DESC_TAB2;
-  begin
-    v_cur := dbms_sql.open_cursor(2); 
-    dbms_sql.parse(v_cur,l_report.report.sql_query,dbms_sql.native);     
-    dbms_sql.describe_columns2(v_cur,v_colls_count,v_desc_tab);    
-
-    for i in 1..v_colls_count loop
-         if upper(v_desc_tab(i).col_name) != 'APXWS_ROW_PK' then --skip internal primary key if need
-           v_columns(v_columns.count + 1) := v_desc_tab(i).col_name;
-           log('Query column = '||v_desc_tab(i).col_name);
-         end if;
-    end loop;                 
-   dbms_sql.close_cursor(v_cur);   
-
-   return v_columns;
-  exception
-    when others then
-      if dbms_sql.is_open(v_cur) then
-        dbms_sql.close_cursor(v_cur);
-      end if;  
-      raise_application_error(-20001,'get_query_column_list: '||SQLERRM);
-  end get_query_column_list;
-  ------------------------------------------------------------------------------
   
   procedure init_t_report(p_app_id       in number,
                           p_page_id      in number)
@@ -354,8 +324,6 @@ CREATE OR REPLACE package body ir_to_xml as
                                            p_region_id      => l_region_id
                                            --p_report_id      => l_report_id
                                           );
-    l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(intersect_arrays(APEX_UTIL.STRING_TO_TABLE(l_report.ir_data.report_columns),get_query_column_list));
-                                          
     for i in (select column_alias,
                      report_label,
                      heading_alignment,
@@ -436,6 +404,8 @@ CREATE OR REPLACE package body ir_to_xml as
     log('l_report.break_really_on='||APEX_UTIL.TABLE_TO_STRING(l_report.break_really_on));
     log('l_report.agg_cols_cnt='||l_report.agg_cols_cnt);
     
+    --v_query_targets(v_query_targets.count + 1) := 'rez.*';
+     
     for c in cur_highlight(p_report_id => l_report_id,
                            p_delimetered_column_list => l_report.ir_data.report_columns
                           ) 
@@ -596,7 +566,6 @@ CREATE OR REPLACE package body ir_to_xml as
       
       v_clob := v_clob ||bcoll(p_font_color   => nvl(v_cell_color,v_row_color),
                                p_back_color   => nvl(v_cell_back_color,v_row_back_color),
-                               p_align        => get_column_alignment(v_column_alias),
                                p_column_alias => v_column_alias,
                                p_colmn_type   => v_column_type,
                                p_value        => v_cell_data.value,
@@ -856,8 +825,6 @@ CREATE OR REPLACE package body ir_to_xml as
     if lower(v_desc_tab(1).col_name) = 'apxws_row_pk' then
       l_report.skipped_columns := 1;
     end if;
-    --rec.col_name
-    
     
     l_report.start_with := 1 + l_report.skipped_columns +
                            nvl(l_report.break_really_on.count,0) + 
@@ -872,7 +839,21 @@ CREATE OR REPLACE package body ir_to_xml as
     log('l_report.start_with='||l_report.start_with);
     log('l_report.end_with='||l_report.end_with);
     log('l_report.skipped_columns='||l_report.skipped_columns);
-   
+    
+    /*
+    for i in 1..v_colls_count loop
+      log('col_type            =    '|| v_desc_tab(i).col_type);
+      log('col_maxlen          =    '|| v_desc_tab(i).col_max_len);
+      log('col_name            =    '|| v_desc_tab(i).col_name);
+      log('col_name_len        =    '|| v_desc_tab(i).col_name_len);
+      log('col_schema_name     =    '|| v_desc_tab(i).col_schema_name);
+      log('col_schema_name_len =    '|| v_desc_tab(i).col_schema_name_len);
+      log('col_precision       =    '|| v_desc_tab(i).col_precision);
+      log('col_scale           =    '|| v_desc_tab(i).col_scale);
+    end loop;
+    */
+
+
     add(v_data,print_header); 
     log('<<bind_variables>>');
     <<bind_variables>>
