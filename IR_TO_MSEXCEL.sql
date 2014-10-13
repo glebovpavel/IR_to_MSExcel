@@ -35,7 +35,7 @@ as
         for (var i in colWidthsArray) {
          colWidthsDelimeteredString = colWidthsDelimeteredString + i + '\,' + colWidthsArray[i] + "=";  
         }       
-        return colWidthsDelimeteredString;
+        return colWidthsDelimeteredString + '#CUSTOMWIDTH#';
       }
     function replaceDownloadXLS()
       {
@@ -80,6 +80,8 @@ as
     if p_jquery_selector is not null then
      v_javascript_code := v_javascript_code||replace(ON_SELECOR_CODE,'#SELECTOR#',rtrim(v_xls_download_selector||p_jquery_selector,','));
     end if;
+    
+    v_javascript_code := replace(v_javascript_code,'#CUSTOMWIDTH#',replace(p_custom_width,'''',''));
     
     
     APEX_JAVASCRIPT.ADD_ONLOAD_CODE(apex_plugin_util.replace_substitutions(v_javascript_code));
