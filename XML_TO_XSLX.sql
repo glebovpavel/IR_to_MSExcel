@@ -6,6 +6,7 @@ IS
   procedure download_file(p_app_id in number,
                     p_page_id      in number,
                     p_max_rows     in number,
+                    p_file_name    in varchar2 default 'Excel',
                     p_col_length   in varchar2 default null,
                     p_coefficient  in number  default WIDTH_COEFFICIENT); 
   -- p_col_length is delimetered string COLUMN_NAME,COLUMN_WIDTH=COLUMN_NAME,COLUMN_WIDTH=  etc.
@@ -646,12 +647,8 @@ is
      v_clob := v_clob||get_colls_width_xml(p_width_str,p_xml,p_coefficient);
      
      add(v_clob,'<sheetData>'||chr(10));
-
-     add(v_clob,'<row>'||chr(10));     
-     v_rownum := v_rownum + 1;
-     add(v_clob,'</row>'||chr(10));     
      
-     --column header
+     --header
      add(v_clob,'<row>'||chr(10));     
      for i in (select  extractvalue(column_value, 'CELL') as column_header,
                        extractvalue(COLUMN_VALUE, 'CELL/@header_align') AS align
@@ -799,26 +796,11 @@ is
      
      dbms_lob.freetemporary(v_agg_clob);
   end get_excel;
-  
-  function get_file_name (p_app_id      in number,
-                          p_page_id     in number)
-  return varchar2
-  is 
-    v_filename varchar2(255);
-  begin
-    select filename 
-    into v_filename
-    from APEX_APPLICATION_PAGE_IR
-    where application_id = p_app_id
-      and page_id = p_page_id;
-       
-     return apex_plugin_util.replace_substitutions(nvl(v_filename,'Excel'));
-  end get_file_name; 
-  
   ------------------------------------------------------------------------------
   procedure download_file(p_app_id      in number,
                           p_page_id     in number,
                           p_max_rows    in number,
+                          p_file_name   in varchar2 default 'Excel',
                           p_col_length   in varchar2 default null,
                           p_coefficient  in number  default WIDTH_COEFFICIENT)
   is
@@ -867,7 +849,7 @@ is
     htp.init();
     owa_util.mime_header( wwv_flow_utilities.get_excel_mime_type, false );
     htp.print( 'Content-Length: ' || dbms_lob.getlength( t_excel ) );
-    htp.print( 'Content-disposition: attachment; filename='||get_file_name (p_app_id,p_page_id)||'.xlsx;' );
+    htp.print( 'Content-disposition: attachment; filename='||p_file_name||'.xlsx;' );
     owa_util.http_header_close;
     wpg_docload.download_file( t_excel );
     dbms_lob.freetemporary(t_excel);
