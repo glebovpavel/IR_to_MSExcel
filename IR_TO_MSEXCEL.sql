@@ -4,7 +4,8 @@ as
                                  p_plugin  in apex_plugin.t_plugin )
   return apex_plugin.t_process_exec_result;
    
-  procedure get_xlsx_from_ir_ext(p_jquery_selector in varchar2 default null,
+  procedure get_xlsx_from_ir_ext(p_maximum_rows    in number default null,
+                                 p_jquery_selector in varchar2 default null,
                                  p_download_type   in char default 'E',   -- E -> Excel XLSX, X -> XML (Debug), T -> Debug TXT
                                  p_replace_xls     in char default 'Y',   --Y/N
                                  p_custom_width    in varchar2 default null
@@ -57,7 +58,8 @@ as
     ]';
   ------------------------------------------------------------------------------ 
   
-  procedure get_xlsx_from_ir_ext(p_jquery_selector in varchar2 default null,
+  procedure get_xlsx_from_ir_ext(p_maximum_rows    in number default null,
+                                 p_jquery_selector in varchar2 default null,
                                  p_download_type   in char default 'E',   -- E -> Excel XLSX, X -> XML (Debug), T -> Debug TXT
                                  p_replace_xls     in char default 'Y',   --Y/N
                                  p_custom_width    in varchar2     
@@ -86,7 +88,8 @@ as
       if p_download_type = 'E' then -- Excel XLSX
         XML_TO_XSLX.download_file(p_app_id       => v('APP_ID'),
                                   p_page_id      => v('APP_PAGE_ID'),
-                                  p_col_length   => regexp_replace(v('REQUEST'),'^GPV_IR_TO_MSEXCEL','')
+                                  p_col_length   => regexp_replace(v('REQUEST'),'^GPV_IR_TO_MSEXCEL',''),
+                                  p_max_rows     => nvl(p_maximum_rows,xml_to_xslx.get_max_rows (v('APP_ID'),v('APP_PAGE_ID')))
                                   );
       elsif p_download_type = 'X' then -- XML
         IR_TO_XML.get_report_xml(p_app_id            => v('APP_ID'),
@@ -143,7 +146,8 @@ as
     v_on_selecor_code varchar2(300);
   BEGIN
     check_correct_use;
-    get_xlsx_from_ir_ext(p_jquery_selector => p_process.attribute_06,
+    get_xlsx_from_ir_ext(p_maximum_rows    => p_process.attribute_05,
+                         p_jquery_selector => p_process.attribute_06,
                          p_download_type   => p_process.attribute_07,
                          p_replace_xls     => p_process.attribute_10
                         );

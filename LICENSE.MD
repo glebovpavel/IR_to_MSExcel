@@ -1,6 +1,6 @@
 ##License
 
-The "GPV Interactive Report to MSExcel" APEX plugin and IR_TO_XML,XML_TO_XSLX.sql packages are currently available for use in all personal or commercial projects under both MIT and GPL licenses. This means that you can choose the license that best suits your project and use it accordingly. Both licenses have been included with this software.
+The "GPV Interactive Report to MSExcel" APEX plugin and IR_TO_XML,XML_TO_XSLX.sql,IR_TO_MSEXCEL.sql packages are currently available for use in all personal or commercial projects under both MIT and GPL licenses. This means that you can choose the license that best suits your project and use it accordingly. Both licenses have been included with this software.
 
 ##Legal disclaimer
 

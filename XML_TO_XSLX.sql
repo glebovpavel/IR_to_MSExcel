@@ -5,7 +5,8 @@ IS
   
   procedure download_file(p_app_id in number,
                           p_page_id      in number,
-                          p_col_length   in varchar2 default null
+                          p_col_length   in varchar2 default null,
+                          p_max_rows     in number 
                          ); 
   -- p_col_length is delimetered string COLUMN_NAME=COLUMN_WIDTH,COLUMN_NAME=COLUMN_WIDTH,  etc.
   -- sample: BREAK_ASSIGNED_TO_1=1325,PROJECT=151,TASK_NAME=319,START_DATE=133,
@@ -843,7 +844,8 @@ is
   ------------------------------------------------------------------------------
   procedure download_file(p_app_id      in number,
                           p_page_id     in number,
-                          p_col_length   in varchar2 default null
+                          p_col_length   in varchar2 default null,
+                          p_max_rows     in number 
                          )
   is
     t_template blob;
@@ -874,7 +876,7 @@ is
                           p_page_id => p_page_id,                                
                           p_get_page_items => 'N',
                           p_items_list  => null,
-                          p_max_rows  => get_max_rows (p_app_id,p_page_id)
+                          p_max_rows  => p_max_rows
                          );
     
     
