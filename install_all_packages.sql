@@ -38,6 +38,28 @@ CREATE OR REPLACE package ir_to_xml as
                           p_max_rows        IN NUMBER            -- maximum rows for export                            
                          )
   return xmltype;     
+
+  -- string to test get_variables_array
+  -- todo: make unit test
+  --  v_test_str varchar2(400) :=
+  --      q'[
+  --    select *,
+  --          '/* --test :var */'as a
+  --    /****
+  --     * Common multi-line comment style.
+  --     ****/
+  --    /****
+  --     * Another common multi-line comment :style.
+  --     */
+  --     from table
+  --    /*  
+  --      --comment
+  --    */ 
+  --     where b='O'':Relly' 
+  --      --and :c is not null
+  --      and :f>sysdate
+  --      and :forward_2 >= 4 
+  --      ]';
                               
 END IR_TO_XML;
 /
@@ -45,7 +67,7 @@ END IR_TO_XML;
 
 CREATE OR REPLACE package body ir_to_xml as   
   
-  subtype largevarchar2 is varchar2(32000); 
+  subtype largevarchar2 is varchar2(32767); 
  
   cursor cur_highlight(p_report_id in APEX_APPLICATION_PAGE_IR_RPT.REPORT_ID%TYPE,
                        p_delimetered_column_list in varchar2) 
@@ -138,6 +160,38 @@ CREATE OR REPLACE package body ir_to_xml as
                                    p_enabled => false,
                                    p_level   => 4);
   end log; 
+  ------------------------------------------------------------------------------
+  function get_variables_array(p_sql in varchar2)
+  return APEX_APPLICATION_GLOBAL.VC_ARR2
+  is
+    v_str         varchar2(32767);
+    v_var         varchar2(255);
+    v_var_pattern varchar(21);
+    v_var_array   APEX_APPLICATION_GLOBAL.VC_ARR2; 
+  begin
+   v_str         := p_sql;
+   --pattern to match bind variable
+   v_var_pattern := ':(([[:alnum:]])|[_])+';  
+   --eliminate strings
+    --http://stackoverflow.com/questions/12646963/get-and-replace-quoted-strings-with-regex
+    v_str := regexp_replace(v_str,q'[\'.*?(?:\\\\.[^\\\\\']*)*\']','');
+    --eliminate single-line comments
+    v_str := regexp_replace(v_str,'--.*','');
+    --eliminate multy-line comments
+    --http://ostermiller.org/findcomment.html
+    v_str := regexp_replace(v_str,'(/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/)|(//.*)','');
+    
+    v_var := regexp_substr(v_str,v_var_pattern);
+    while length(v_var) > 0 loop
+      v_var := ltrim(v_var,':');
+      v_var_array(v_var_array.count + 1) := v_var;
+      log('Variable found ('||v_var_array.count||'):'||v_var);
+      v_str := regexp_replace(v_str,'[:]'||v_var,'',1,1);      
+      v_var := regexp_substr(v_str,v_var_pattern);
+    end loop;    
+    
+    return v_var_array;
+  end get_variables_array;    
   ------------------------------------------------------------------------------
   function bcoll(p_font_color    in varchar2 default null,
                  p_back_color    in varchar2 default null,
@@ -307,9 +361,12 @@ CREATE OR REPLACE package body ir_to_xml as
    v_colls_count INTEGER; 
    v_columns     APEX_APPLICATION_GLOBAL.VC_ARR2;
    v_desc_tab    DBMS_SQL.DESC_TAB2;
+   v_sql         largevarchar2;   
   begin
-    v_cur := dbms_sql.open_cursor(2); 
-    dbms_sql.parse(v_cur,l_report.report.sql_query,dbms_sql.native);     
+    v_cur := dbms_sql.open_cursor(2);     
+    v_sql := apex_plugin_util.replace_substitutions(p_value => l_report.report.sql_query,p_escape => false);
+    log(v_sql);
+    dbms_sql.parse(v_cur,v_sql,dbms_sql.native);     
     dbms_sql.describe_columns2(v_cur,v_colls_count,v_desc_tab);    
 
     for i in 1..v_colls_count loop
@@ -474,8 +531,8 @@ CREATE OR REPLACE package body ir_to_xml as
   exception
     when no_data_found then
       raise_application_error(-20001,'No Interactive Report found on Page='||p_page_id||' Application='||p_app_id||' Please make sure that the report was running at least once by this session.');
-    when others then 
-      raise_application_error(-20001,'init_t_report: Page='||p_page_id||' Application='||p_app_id||' '||sqlerrm);
+    --when others then 
+    --  raise_application_error(-20001,'init_t_report: Page='||p_page_id||' Application='||p_app_id||' '||sqlerrm);
   end init_t_report;  
   ------------------------------------------------------------------------------
  
@@ -856,18 +913,21 @@ CREATE OR REPLACE package body ir_to_xml as
   ------------------------------------------------------------------------------    
   procedure get_xml_from_ir(v_data in out nocopy clob,p_max_rows in integer)
   is
-   v_cur         INTEGER; 
-   v_result      INTEGER;
-   v_colls_count INTEGER;
-   v_row         APEX_APPLICATION_GLOBAL.VC_ARR2;
-   v_prev_row    APEX_APPLICATION_GLOBAL.VC_ARR2;
-   v_columns     APEX_APPLICATION_GLOBAL.VC_ARR2;
-   v_current_row number default 0;
-   v_desc_tab    DBMS_SQL.DESC_TAB2;
-   v_inside      boolean default false;
+   v_cur            INTEGER; 
+   v_result         INTEGER;
+   v_colls_count    INTEGER;
+   v_row            APEX_APPLICATION_GLOBAL.VC_ARR2;
+   v_prev_row       APEX_APPLICATION_GLOBAL.VC_ARR2;
+   v_columns        APEX_APPLICATION_GLOBAL.VC_ARR2;
+   v_current_row    number default 0;
+   v_desc_tab       DBMS_SQL.DESC_TAB2;
+   v_inside         boolean default false;
+   v_sql            largevarchar2;
+   v_bind_variables APEX_APPLICATION_GLOBAL.VC_ARR2;
   begin
     v_cur := dbms_sql.open_cursor(2); 
-    dbms_sql.parse(v_cur,l_report.report.sql_query,dbms_sql.native);     
+    v_sql := apex_plugin_util.replace_substitutions(p_value => l_report.report.sql_query,p_escape => false);    
+    dbms_sql.parse(v_cur,v_sql,dbms_sql.native);     
     dbms_sql.describe_columns2(v_cur,v_colls_count,v_desc_tab);    
     --skip internal primary key if need
     if lower(v_desc_tab(1).col_name) = 'apxws_row_pk' then
@@ -889,11 +949,14 @@ CREATE OR REPLACE package body ir_to_xml as
     log('l_report.start_with='||l_report.start_with);
     log('l_report.end_with='||l_report.end_with);
     log('l_report.skipped_columns='||l_report.skipped_columns);
-   
+    
+    v_bind_variables := get_variables_array(v_sql);
+       
     add(v_data,print_header); 
-    log('<<bind_variables>>');
+    log('<<bind variables>>');
     <<bind_variables>>
     for i in 1..l_report.report.binds.count loop
+      log('Bind variable '||l_report.report.binds(i).name);
       --remove MAX_ROWS
       if l_report.report.binds(i).name = 'APXWS_MAX_ROW_CNT' then      
         DBMS_SQL.BIND_VARIABLE (v_cur,l_report.report.binds(i).name,p_max_rows);      
@@ -901,9 +964,30 @@ CREATE OR REPLACE package body ir_to_xml as
       else
         DBMS_SQL.BIND_VARIABLE (v_cur,l_report.report.binds(i).name,l_report.report.binds(i).value);      
       end if;
-    end loop bind_variables;   
+      --mark variable as binded
+      for a in 1..v_bind_variables.count loop
+        if v_bind_variables(a) = l_report.report.binds(i).name then
+          v_bind_variables(a) := '';
+        end if;
+      end loop;
+    end loop bind_variables;  
     
+    log('<<bind variables from substantive strings>>');
+    for i in 1..v_bind_variables.count loop
+      if v_bind_variables(i) is not null then
+        log('Bind variable ('||i||')'||v_bind_variables(i));
+        DBMS_SQL.BIND_VARIABLE (v_cur,v_bind_variables(i),v(v_bind_variables(i)));      
+        --delete bided variable from array
+        for a in (i+1)..v_bind_variables.count loop
+          if v_bind_variables(a) = v_bind_variables(i) then
+           log('Delete bind variable ('||a||')'||v_bind_variables(i));
+           v_bind_variables(a) := '';
+         end if;
+        end loop;        
+      end if; 
+    end loop bind_variables;      
     
+  
     for i in 1..v_colls_count loop
        v_row(i) := ' ';
     end loop;
@@ -1049,11 +1133,11 @@ CREATE OR REPLACE package body ir_to_xml as
     log('p_get_page_items='||p_get_page_items);
     log('p_items_list='||p_items_list);
     log('p_collection_name='||p_collection_name);
-    log('p_max_rows='||p_max_rows);
+    log('p_max_rows='||p_max_rows);    
     
-    init_t_report(p_app_id,p_page_id);    
-    if p_return_type = 'Q' then  -- debug information    
+    if p_return_type = 'Q' then  -- debug information            
         begin
+          init_t_report(p_app_id,p_page_id);    
           get_final_xml(v_data,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);
           if p_collection_name is not null then  
             set_collection(upper(p_collection_name),v_data);
@@ -1064,6 +1148,7 @@ CREATE OR REPLACE package body ir_to_xml as
         end;
         download_file(v_debug,'text/txt','log.txt');
     elsif p_return_type = 'X' then --XML-Data
+        init_t_report(p_app_id,p_page_id);    
         get_final_xml(v_data,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);
         if p_collection_name is not null then  
           set_collection(upper(p_collection_name),v_data);
@@ -1078,6 +1163,7 @@ CREATE OR REPLACE package body ir_to_xml as
   exception
    when others then
      raise_application_error(-20001,'get_report_xml:'||SQLERRM);
+     raise;
   end get_report_xml; 
   ------------------------------------------------------------------------------
   function get_report_xml(p_app_id          IN NUMBER,
