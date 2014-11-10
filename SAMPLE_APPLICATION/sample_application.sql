@@ -7,12 +7,12 @@ begin wwv_flow.g_import_in_progress := true; end;
  
  
 --application/set_environment
-prompt  APPLICATION 26483 - Sample Application
+prompt  APPLICATION 26482 - Sample Application
 --
 -- Application Export:
---   Application:     26483
+--   Application:     26482
 --   Name:            Sample Application
---   Date and Time:   14:16 Thursday August 14, 2014
+--   Date and Time:   15:22 Monday November 10, 2014
 --   Exported By:     GPV
 --   Flashback:       0
 --   Export Type:     Application Export
@@ -103,7 +103,7 @@ prompt  Set Application ID...
 begin
  
    -- SET APPLICATION ID
-   wwv_flow.g_flow_id := nvl(wwv_flow_application_install.get_application_id,26483);
+   wwv_flow.g_flow_id := nvl(wwv_flow_application_install.get_application_id,26482);
    wwv_flow_api.g_id_offset := nvl(wwv_flow_application_install.get_offset,0);
 null;
  
@@ -115,7 +115,7 @@ end;
 begin
  
    -- Remove Application
-wwv_flow_api.remove_flow(nvl(wwv_flow_application_install.get_application_id,26483));
+wwv_flow_api.remove_flow(nvl(wwv_flow_application_install.get_application_id,26482));
  
 end;
 /
@@ -123,7 +123,7 @@ end;
  
 begin
  
-wwv_flow_audit.remove_audit_trail(nvl(wwv_flow_application_install.get_application_id,26483));
+wwv_flow_audit.remove_audit_trail(nvl(wwv_flow_application_install.get_application_id,26482));
 null;
  
 end;
@@ -144,14 +144,14 @@ end;
 begin
  
 wwv_flow_api.create_flow(
-  p_id    => nvl(wwv_flow_application_install.get_application_id,26483),
-  p_display_id=> nvl(wwv_flow_application_install.get_application_id,26483),
+  p_id    => nvl(wwv_flow_application_install.get_application_id,26482),
+  p_display_id=> nvl(wwv_flow_application_install.get_application_id,26482),
   p_owner => nvl(wwv_flow_application_install.get_schema,'GPV'),
   p_name  => nvl(wwv_flow_application_install.get_application_name,'Sample Application'),
-  p_alias => nvl(wwv_flow_application_install.get_application_alias,'F_1022648226483'),
+  p_alias => nvl(wwv_flow_application_install.get_application_alias,'F_10226482'),
   p_page_view_logging => 'YES',
   p_page_protection_enabled_y_n=> 'Y',
-  p_checksum_salt_last_reset => '20140814141626',
+  p_checksum_salt_last_reset => '20141110152238',
   p_max_session_length_sec=> null,
   p_compatibility_mode=> '4.2',
   p_html_escaping_mode=> 'E',
@@ -162,7 +162,7 @@ wwv_flow_api.create_flow(
   p_publish_yn=> 'N',
   p_documentation_banner=> '',
   p_authentication=> 'PLUGIN',
-  p_authentication_id=> 98831290160231464509 + wwv_flow_api.g_id_offset,
+  p_authentication_id=> 98828886540409776158 + wwv_flow_api.g_id_offset,
   p_logout_url=> '',
   p_application_tab_set=> 0,
   p_logo_image => 'TEXT:Plugin Demonstration',
@@ -193,7 +193,7 @@ wwv_flow_api.create_flow(
   p_substitution_string_02 => 'AUTOLOGIN_PASSWORD',
   p_substitution_value_02  => '',
   p_last_updated_by => 'GPV',
-  p_last_upd_yyyymmddhh24miss=> '20140814141626',
+  p_last_upd_yyyymmddhh24miss=> '20141110152238',
   p_ui_type_name => null,
   p_required_roles=> wwv_flow_utilities.string_to_table2(''));
  
@@ -211,7 +211,7 @@ begin
  
 --application/user interface/desktop
 wwv_flow_api.create_user_interface (
-  p_id => 98831289962476464508 + wwv_flow_api.g_id_offset
+  p_id => 98828886342654776157 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_ui_type_name => 'DESKTOP'
  ,p_display_name => 'Desktop'
@@ -234,7 +234,7 @@ begin
  
 --application/plug-in setting/item_type_native_yes_no
 wwv_flow_api.create_plugin_setting (
-  p_id => 98831279067325464488 + wwv_flow_api.g_id_offset
+  p_id => 98828875447503776137 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_plugin_type => 'ITEM TYPE'
  ,p_plugin => 'NATIVE_YES_NO'
@@ -263,7 +263,7 @@ prompt  ...navigation bar entries
 begin
  
 wwv_flow_api.create_icon_bar_item(
-  p_id => 98831290063300464509 + wwv_flow_api.g_id_offset,
+  p_id => 98828886443478776158 + wwv_flow_api.g_id_offset,
   p_flow_id => wwv_flow.g_flow_id,
   p_icon_sequence=> 200,
   p_icon_image => '',
@@ -327,10 +327,10 @@ prompt  ...Shared Lists of values
 begin
  
 wwv_flow_api.create_list_of_values (
-  p_id       => 98831693886250362508 + wwv_flow_api.g_id_offset,
+  p_id       => 98829290266428674157 + wwv_flow_api.g_id_offset,
   p_flow_id  => wwv_flow.g_flow_id,
   p_lov_name => 'STATUSES',
-  p_lov_query=> '.'||to_char(98831693886250362508 + wwv_flow_api.g_id_offset)||'.');
+  p_lov_query=> '.'||to_char(98829290266428674157 + wwv_flow_api.g_id_offset)||'.');
  
 null;
  
@@ -341,8 +341,8 @@ end;
 begin
  
 wwv_flow_api.create_static_lov_data (
-  p_id=>98831694189028362508 + wwv_flow_api.g_id_offset,
-  p_lov_id=>98831693886250362508 + wwv_flow_api.g_id_offset,
+  p_id=>98829290569206674157 + wwv_flow_api.g_id_offset,
+  p_lov_id=>98829290266428674157 + wwv_flow_api.g_id_offset,
   p_lov_disp_sequence=>1,
   p_lov_disp_value=>'OPN',
   p_lov_return_value=>'Open',
@@ -357,8 +357,8 @@ end;
 begin
  
 wwv_flow_api.create_static_lov_data (
-  p_id=>98831694474369362510 + wwv_flow_api.g_id_offset,
-  p_lov_id=>98831693886250362508 + wwv_flow_api.g_id_offset,
+  p_id=>98829290854547674159 + wwv_flow_api.g_id_offset,
+  p_lov_id=>98829290266428674157 + wwv_flow_api.g_id_offset,
   p_lov_disp_sequence=>2,
   p_lov_disp_value=>'CLS',
   p_lov_return_value=>'Closed',
@@ -373,8 +373,8 @@ end;
 begin
  
 wwv_flow_api.create_static_lov_data (
-  p_id=>98831694781930362510 + wwv_flow_api.g_id_offset,
-  p_lov_id=>98831693886250362508 + wwv_flow_api.g_id_offset,
+  p_id=>98829291162108674159 + wwv_flow_api.g_id_offset,
+  p_lov_id=>98829290266428674157 + wwv_flow_api.g_id_offset,
   p_lov_disp_sequence=>3,
   p_lov_disp_value=>'OHLD',
   p_lov_return_value=>'On-Hold',
@@ -411,7 +411,7 @@ begin
 wwv_flow_api.create_page (
   p_flow_id => wwv_flow.g_flow_id
  ,p_id => 1
- ,p_user_interface_id => 98831289962476464508 + wwv_flow_api.g_id_offset
+ ,p_user_interface_id => 98828886342654776157 + wwv_flow_api.g_id_offset
  ,p_name => 'Plugin Demonstration'
  ,p_alias => 'LANDING_PAGE'
  ,p_step_title => 'Plugin Demonstration'
@@ -420,7 +420,7 @@ wwv_flow_api.create_page (
  ,p_first_item => 'NO_FIRST_ITEM'
  ,p_include_apex_css_js_yn => 'Y'
  ,p_autocomplete_on_off => 'ON'
- ,p_step_template => 98831279281638464491 + wwv_flow_api.g_id_offset
+ ,p_step_template => 98828875661816776140 + wwv_flow_api.g_id_offset
  ,p_page_is_public_y_n => 'N'
  ,p_protection_level => 'N'
  ,p_cache_page_yn => 'N'
@@ -429,7 +429,7 @@ wwv_flow_api.create_page (
  ,p_help_text => 
 'No help is available for this page.'
  ,p_last_updated_by => 'GPV'
- ,p_last_upd_yyyymmddhh24miss => '20140813150248'
+ ,p_last_upd_yyyymmddhh24miss => '20141110151802'
   );
 null;
  
@@ -450,17 +450,18 @@ s:=s||'select	--ROWID,'||unistr('\000a')||
 '       STATUS,'||unistr('\000a')||
 '       ASSIGNED_TO,'||unistr('\000a')||
 '       COST,'||unistr('\000a')||
-'       BUDGET       '||unistr('\000a')||
+'       BUDGET,'||unistr('\000a')||
+'       budget - cost available_budget'||unistr('\000a')||
 'from EBA_DEMO_IR_PROJECTS';
 
 wwv_flow_api.create_page_plug (
-  p_id=> 98831293871554528254 + wwv_flow_api.g_id_offset,
+  p_id=> 98828890251732839903 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_page_id=> 1,
   p_plug_name=> 'Sample Interactive Report',
   p_region_name=>'',
   p_escape_on_http_output=>'N',
-  p_plug_template=> 98831282683820464498+ wwv_flow_api.g_id_offset,
+  p_plug_template=> 98828879063998776147+ wwv_flow_api.g_id_offset,
   p_plug_display_sequence=> 10,
   p_plug_new_grid         => false,
   p_plug_new_grid_row     => true,
@@ -478,6 +479,35 @@ wwv_flow_api.create_page_plug (
   p_plug_query_show_nulls_as => ' - ',
   p_plug_display_condition_type => '',
   p_pagination_display_position=>'BOTTOM_RIGHT',
+  p_prn_output_show_link=> 'Y',
+  p_prn_content_disposition=> 'ATTACHMENT',
+  p_prn_document_header=> 'APEX',
+  p_prn_units=> 'INCHES',
+  p_prn_paper_size=> 'LETTER',
+  p_prn_width=> 11,
+  p_prn_height=> 8.5,
+  p_prn_orientation=> 'HORIZONTAL',
+  p_prn_page_header_font_color=> '#000000',
+  p_prn_page_header_font_family=> 'Helvetica',
+  p_prn_page_header_font_weight=> 'normal',
+  p_prn_page_header_font_size=> '12',
+  p_prn_page_footer_font_color=> '#000000',
+  p_prn_page_footer_font_family=> 'Helvetica',
+  p_prn_page_footer_font_weight=> 'normal',
+  p_prn_page_footer_font_size=> '12',
+  p_prn_header_bg_color=> '#9bafde',
+  p_prn_header_font_color=> '#ffffff',
+  p_prn_header_font_family=> 'Helvetica',
+  p_prn_header_font_weight=> 'normal',
+  p_prn_header_font_size=> '10',
+  p_prn_body_bg_color=> '#efefef',
+  p_prn_body_font_color=> '#000000',
+  p_prn_body_font_family=> 'Helvetica',
+  p_prn_body_font_weight=> 'normal',
+  p_prn_body_font_size=> '10',
+  p_prn_border_width=> .5,
+  p_prn_page_header_alignment=> 'CENTER',
+  p_prn_page_footer_alignment=> 'CENTER',
   p_plug_customized=>'0',
   p_plug_caching=> 'NOT_CACHED',
   p_plug_comment=> '');
@@ -495,14 +525,15 @@ a1:=a1||'select	--ROWID,'||unistr('\000a')||
 '       STATUS,'||unistr('\000a')||
 '       ASSIGNED_TO,'||unistr('\000a')||
 '       COST,'||unistr('\000a')||
-'       BUDGET       '||unistr('\000a')||
+'       BUDGET,'||unistr('\000a')||
+'       budget - cost available_budget'||unistr('\000a')||
 'from EBA_DEMO_IR_PROJECTS';
 
 wwv_flow_api.create_worksheet(
-  p_id=> 98831293964528528254+wwv_flow_api.g_id_offset,
+  p_id=> 98828890344706839903+wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_page_id=> 1,
-  p_region_id=> 98831293871554528254+wwv_flow_api.g_id_offset,
+  p_region_id=> 98828890251732839903+wwv_flow_api.g_id_offset,
   p_name=> 'Sample Interactive Report',
   p_folder_id=> null, 
   p_alias=> '',
@@ -547,7 +578,7 @@ wwv_flow_api.create_worksheet(
   p_show_reset=>'Y',
   p_show_download=>'Y',
   p_show_help=>'Y',
-  p_download_formats=>'CSV:HTML:EMAIL',
+  p_download_formats=>'CSV:HTML:EMAIL:XLS',
   p_allow_exclude_null_values=>'N',
   p_allow_hide_extra_columns=>'N',
   p_icon_view_enabled_yn=>'N',
@@ -560,10 +591,10 @@ end;
 /
 begin
 wwv_flow_api.create_worksheet_column(
-  p_id => 98831687871489589135+wwv_flow_api.g_id_offset,
+  p_id => 98829284251667900784+wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_page_id=> 1,
-  p_worksheet_id => 98831293964528528254+wwv_flow_api.g_id_offset,
+  p_worksheet_id => 98828890344706839903+wwv_flow_api.g_id_offset,
   p_db_column_name         =>'ID',
   p_display_order          =>2,
   p_column_identifier      =>'B',
@@ -597,10 +628,10 @@ end;
 /
 begin
 wwv_flow_api.create_worksheet_column(
-  p_id => 98831687978597589135+wwv_flow_api.g_id_offset,
+  p_id => 98829284358775900784+wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_page_id=> 1,
-  p_worksheet_id => 98831293964528528254+wwv_flow_api.g_id_offset,
+  p_worksheet_id => 98828890344706839903+wwv_flow_api.g_id_offset,
   p_db_column_name         =>'PROJECT',
   p_display_order          =>3,
   p_column_identifier      =>'C',
@@ -634,10 +665,10 @@ end;
 /
 begin
 wwv_flow_api.create_worksheet_column(
-  p_id => 98831688077907589135+wwv_flow_api.g_id_offset,
+  p_id => 98829284458085900784+wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_page_id=> 1,
-  p_worksheet_id => 98831293964528528254+wwv_flow_api.g_id_offset,
+  p_worksheet_id => 98828890344706839903+wwv_flow_api.g_id_offset,
   p_db_column_name         =>'TASK_NAME',
   p_display_order          =>4,
   p_column_identifier      =>'D',
@@ -671,10 +702,10 @@ end;
 /
 begin
 wwv_flow_api.create_worksheet_column(
-  p_id => 98831688159576589135+wwv_flow_api.g_id_offset,
+  p_id => 98829284539754900784+wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_page_id=> 1,
-  p_worksheet_id => 98831293964528528254+wwv_flow_api.g_id_offset,
+  p_worksheet_id => 98828890344706839903+wwv_flow_api.g_id_offset,
   p_db_column_name         =>'START_DATE',
   p_display_order          =>5,
   p_column_identifier      =>'E',
@@ -708,10 +739,10 @@ end;
 /
 begin
 wwv_flow_api.create_worksheet_column(
-  p_id => 98831688273265589136+wwv_flow_api.g_id_offset,
+  p_id => 98829284653443900785+wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_page_id=> 1,
-  p_worksheet_id => 98831293964528528254+wwv_flow_api.g_id_offset,
+  p_worksheet_id => 98828890344706839903+wwv_flow_api.g_id_offset,
   p_db_column_name         =>'END_DATE',
   p_display_order          =>6,
   p_column_identifier      =>'F',
@@ -745,10 +776,10 @@ end;
 /
 begin
 wwv_flow_api.create_worksheet_column(
-  p_id => 98831688374971589136+wwv_flow_api.g_id_offset,
+  p_id => 98829284755149900785+wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_page_id=> 1,
-  p_worksheet_id => 98831293964528528254+wwv_flow_api.g_id_offset,
+  p_worksheet_id => 98828890344706839903+wwv_flow_api.g_id_offset,
   p_db_column_name         =>'STATUS',
   p_display_order          =>7,
   p_column_identifier      =>'G',
@@ -775,7 +806,7 @@ wwv_flow_api.create_worksheet_column(
   p_column_alignment       =>'LEFT',
   p_tz_dependent           =>'N',
   p_rpt_distinct_lov       =>'Y',
-  p_rpt_named_lov          =>98831693886250362508+wwv_flow_api.g_id_offset,
+  p_rpt_named_lov          =>98829290266428674157+wwv_flow_api.g_id_offset,
   p_rpt_show_filter_lov    =>'1',
   p_rpt_filter_date_ranges =>'ALL',
   p_help_text              =>'');
@@ -783,10 +814,10 @@ end;
 /
 begin
 wwv_flow_api.create_worksheet_column(
-  p_id => 98831688487548589136+wwv_flow_api.g_id_offset,
+  p_id => 98829284867726900785+wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_page_id=> 1,
-  p_worksheet_id => 98831293964528528254+wwv_flow_api.g_id_offset,
+  p_worksheet_id => 98828890344706839903+wwv_flow_api.g_id_offset,
   p_db_column_name         =>'ASSIGNED_TO',
   p_display_order          =>8,
   p_column_identifier      =>'H',
@@ -820,10 +851,10 @@ end;
 /
 begin
 wwv_flow_api.create_worksheet_column(
-  p_id => 98831688578861589136+wwv_flow_api.g_id_offset,
+  p_id => 98829284959039900785+wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_page_id=> 1,
-  p_worksheet_id => 98831293964528528254+wwv_flow_api.g_id_offset,
+  p_worksheet_id => 98828890344706839903+wwv_flow_api.g_id_offset,
   p_db_column_name         =>'COST',
   p_display_order          =>9,
   p_column_identifier      =>'I',
@@ -857,10 +888,10 @@ end;
 /
 begin
 wwv_flow_api.create_worksheet_column(
-  p_id => 98831688689976589136+wwv_flow_api.g_id_offset,
+  p_id => 98829285070154900785+wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_page_id=> 1,
-  p_worksheet_id => 98831293964528528254+wwv_flow_api.g_id_offset,
+  p_worksheet_id => 98828890344706839903+wwv_flow_api.g_id_offset,
   p_db_column_name         =>'BUDGET',
   p_display_order          =>10,
   p_column_identifier      =>'J',
@@ -892,16 +923,53 @@ wwv_flow_api.create_worksheet_column(
   p_help_text              =>'');
 end;
 /
+begin
+wwv_flow_api.create_worksheet_column(
+  p_id => 98829285164976900785+wwv_flow_api.g_id_offset,
+  p_flow_id=> wwv_flow.g_flow_id,
+  p_page_id=> 1,
+  p_worksheet_id => 98828890344706839903+wwv_flow_api.g_id_offset,
+  p_db_column_name         =>'AVAILABLE_BUDGET',
+  p_display_order          =>11,
+  p_column_identifier      =>'K',
+  p_column_label           =>'Available Budget',
+  p_report_label           =>'Available Budget',
+  p_sync_form_label        =>'Y',
+  p_display_in_default_rpt =>'Y',
+  p_is_sortable            =>'Y',
+  p_allow_sorting          =>'Y',
+  p_allow_filtering        =>'Y',
+  p_allow_highlighting     =>'Y',
+  p_allow_ctrl_breaks      =>'Y',
+  p_allow_aggregations     =>'Y',
+  p_allow_computations     =>'Y',
+  p_allow_charting         =>'Y',
+  p_allow_group_by         =>'Y',
+  p_allow_hide             =>'Y',
+  p_others_may_edit        =>'Y',
+  p_others_may_view        =>'Y',
+  p_column_type            =>'NUMBER',
+  p_display_as             =>'TEXT',
+  p_display_text_as        =>'ESCAPE_SC',
+  p_heading_alignment      =>'CENTER',
+  p_column_alignment       =>'RIGHT',
+  p_tz_dependent           =>'N',
+  p_rpt_distinct_lov       =>'Y',
+  p_rpt_show_filter_lov    =>'D',
+  p_rpt_filter_date_ranges =>'ALL',
+  p_help_text              =>'');
+end;
+/
 declare
     rc1 varchar2(32767) := null;
 begin
-rc1:=rc1||'PROJECT:TASK_NAME:STATUS:ASSIGNED_TO:BUDGET:COST:APXWS_CC_001';
+rc1:=rc1||'PROJECT:TASK_NAME:START_DATE:END_DATE:STATUS:ASSIGNED_TO:COST:BUDGET';
 
 wwv_flow_api.create_worksheet_rpt(
-  p_id => 98831294472939528612+wwv_flow_api.g_id_offset,
+  p_id => 98828890853117840261+wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_page_id=> 1,
-  p_worksheet_id => 98831293964528528254+wwv_flow_api.g_id_offset,
+  p_worksheet_id => 98828890344706839903+wwv_flow_api.g_id_offset,
   p_session_id  => null,
   p_base_report_id  => null+wwv_flow_api.g_id_offset,
   p_application_user => 'APXWS_DEFAULT',
@@ -914,45 +982,30 @@ wwv_flow_api.create_worksheet_rpt(
   p_report_columns          =>rc1,
   p_break_on                =>'PROJECT',
   p_break_enabled_on        =>'PROJECT',
-  p_sum_columns_on_break    =>'COST',
-  p_count_columns_on_break  =>'TASK_NAME',
+  p_sum_columns_on_break    =>'BUDGET',
   p_flashback_enabled       =>'N',
   p_calendar_display_column =>'');
-end;
-/
-begin
-wwv_flow_api.create_worksheet_computation(
-  p_id => 2980003479077956+wwv_flow_api.g_id_offset,
-  p_flow_id=> wwv_flow.g_flow_id,
-  p_page_id=> 1,
-  p_worksheet_id => 98831293964528528254+wwv_flow_api.g_id_offset,
-  p_report_id => 98831294472939528612+wwv_flow_api.g_id_offset,
-  p_db_column_name    =>'APXWS_CC_001',
-  p_column_identifier =>'C01',
-  p_computation_expr  =>'J - I',
-  p_format_mask       =>'',
-  p_column_type       =>'NUMBER',
-  p_column_label      =>'Available Budget',
-  p_report_label      =>'Available Budget');
 end;
 /
  
 begin
  
 wwv_flow_api.create_page_button(
-  p_id             => 4805923074338671 + wwv_flow_api.g_id_offset,
+  p_id             => 5431618255269469 + wwv_flow_api.g_id_offset,
   p_flow_id        => wwv_flow.g_flow_id,
   p_flow_step_id   => 1,
-  p_button_sequence=> 20,
-  p_button_plug_id => 98831293871554528254+wwv_flow_api.g_id_offset,
-  p_button_name    => 'P1_GET_EXCEL_FROM_IR',
-  p_button_action  => 'REDIRECT_PAGE',
-  p_button_image   => 'template:'||to_char(98831288371888464505+wwv_flow_api.g_id_offset),
+  p_button_sequence=> 10,
+  p_button_plug_id => 98828890251732839903+wwv_flow_api.g_id_offset,
+  p_button_name    => 'DOWNLOAD_EXCEL',
+  p_button_static_id=> 'GETEXCEL',
+  p_button_action  => 'DEFINED_BY_DA',
+  p_button_image   => 'template:'||to_char(98828884752066776154+wwv_flow_api.g_id_offset),
   p_button_is_hot=>'N',
-  p_button_image_alt=> 'Get Result as Excel File',
+  p_button_image_alt=> 'Download Excel',
   p_button_position=> 'RIGHT_OF_IR_SEARCH_BAR',
   p_button_alignment=> 'LEFT',
-  p_button_redirect_url=> 'f?p=&APP_ID.:&APP_PAGE_ID.:&SESSION.:GET_EXCEL:&DEBUG.:::',
+  p_button_redirect_url=> '',
+  p_button_execute_validations=>'Y',
   p_required_patch => null + wwv_flow_api.g_id_offset);
  
  
@@ -977,20 +1030,20 @@ declare
 begin
 p := null;
 wwv_flow_api.create_page_process(
-  p_id     => 4806750231354603 + wwv_flow_api.g_id_offset,
+  p_id     => 5431430591263516 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_flow_step_id => 1,
   p_process_sequence=> 10,
-  p_process_point=> 'BEFORE_HEADER',
+  p_process_point=> 'AFTER_HEADER',
   p_process_type=> 'PLUGIN_GPV_IR_TO_MSEXCEL',
   p_process_name=> 'Get Excel',
   p_process_sql_clob => p,
-  p_attribute_05=> '1000',
-  p_attribute_06=> 'Report refreshed. Please try download again.',
+  p_attribute_05=> '500',
+  p_attribute_06=> '#GETEXCEL',
+  p_attribute_07=> 'E',
+  p_attribute_10=> 'Y',
   p_process_error_message=> '',
   p_error_display_location=> 'ON_ERROR_PAGE',
-  p_process_when=>'GET_EXCEL',
-  p_process_when_type=>'REQUEST_EQUALS_CONDITION',
   p_process_success_message=> '',
   p_process_is_stateful_y_n=>'N',
   p_process_comment=>'');
@@ -1026,7 +1079,7 @@ begin
 wwv_flow_api.create_page (
   p_flow_id => wwv_flow.g_flow_id
  ,p_id => 11
- ,p_user_interface_id => 98831289962476464508 + wwv_flow_api.g_id_offset
+ ,p_user_interface_id => 98828886342654776157 + wwv_flow_api.g_id_offset
  ,p_name => 'Login Page'
  ,p_alias => 'LOGIN_DESKTOP'
  ,p_step_title => 'Login Page'
@@ -1034,7 +1087,7 @@ wwv_flow_api.create_page (
  ,p_first_item => 'AUTO_FIRST_ITEM'
  ,p_include_apex_css_js_yn => 'Y'
  ,p_autocomplete_on_off => 'OFF'
- ,p_step_template => 98831279174362464489 + wwv_flow_api.g_id_offset
+ ,p_step_template => 98828875554540776138 + wwv_flow_api.g_id_offset
  ,p_page_is_public_y_n => 'Y'
  ,p_cache_page_yn => 'N'
  ,p_last_updated_by => 'TODANTE@GMAIL.COM'
@@ -1052,13 +1105,13 @@ declare
 begin
 s := null;
 wwv_flow_api.create_page_plug (
-  p_id=> 49415610931823190887 + wwv_flow_api.g_id_offset,
+  p_id=> 49413207312001502536 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_page_id=> 11,
   p_plug_name=> 'Login Page',
   p_region_name=>'',
   p_escape_on_http_output=>'N',
-  p_plug_template=> 98831282274108464497+ wwv_flow_api.g_id_offset,
+  p_plug_template=> 98828878654286776146+ wwv_flow_api.g_id_offset,
   p_plug_display_sequence=> 10,
   p_plug_new_grid         => false,
   p_plug_new_grid_row     => true,
@@ -1096,7 +1149,7 @@ declare
     h varchar2(32767) := null;
 begin
 wwv_flow_api.create_page_item(
-  p_id=>49415611142219190889 + wwv_flow_api.g_id_offset,
+  p_id=>49413207522397502538 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_flow_step_id=> 11,
   p_name=>'P11_USERNAME',
@@ -1104,7 +1157,7 @@ wwv_flow_api.create_page_item(
   p_is_required=> false,
   p_accept_processing=> 'REPLACE_EXISTING',
   p_item_sequence=> 10,
-  p_item_plug_id => 49415610931823190887+wwv_flow_api.g_id_offset,
+  p_item_plug_id => 49413207312001502536+wwv_flow_api.g_id_offset,
   p_use_cache_before_default=> '',
   p_prompt=>'Username',
   p_display_as=> 'NATIVE_TEXT_FIELD',
@@ -1121,7 +1174,7 @@ wwv_flow_api.create_page_item(
   p_grid_column=> null,
   p_label_alignment=> 'RIGHT',
   p_field_alignment=> 'LEFT',
-  p_field_template=> 98831287865392464505+wwv_flow_api.g_id_offset,
+  p_field_template=> 98828884245570776154+wwv_flow_api.g_id_offset,
   p_is_persistent=> 'Y',
   p_attribute_01 => 'N',
   p_attribute_02 => 'N',
@@ -1137,7 +1190,7 @@ declare
     h varchar2(32767) := null;
 begin
 wwv_flow_api.create_page_item(
-  p_id=>49415611349462190889 + wwv_flow_api.g_id_offset,
+  p_id=>49413207729640502538 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_flow_step_id=> 11,
   p_name=>'P11_PASSWORD',
@@ -1145,7 +1198,7 @@ wwv_flow_api.create_page_item(
   p_is_required=> false,
   p_accept_processing=> 'REPLACE_EXISTING',
   p_item_sequence=> 20,
-  p_item_plug_id => 49415610931823190887+wwv_flow_api.g_id_offset,
+  p_item_plug_id => 49413207312001502536+wwv_flow_api.g_id_offset,
   p_use_cache_before_default=> '',
   p_prompt=>'Password',
   p_display_as=> 'NATIVE_PASSWORD',
@@ -1162,7 +1215,7 @@ wwv_flow_api.create_page_item(
   p_grid_column=> null,
   p_label_alignment=> 'RIGHT',
   p_field_alignment=> 'LEFT',
-  p_field_template=> 98831287865392464505+wwv_flow_api.g_id_offset,
+  p_field_template=> 98828884245570776154+wwv_flow_api.g_id_offset,
   p_is_persistent=> 'Y',
   p_attribute_01 => 'Y',
   p_attribute_02 => 'Y',
@@ -1176,7 +1229,7 @@ declare
     h varchar2(32767) := null;
 begin
 wwv_flow_api.create_page_item(
-  p_id=>49415611526560190890 + wwv_flow_api.g_id_offset,
+  p_id=>49413207906738502539 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_flow_step_id=> 11,
   p_name=>'P11_LOGIN',
@@ -1184,7 +1237,7 @@ wwv_flow_api.create_page_item(
   p_is_required=> false,
   p_accept_processing=> 'REPLACE_EXISTING',
   p_item_sequence=> 30,
-  p_item_plug_id => 49415610931823190887+wwv_flow_api.g_id_offset,
+  p_item_plug_id => 49413207312001502536+wwv_flow_api.g_id_offset,
   p_use_cache_before_default=> '',
   p_item_default=> 'Login',
   p_prompt=>'Login',
@@ -1196,7 +1249,7 @@ wwv_flow_api.create_page_item(
   p_cSize=> null,
   p_cMaxlength=> null,
   p_cHeight=> null,
-  p_tag_attributes  => 'template:'||to_char(98831288262132464505 + wwv_flow_api.g_id_offset),
+  p_tag_attributes  => 'template:'||to_char(98828884642310776154 + wwv_flow_api.g_id_offset),
   p_new_grid=> false,
   p_begin_on_new_line=> 'NO',
   p_begin_on_new_field=> 'YES',
@@ -1226,7 +1279,7 @@ p:=p||'apex_authentication.send_login_username_cookie ('||unistr('\000a')||
 '    p_username => lower(:P11_USERNAME) );';
 
 wwv_flow_api.create_page_process(
-  p_id     => 49415613944866190891 + wwv_flow_api.g_id_offset,
+  p_id     => 49413210325044502540 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_flow_step_id => 11,
   p_process_sequence=> 10,
@@ -1258,7 +1311,7 @@ p:=p||'apex_authentication.login('||unistr('\000a')||
 '    p_password => :P11_PASSWORD );';
 
 wwv_flow_api.create_page_process(
-  p_id     => 49415611741008190890 + wwv_flow_api.g_id_offset,
+  p_id     => 49413208121186502539 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_flow_step_id => 11,
   p_process_sequence=> 20,
@@ -1288,7 +1341,7 @@ begin
 p:=p||'11';
 
 wwv_flow_api.create_page_process(
-  p_id     => 49415614323100190891 + wwv_flow_api.g_id_offset,
+  p_id     => 49413210703278502540 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_flow_step_id => 11,
   p_process_sequence=> 30,
@@ -1318,7 +1371,7 @@ begin
 p:=p||':P11_USERNAME := apex_authentication.get_login_username_cookie;';
 
 wwv_flow_api.create_page_process(
-  p_id     => 49415614120828190891 + wwv_flow_api.g_id_offset,
+  p_id     => 49413210501006502540 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_flow_step_id => 11,
   p_process_sequence=> 10,
@@ -1362,7 +1415,7 @@ prompt  ...breadcrumbs
 begin
  
 wwv_flow_api.create_menu (
-  p_id=> 98831291279174464511 + wwv_flow_api.g_id_offset,
+  p_id=> 98828887659352776160 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_name=> ' Breadcrumb');
  
@@ -1371,15 +1424,15 @@ null;
 end;
 /
 
-prompt  ...page templates for application: 26483
+prompt  ...page templates for application: 26482
 --
 --application/shared_components/user_interface/templates/page/login
-prompt  ......Page template 98831279174362464489
+prompt  ......Page template 98828875554540776138
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831279174362464489 + wwv_flow_api.g_id_offset
+  p_id => 98828875554540776138 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'Login'
@@ -1459,12 +1512,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/minimal_page
-prompt  ......Page template 98831279281638464491
+prompt  ......Page template 98828875661816776140
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831279281638464491 + wwv_flow_api.g_id_offset
+  p_id => 98828875661816776140 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'Minimal Page'
@@ -1585,12 +1638,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/no_tabs_left_sidebar
-prompt  ......Page template 98831279381502464491
+prompt  ......Page template 98828875761680776140
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831279381502464491 + wwv_flow_api.g_id_offset
+  p_id => 98828875761680776140 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'No Tabs - Left Sidebar'
@@ -1713,12 +1766,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/no_tabs_left_and_right_sidebar
-prompt  ......Page template 98831279461176464491
+prompt  ......Page template 98828875841354776140
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831279461176464491 + wwv_flow_api.g_id_offset
+  p_id => 98828875841354776140 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'No Tabs - Left and Right Sidebar'
@@ -1845,12 +1898,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/no_tabs_no_sidebar
-prompt  ......Page template 98831279565012464491
+prompt  ......Page template 98828875945190776140
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831279565012464491 + wwv_flow_api.g_id_offset
+  p_id => 98828875945190776140 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'No Tabs - No Sidebar'
@@ -1979,12 +2032,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/no_tabs_right_sidebar
-prompt  ......Page template 98831279684519464491
+prompt  ......Page template 98828876064697776140
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831279684519464491 + wwv_flow_api.g_id_offset
+  p_id => 98828876064697776140 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'No Tabs - Right Sidebar'
@@ -2107,12 +2160,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/one_level_tabs_content_frame
-prompt  ......Page template 98831279762342464492
+prompt  ......Page template 98828876142520776141
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831279762342464492 + wwv_flow_api.g_id_offset
+  p_id => 98828876142520776141 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'One Level Tabs - Content Frame'
@@ -2253,12 +2306,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/one_level_tabs_left_sidebar
-prompt  ......Page template 98831279889552464492
+prompt  ......Page template 98828876269730776141
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831279889552464492 + wwv_flow_api.g_id_offset
+  p_id => 98828876269730776141 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'One Level Tabs - Left Sidebar'
@@ -2391,12 +2444,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/one_level_tabs_left_and_right_sidebar
-prompt  ......Page template 98831279975618464492
+prompt  ......Page template 98828876355796776141
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831279975618464492 + wwv_flow_api.g_id_offset
+  p_id => 98828876355796776141 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'One Level Tabs - Left and Right Sidebar'
@@ -2533,12 +2586,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/one_level_tabs_no_sidebar
-prompt  ......Page template 98831280065018464492
+prompt  ......Page template 98828876445196776141
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831280065018464492 + wwv_flow_api.g_id_offset
+  p_id => 98828876445196776141 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'One Level Tabs - No Sidebar'
@@ -2658,12 +2711,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/one_level_tabs_right_sidebar
-prompt  ......Page template 98831280172431464492
+prompt  ......Page template 98828876552609776141
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831280172431464492 + wwv_flow_api.g_id_offset
+  p_id => 98828876552609776141 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'One Level Tabs - Right Sidebar'
@@ -2794,12 +2847,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/one_level_tabs_search_filter_bar
-prompt  ......Page template 98831280287750464494
+prompt  ......Page template 98828876667928776143
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831280287750464494 + wwv_flow_api.g_id_offset
+  p_id => 98828876667928776143 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'One Level Tabs - Search Filter Bar'
@@ -2931,12 +2984,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/one_level_tabs_wizard_page
-prompt  ......Page template 98831280360639464494
+prompt  ......Page template 98828876740817776143
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831280360639464494 + wwv_flow_api.g_id_offset
+  p_id => 98828876740817776143 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'One Level Tabs - Wizard Page'
@@ -3072,12 +3125,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/popup
-prompt  ......Page template 98831280473860464494
+prompt  ......Page template 98828876854038776143
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831280473860464494 + wwv_flow_api.g_id_offset
+  p_id => 98828876854038776143 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'Popup'
@@ -3177,12 +3230,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/printer_friendly
-prompt  ......Page template 98831280575871464494
+prompt  ......Page template 98828876956049776143
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831280575871464494 + wwv_flow_api.g_id_offset
+  p_id => 98828876956049776143 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'Printer Friendly'
@@ -3304,12 +3357,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/two_level_tabs_left_sidebar
-prompt  ......Page template 98831280686061464494
+prompt  ......Page template 98828877066239776143
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831280686061464494 + wwv_flow_api.g_id_offset
+  p_id => 98828877066239776143 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'Two Level Tabs - Left Sidebar'
@@ -3447,12 +3500,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/two_level_tabs_left_and_right_sidebar
-prompt  ......Page template 98831280790722464495
+prompt  ......Page template 98828877170900776144
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831280790722464495 + wwv_flow_api.g_id_offset
+  p_id => 98828877170900776144 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'Two Level Tabs - Left and Right Sidebar'
@@ -3595,12 +3648,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/two_level_tabs_no_sidebar
-prompt  ......Page template 98831280888119464495
+prompt  ......Page template 98828877268297776144
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831280888119464495 + wwv_flow_api.g_id_offset
+  p_id => 98828877268297776144 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'Two Level Tabs - No Sidebar'
@@ -3729,12 +3782,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/page/two_level_tabs_right_sidebar
-prompt  ......Page template 98831280987888464495
+prompt  ......Page template 98828877368066776144
  
 begin
  
 wwv_flow_api.create_template (
-  p_id => 98831280987888464495 + wwv_flow_api.g_id_offset
+  p_id => 98828877368066776144 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_theme_id => 26
  ,p_name => 'Two Level Tabs - Right Sidebar'
@@ -3873,12 +3926,12 @@ end;
 prompt  ...button templates
 --
 --application/shared_components/user_interface/templates/button/button
-prompt  ......Button Template 98831288262132464505
+prompt  ......Button Template 98828884642310776154
  
 begin
  
 wwv_flow_api.create_button_templates (
-  p_id => 98831288262132464505 + wwv_flow_api.g_id_offset
+  p_id => 98828884642310776154 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_template_name => 'Button'
  ,p_template => 
@@ -3895,12 +3948,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/button/interactive_report_button
-prompt  ......Button Template 98831288371888464505
+prompt  ......Button Template 98828884752066776154
  
 begin
  
 wwv_flow_api.create_button_templates (
-  p_id => 98831288371888464505 + wwv_flow_api.g_id_offset
+  p_id => 98828884752066776154 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_template_name => 'Interactive Report Button'
  ,p_template => 
@@ -3917,12 +3970,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/button/interactive_report_button_next
-prompt  ......Button Template 98831288483732464505
+prompt  ......Button Template 98828884863910776154
  
 begin
  
 wwv_flow_api.create_button_templates (
-  p_id => 98831288483732464505 + wwv_flow_api.g_id_offset
+  p_id => 98828884863910776154 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_template_name => 'Interactive Report Button (Next)'
  ,p_template => 
@@ -3940,12 +3993,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/button/large_button
-prompt  ......Button Template 98831288575721464505
+prompt  ......Button Template 98828884955899776154
  
 begin
  
 wwv_flow_api.create_button_templates (
-  p_id => 98831288575721464505 + wwv_flow_api.g_id_offset
+  p_id => 98828884955899776154 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_template_name => 'Large Button'
  ,p_template => 
@@ -3963,12 +4016,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/button/large_button_next
-prompt  ......Button Template 98831288677087464505
+prompt  ......Button Template 98828885057265776154
  
 begin
  
 wwv_flow_api.create_button_templates (
-  p_id => 98831288677087464505 + wwv_flow_api.g_id_offset
+  p_id => 98828885057265776154 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_template_name => 'Large Button (Next)'
  ,p_template => 
@@ -3986,12 +4039,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/button/large_button_previous
-prompt  ......Button Template 98831288764888464505
+prompt  ......Button Template 98828885145066776154
  
 begin
  
 wwv_flow_api.create_button_templates (
-  p_id => 98831288764888464505 + wwv_flow_api.g_id_offset
+  p_id => 98828885145066776154 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_template_name => 'Large Button (Previous)'
  ,p_template => 
@@ -4009,12 +4062,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/button/small_button
-prompt  ......Button Template 98831288879697464505
+prompt  ......Button Template 98828885259875776154
  
 begin
  
 wwv_flow_api.create_button_templates (
-  p_id => 98831288879697464505 + wwv_flow_api.g_id_offset
+  p_id => 98828885259875776154 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_template_name => 'Small Button'
  ,p_template => 
@@ -4031,12 +4084,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/button/add_button
-prompt  ......Button Template 98831288991006464505
+prompt  ......Button Template 98828885371184776154
  
 begin
  
 wwv_flow_api.create_button_templates (
-  p_id => 98831288991006464505 + wwv_flow_api.g_id_offset
+  p_id => 98828885371184776154 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_template_name => '[ + ] Add Button'
  ,p_template => 
@@ -4053,12 +4106,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/button/go_to_button
-prompt  ......Button Template 98831289061099464505
+prompt  ......Button Template 98828885441277776154
  
 begin
  
 wwv_flow_api.create_button_templates (
-  p_id => 98831289061099464505 + wwv_flow_api.g_id_offset
+  p_id => 98828885441277776154 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_template_name => '[ > ] Go To Button'
  ,p_template => 
@@ -4075,12 +4128,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/button/text_button
-prompt  ......Button Template 98831289172767464505
+prompt  ......Button Template 98828885552945776154
  
 begin
  
 wwv_flow_api.create_button_templates (
-  p_id => 98831289172767464505 + wwv_flow_api.g_id_offset
+  p_id => 98828885552945776154 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_template_name => '[ Text ] Button'
  ,p_template => 
@@ -4100,12 +4153,12 @@ end;
 prompt  ...region templates
 --
 --application/shared_components/user_interface/templates/region/accessible_region_with_heading
-prompt  ......region template 98831281079348464495
+prompt  ......region template 98828877459526776144
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831281079348464495 + wwv_flow_api.g_id_offset
+  p_id => 98828877459526776144 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4126,12 +4179,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/alert_region
-prompt  ......region template 98831281169823464497
+prompt  ......region template 98828877550001776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831281169823464497 + wwv_flow_api.g_id_offset
+  p_id => 98828877550001776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4163,12 +4216,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/borderless_region
-prompt  ......region template 98831281277313464497
+prompt  ......region template 98828877657491776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831281277313464497 + wwv_flow_api.g_id_offset
+  p_id => 98828877657491776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4201,12 +4254,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/borderless_region_no_heading
-prompt  ......region template 98831281367082464497
+prompt  ......region template 98828877747260776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831281367082464497 + wwv_flow_api.g_id_offset
+  p_id => 98828877747260776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4231,12 +4284,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/bracketed_region
-prompt  ......region template 98831281485617464497
+prompt  ......region template 98828877865795776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831281485617464497 + wwv_flow_api.g_id_offset
+  p_id => 98828877865795776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4269,12 +4322,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/breadcrumb_region
-prompt  ......region template 98831281564475464497
+prompt  ......region template 98828877944653776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831281564475464497 + wwv_flow_api.g_id_offset
+  p_id => 98828877944653776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4299,12 +4352,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/button_region_with_title
-prompt  ......region template 98831281673653464497
+prompt  ......region template 98828878053831776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831281673653464497 + wwv_flow_api.g_id_offset
+  p_id => 98828878053831776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4329,12 +4382,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/button_region_without_title
-prompt  ......region template 98831281760929464497
+prompt  ......region template 98828878141107776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831281760929464497 + wwv_flow_api.g_id_offset
+  p_id => 98828878141107776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4359,12 +4412,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/chart_list
-prompt  ......region template 98831281860784464497
+prompt  ......region template 98828878240962776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831281860784464497 + wwv_flow_api.g_id_offset
+  p_id => 98828878240962776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4396,12 +4449,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/chart_region
-prompt  ......region template 98831281989135464497
+prompt  ......region template 98828878369313776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831281989135464497 + wwv_flow_api.g_id_offset
+  p_id => 98828878369313776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4433,12 +4486,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/content_frame_body_container
-prompt  ......region template 98831282085689464497
+prompt  ......region template 98828878465867776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831282085689464497 + wwv_flow_api.g_id_offset
+  p_id => 98828878465867776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4467,12 +4520,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/div_region_with_id
-prompt  ......region template 98831282179217464497
+prompt  ......region template 98828878559395776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831282179217464497 + wwv_flow_api.g_id_offset
+  p_id => 98828878559395776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4493,12 +4546,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/form_region
-prompt  ......region template 98831282274108464497
+prompt  ......region template 98828878654286776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831282274108464497 + wwv_flow_api.g_id_offset
+  p_id => 98828878654286776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4530,12 +4583,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/hide_and_show_region
-prompt  ......region template 98831282375648464497
+prompt  ......region template 98828878755826776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831282375648464497 + wwv_flow_api.g_id_offset
+  p_id => 98828878755826776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4567,12 +4620,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/hide_and_show_region_hidden_first_borderless
-prompt  ......region template 98831282471409464497
+prompt  ......region template 98828878851587776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831282471409464497 + wwv_flow_api.g_id_offset
+  p_id => 98828878851587776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4604,12 +4657,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/hide_and_show_region_borderless
-prompt  ......region template 98831282571224464497
+prompt  ......region template 98828878951402776146
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831282571224464497 + wwv_flow_api.g_id_offset
+  p_id => 98828878951402776146 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4641,12 +4694,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/interactive_report_region
-prompt  ......region template 98831282683820464498
+prompt  ......region template 98828879063998776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831282683820464498 + wwv_flow_api.g_id_offset
+  p_id => 98828879063998776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4667,12 +4720,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/login_region
-prompt  ......region template 98831282783164464498
+prompt  ......region template 98828879163342776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831282783164464498 + wwv_flow_api.g_id_offset
+  p_id => 98828879163342776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4709,12 +4762,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/modal_region
-prompt  ......region template 98831282872172464498
+prompt  ......region template 98828879252350776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831282872172464498 + wwv_flow_api.g_id_offset
+  p_id => 98828879252350776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4747,12 +4800,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/navigation_region
-prompt  ......region template 98831282971155464498
+prompt  ......region template 98828879351333776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831282971155464498 + wwv_flow_api.g_id_offset
+  p_id => 98828879351333776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4780,12 +4833,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/navigation_region_heading_inside
-prompt  ......region template 98831283077874464498
+prompt  ......region template 98828879458052776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831283077874464498 + wwv_flow_api.g_id_offset
+  p_id => 98828879458052776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4813,12 +4866,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/region_without_buttons_and_titles
-prompt  ......region template 98831283167545464498
+prompt  ......region template 98828879547723776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831283167545464498 + wwv_flow_api.g_id_offset
+  p_id => 98828879547723776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4840,12 +4893,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/region_without_title
-prompt  ......region template 98831283268174464498
+prompt  ......region template 98828879648352776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831283268174464498 + wwv_flow_api.g_id_offset
+  p_id => 98828879648352776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4872,12 +4925,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/report_filter_single_row
-prompt  ......region template 98831283368445464498
+prompt  ......region template 98828879748623776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831283368445464498 + wwv_flow_api.g_id_offset
+  p_id => 98828879748623776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4908,12 +4961,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/report_list
-prompt  ......region template 98831283483168464498
+prompt  ......region template 98828879863346776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831283483168464498 + wwv_flow_api.g_id_offset
+  p_id => 98828879863346776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4944,12 +4997,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/reports_region
-prompt  ......region template 98831283585770464498
+prompt  ......region template 98828879965948776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831283585770464498 + wwv_flow_api.g_id_offset
+  p_id => 98828879965948776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -4981,12 +5034,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/reports_region_100_width
-prompt  ......region template 98831283682813464498
+prompt  ......region template 98828880062991776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831283682813464498 + wwv_flow_api.g_id_offset
+  p_id => 98828880062991776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -5018,12 +5071,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/reports_region_heading_inside
-prompt  ......region template 98831283760644464498
+prompt  ......region template 98828880140822776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831283760644464498 + wwv_flow_api.g_id_offset
+  p_id => 98828880140822776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -5055,12 +5108,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/scrollable_content_region
-prompt  ......region template 98831283887291464498
+prompt  ......region template 98828880267469776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831283887291464498 + wwv_flow_api.g_id_offset
+  p_id => 98828880267469776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -5090,12 +5143,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/search_filter_region
-prompt  ......region template 98831283990562464498
+prompt  ......region template 98828880370740776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831283990562464498 + wwv_flow_api.g_id_offset
+  p_id => 98828880370740776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -5126,12 +5179,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/sidebar_region
-prompt  ......region template 98831284063888464498
+prompt  ......region template 98828880444066776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831284063888464498 + wwv_flow_api.g_id_offset
+  p_id => 98828880444066776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -5224,12 +5277,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/sidebar_region_heading_inside
-prompt  ......region template 98831284174893464498
+prompt  ......region template 98828880555071776147
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831284174893464498 + wwv_flow_api.g_id_offset
+  p_id => 98828880555071776147 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -5260,12 +5313,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/wizard_buttons
-prompt  ......region template 98831284264261464500
+prompt  ......region template 98828880644439776149
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831284264261464500 + wwv_flow_api.g_id_offset
+  p_id => 98828880644439776149 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -5288,12 +5341,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/wizard_region
-prompt  ......region template 98831284359660464500
+prompt  ......region template 98828880739838776149
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831284359660464500 + wwv_flow_api.g_id_offset
+  p_id => 98828880739838776149 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -5321,12 +5374,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/wizard_region_with_icon
-prompt  ......region template 98831284468980464500
+prompt  ......region template 98828880849158776149
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831284468980464500 + wwv_flow_api.g_id_offset
+  p_id => 98828880849158776149 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -5354,12 +5407,12 @@ end;
 /
 
 --application/shared_components/user_interface/templates/region/jquery_modal_region_template
-prompt  ......region template 98831284591402464500
+prompt  ......region template 98828880971580776149
  
 begin
  
 wwv_flow_api.create_plug_template (
-  p_id => 98831284591402464500 + wwv_flow_api.g_id_offset
+  p_id => 98828880971580776149 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_layout => 'TABLE'
  ,p_template => 
@@ -5381,7 +5434,7 @@ end;
 prompt  ...List Templates
 --
 --application/shared_components/user_interface/templates/list/button_list
-prompt  ......list template 98831285759141464502
+prompt  ......list template 98828882139319776151
  
 begin
  
@@ -5415,7 +5468,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831285759141464502 + wwv_flow_api.g_id_offset,
+  p_id=>98828882139319776151 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -5433,7 +5486,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/dhtml_tree
-prompt  ......list template 98831285860576464502
+prompt  ......list template 98828882240754776151
  
 begin
  
@@ -5473,7 +5526,7 @@ t7:=t7||'<li><a href="#LINK#">#TEXT#</a></li>';
 t8:=t8||'<li><a href="#LINK#">#TEXT#</a></li>';
 
 wwv_flow_api.create_list_template (
-  p_id=>98831285860576464502 + wwv_flow_api.g_id_offset,
+  p_id=>98828882240754776151 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -5499,7 +5552,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/featured_list_with_subtext
-prompt  ......list template 98831285960749464502
+prompt  ......list template 98828882340927776151
  
 begin
  
@@ -5543,7 +5596,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831285960749464502 + wwv_flow_api.g_id_offset,
+  p_id=>98828882340927776151 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -5561,7 +5614,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/hierarchical_expanding
-prompt  ......list template 98831286060004464502
+prompt  ......list template 98828882440182776151
  
 begin
  
@@ -5601,7 +5654,7 @@ t7:=t7||'<li><img src="#IMAGE_PREFIX#themes/theme_13/plus.gif" onclick="htmldb_T
 t8:=t8||'<li><img src="#IMAGE_PREFIX#themes/theme_13/plus.gif" onclick="htmldb_ToggleWithImage(this,''#LIST_ITEM_ID#'')" align="middle" class="pseudoButtonInactive" alt="" /><a href="#LINK#">#TEXT#</a></li>';
 
 wwv_flow_api.create_list_template (
-  p_id=>98831286060004464502 + wwv_flow_api.g_id_offset,
+  p_id=>98828882440182776151 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -5627,7 +5680,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/horizontal_images_with_label_list
-prompt  ......list template 98831286168691464502
+prompt  ......list template 98828882548869776151
  
 begin
  
@@ -5671,7 +5724,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831286168691464502 + wwv_flow_api.g_id_offset,
+  p_id=>98828882548869776151 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -5691,7 +5744,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/horizontal_links_list
-prompt  ......list template 98831286288094464502
+prompt  ......list template 98828882668272776151
  
 begin
  
@@ -5725,7 +5778,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831286288094464502 + wwv_flow_api.g_id_offset,
+  p_id=>98828882668272776151 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -5743,7 +5796,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/horizontal_wizard_progress_list
-prompt  ......list template 98831286362943464503
+prompt  ......list template 98828882743121776152
  
 begin
  
@@ -5781,7 +5834,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831286362943464503 + wwv_flow_api.g_id_offset,
+  p_id=>98828882743121776152 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -5801,7 +5854,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/page_level_tabs_list
-prompt  ......list template 98831286487752464503
+prompt  ......list template 98828882867930776152
  
 begin
  
@@ -5835,7 +5888,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831286487752464503 + wwv_flow_api.g_id_offset,
+  p_id=>98828882867930776152 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -5855,7 +5908,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/pull_down_menu
-prompt  ......list template 98831286564652464503
+prompt  ......list template 98828882944830776152
  
 begin
  
@@ -5896,7 +5949,7 @@ t7:=t7||'<li class="dhtmlSubMenuS"><a href="#LINK#" class="dhtmlSubMenuS" onmous
 t8:=t8||'<li class="dhtmlSubMenuS"><a href="#LINK#" class="dhtmlSubMenuS" onmouseover="dhtml_MenuOpen(this,''#LIST_ITEM_ID#'',true,''Left'')"><span style="float:left;">#TEXT#</span><img class="t13MIMG" src="#IMAGE_PREFIX#menu_open_right2.gif" alt="" / ></a></li>';
 
 wwv_flow_api.create_list_template (
-  p_id=>98831286564652464503 + wwv_flow_api.g_id_offset,
+  p_id=>98828882944830776152 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -5922,7 +5975,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/pull_down_menu_with_image
-prompt  ......list template 98831286690463464503
+prompt  ......list template 98828883070641776152
  
 begin
  
@@ -5966,7 +6019,7 @@ t7:=t7||'<li class="dhtmlSubMenuS"><a href="#LINK#" class="dhtmlSubMenuS" onmous
 t8:=t8||'<li class="dhtmlSubMenuS"><a href="#LINK#" class="dhtmlSubMenuS" onmouseover="dhtml_MenuOpen(this,''S#LIST_ITEM_ID#'',true,''Left'')"><span style="float:left;">#TEXT#</span><img class="t13MIMG" src="#IMAGE_PREFIX#menu_open_right2.gif" /></a></li>';
 
 wwv_flow_api.create_list_template (
-  p_id=>98831286690463464503 + wwv_flow_api.g_id_offset,
+  p_id=>98828883070641776152 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -5992,7 +6045,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/search_filter_tabs
-prompt  ......list template 98831286789628464503
+prompt  ......list template 98828883169806776152
  
 begin
  
@@ -6026,7 +6079,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831286789628464503 + wwv_flow_api.g_id_offset,
+  p_id=>98828883169806776152 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -6044,7 +6097,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/tabbed_navigation_list
-prompt  ......list template 98831286875168464503
+prompt  ......list template 98828883255346776152
  
 begin
  
@@ -6078,7 +6131,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831286875168464503 + wwv_flow_api.g_id_offset,
+  p_id=>98828883255346776152 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -6098,7 +6151,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/vertical_images_list
-prompt  ......list template 98831286959337464503
+prompt  ......list template 98828883339515776152
  
 begin
  
@@ -6142,7 +6195,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831286959337464503 + wwv_flow_api.g_id_offset,
+  p_id=>98828883339515776152 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -6162,7 +6215,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/vertical_list_with_subtext_and_icon
-prompt  ......list template 98831287070682464503
+prompt  ......list template 98828883450860776152
  
 begin
  
@@ -6208,7 +6261,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831287070682464503 + wwv_flow_api.g_id_offset,
+  p_id=>98828883450860776152 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -6226,7 +6279,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/vertical_ordered_list
-prompt  ......list template 98831287173647464503
+prompt  ......list template 98828883553825776152
  
 begin
  
@@ -6260,7 +6313,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831287173647464503 + wwv_flow_api.g_id_offset,
+  p_id=>98828883553825776152 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -6278,7 +6331,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/vertical_sidebar_list
-prompt  ......list template 98831287291045464503
+prompt  ......list template 98828883671223776152
  
 begin
  
@@ -6312,7 +6365,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831287291045464503 + wwv_flow_api.g_id_offset,
+  p_id=>98828883671223776152 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -6330,7 +6383,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/vertical_unordered_list_with_bullets
-prompt  ......list template 98831287360825464503
+prompt  ......list template 98828883741003776152
  
 begin
  
@@ -6364,7 +6417,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831287360825464503 + wwv_flow_api.g_id_offset,
+  p_id=>98828883741003776152 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -6382,7 +6435,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/vertical_unordered_list_without_bullets
-prompt  ......list template 98831287476897464503
+prompt  ......list template 98828883857075776152
  
 begin
  
@@ -6416,7 +6469,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831287476897464503 + wwv_flow_api.g_id_offset,
+  p_id=>98828883857075776152 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -6434,7 +6487,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/list/wizard_progress_list_vertical
-prompt  ......list template 98831287586751464503
+prompt  ......list template 98828883966929776152
  
 begin
  
@@ -6468,7 +6521,7 @@ t6 := null;
 t7 := null;
 t8 := null;
 wwv_flow_api.create_list_template (
-  p_id=>98831287586751464503 + wwv_flow_api.g_id_offset,
+  p_id=>98828883966929776152 + wwv_flow_api.g_id_offset,
   p_flow_id=>wwv_flow.g_flow_id,
   p_list_template_current=>t,
   p_list_template_noncurrent=> t2,
@@ -6488,7 +6541,7 @@ end;
 prompt  ...report templates
 --
 --application/shared_components/user_interface/templates/report/borderless_report
-prompt  ......report template 98831284682757464500
+prompt  ......report template 98828881062935776149
  
 begin
  
@@ -6504,7 +6557,7 @@ c2 := null;
 c3 := null;
 c4 := null;
 wwv_flow_api.create_row_template (
-  p_id=> 98831284682757464500 + wwv_flow_api.g_id_offset,
+  p_id=> 98828881062935776149 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_row_template_name=> 'Borderless Report',
   p_row_template1=> c1,
@@ -6563,7 +6616,7 @@ begin
  
 begin
 wwv_flow_api.create_row_template_patch (
-  p_id => 98831284682757464500 + wwv_flow_api.g_id_offset,
+  p_id => 98828881062935776149 + wwv_flow_api.g_id_offset,
   p_row_template_before_first =>'<tr>',
   p_row_template_after_last =>'</tr>');
 exception when others then null;
@@ -6574,7 +6627,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/report/comment_bubbles
-prompt  ......report template 98831284773706464500
+prompt  ......report template 98828881153884776149
  
 begin
  
@@ -6598,7 +6651,7 @@ c2 := null;
 c3 := null;
 c4 := null;
 wwv_flow_api.create_row_template (
-  p_id=> 98831284773706464500 + wwv_flow_api.g_id_offset,
+  p_id=> 98828881153884776149 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_row_template_name=> 'Comment Bubbles',
   p_row_template1=> c1,
@@ -6636,7 +6689,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/report/fixed_headers
-prompt  ......report template 98831284886368464500
+prompt  ......report template 98828881266546776149
  
 begin
  
@@ -6652,7 +6705,7 @@ c2 := null;
 c3 := null;
 c4 := null;
 wwv_flow_api.create_row_template (
-  p_id=> 98831284886368464500 + wwv_flow_api.g_id_offset,
+  p_id=> 98828881266546776149 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_row_template_name=> 'Fixed Headers',
   p_row_template1=> c1,
@@ -6715,7 +6768,7 @@ begin
  
 begin
 wwv_flow_api.create_row_template_patch (
-  p_id => 98831284886368464500 + wwv_flow_api.g_id_offset,
+  p_id => 98828881266546776149 + wwv_flow_api.g_id_offset,
   p_row_template_before_first =>'<tr>',
   p_row_template_after_last =>'</tr>'||unistr('\000a')||
 '');
@@ -6727,7 +6780,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/report/horizontal_border
-prompt  ......report template 98831284980921464500
+prompt  ......report template 98828881361099776149
  
 begin
  
@@ -6743,7 +6796,7 @@ c2 := null;
 c3 := null;
 c4 := null;
 wwv_flow_api.create_row_template (
-  p_id=> 98831284980921464500 + wwv_flow_api.g_id_offset,
+  p_id=> 98828881361099776149 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_row_template_name=> 'Horizontal Border',
   p_row_template1=> c1,
@@ -6802,7 +6855,7 @@ begin
  
 begin
 wwv_flow_api.create_row_template_patch (
-  p_id => 98831284980921464500 + wwv_flow_api.g_id_offset,
+  p_id => 98828881361099776149 + wwv_flow_api.g_id_offset,
   p_row_template_before_first =>'<tr>',
   p_row_template_after_last =>'</tr>');
 exception when others then null;
@@ -6813,7 +6866,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/report/one_column_unordered_list
-prompt  ......report template 98831285065753464500
+prompt  ......report template 98828881445931776149
  
 begin
  
@@ -6829,7 +6882,7 @@ c2 := null;
 c3 := null;
 c4 := null;
 wwv_flow_api.create_row_template (
-  p_id=> 98831285065753464500 + wwv_flow_api.g_id_offset,
+  p_id=> 98828881445931776149 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_row_template_name=> 'One Column Unordered List',
   p_row_template1=> c1,
@@ -6882,7 +6935,7 @@ begin
  
 begin
 wwv_flow_api.create_row_template_patch (
-  p_id => 98831285065753464500 + wwv_flow_api.g_id_offset,
+  p_id => 98828881445931776149 + wwv_flow_api.g_id_offset,
   p_row_template_before_first =>'OMIT',
   p_row_template_after_last =>'OMIT');
 exception when others then null;
@@ -6893,7 +6946,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/report/search_results_report_select_link_text_link_target_detail1_detail2_last_modified
-prompt  ......report template 98831285171374464500
+prompt  ......report template 98828881551552776149
  
 begin
  
@@ -6913,7 +6966,7 @@ c2 := null;
 c3 := null;
 c4 := null;
 wwv_flow_api.create_row_template (
-  p_id=> 98831285171374464500 + wwv_flow_api.g_id_offset,
+  p_id=> 98828881551552776149 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_row_template_name=> 'Search Results Report (SELECT link_text, link_target, detail1, detail2, last_modified)',
   p_row_template1=> c1,
@@ -6951,7 +7004,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/report/standard
-prompt  ......report template 98831285284348464500
+prompt  ......report template 98828881664526776149
  
 begin
  
@@ -6967,7 +7020,7 @@ c2 := null;
 c3 := null;
 c4 := null;
 wwv_flow_api.create_row_template (
-  p_id=> 98831285284348464500 + wwv_flow_api.g_id_offset,
+  p_id=> 98828881664526776149 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_row_template_name=> 'Standard',
   p_row_template1=> c1,
@@ -7026,7 +7079,7 @@ begin
  
 begin
 wwv_flow_api.create_row_template_patch (
-  p_id => 98831285284348464500 + wwv_flow_api.g_id_offset,
+  p_id => 98828881664526776149 + wwv_flow_api.g_id_offset,
   p_row_template_before_first =>'<tr>',
   p_row_template_after_last =>'</tr>');
 exception when others then null;
@@ -7037,7 +7090,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/report/standard_alternative
-prompt  ......report template 98831285389631464502
+prompt  ......report template 98828881769809776151
  
 begin
  
@@ -7054,7 +7107,7 @@ c3:=c3||'<td #ALIGNMENT# headers="#COLUMN_HEADER_NAME#" class="uOddRow">#COLUMN_
 
 c4 := null;
 wwv_flow_api.create_row_template (
-  p_id=> 98831285389631464502 + wwv_flow_api.g_id_offset,
+  p_id=> 98828881769809776151 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_row_template_name=> 'Standard - Alternative',
   p_row_template1=> c1,
@@ -7111,7 +7164,7 @@ begin
  
 begin
 wwv_flow_api.create_row_template_patch (
-  p_id => 98831285389631464502 + wwv_flow_api.g_id_offset,
+  p_id => 98828881769809776151 + wwv_flow_api.g_id_offset,
   p_row_template_before_first =>'<tr>',
   p_row_template_after_last =>'</tr>'||unistr('\000a')||
 '');
@@ -7123,7 +7176,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/report/two_column_portlet
-prompt  ......report template 98831285464767464502
+prompt  ......report template 98828881844945776151
  
 begin
  
@@ -7146,7 +7199,7 @@ c2 := null;
 c3 := null;
 c4 := null;
 wwv_flow_api.create_row_template (
-  p_id=> 98831285464767464502 + wwv_flow_api.g_id_offset,
+  p_id=> 98828881844945776151 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_row_template_name=> 'Two Column Portlet',
   p_row_template1=> c1,
@@ -7177,7 +7230,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/report/value_attribute_pairs
-prompt  ......report template 98831285575351464502
+prompt  ......report template 98828881955529776151
  
 begin
  
@@ -7200,7 +7253,7 @@ c2 := null;
 c3 := null;
 c4 := null;
 wwv_flow_api.create_row_template (
-  p_id=> 98831285575351464502 + wwv_flow_api.g_id_offset,
+  p_id=> 98828881955529776151 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_row_template_name=> 'Value Attribute Pairs',
   p_row_template1=> c1,
@@ -7231,7 +7284,7 @@ end;
 /
 
 --application/shared_components/user_interface/templates/report/value_attribute_pairs_left_aligned
-prompt  ......report template 98831285679053464502
+prompt  ......report template 98828882059231776151
  
 begin
  
@@ -7254,7 +7307,7 @@ c2 := null;
 c3 := null;
 c4 := null;
 wwv_flow_api.create_row_template (
-  p_id=> 98831285679053464502 + wwv_flow_api.g_id_offset,
+  p_id=> 98828882059231776151 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_row_template_name=> 'Value Attribute Pairs - Left Aligned',
   p_row_template1=> c1,
@@ -7287,13 +7340,13 @@ end;
 prompt  ...label templates
 --
 --application/shared_components/user_interface/templates/label/hidden_label_read_by_screen_reader
-prompt  ......label template 98831287674951464503
+prompt  ......label template 98828884055129776152
  
 begin
  
 begin
 wwv_flow_api.create_field_template (
-  p_id=> 98831287674951464503 + wwv_flow_api.g_id_offset,
+  p_id=> 98828884055129776152 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_template_name=>'Hidden label, read by screen reader',
   p_template_body1=>'<label for="#CURRENT_ITEM_NAME#" tabindex="999" class="hideMeButHearMe">',
@@ -7313,13 +7366,13 @@ end;
 /
 
 --application/shared_components/user_interface/templates/label/no_label
-prompt  ......label template 98831287760440464505
+prompt  ......label template 98828884140618776154
  
 begin
  
 begin
 wwv_flow_api.create_field_template (
-  p_id=> 98831287760440464505 + wwv_flow_api.g_id_offset,
+  p_id=> 98828884140618776154 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_template_name=>'No Label',
   p_template_body1=>'<span class="uNoLabel">',
@@ -7339,13 +7392,13 @@ end;
 /
 
 --application/shared_components/user_interface/templates/label/optional
-prompt  ......label template 98831287865392464505
+prompt  ......label template 98828884245570776154
  
 begin
  
 begin
 wwv_flow_api.create_field_template (
-  p_id=> 98831287865392464505 + wwv_flow_api.g_id_offset,
+  p_id=> 98828884245570776154 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_template_name=>'Optional',
   p_template_body1=>'<label for="#CURRENT_ITEM_NAME#" class="uOptional">',
@@ -7365,13 +7418,13 @@ end;
 /
 
 --application/shared_components/user_interface/templates/label/optional_with_help
-prompt  ......label template 98831287967782464505
+prompt  ......label template 98828884347960776154
  
 begin
  
 begin
 wwv_flow_api.create_field_template (
-  p_id=> 98831287967782464505 + wwv_flow_api.g_id_offset,
+  p_id=> 98828884347960776154 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_template_name=>'Optional with help',
   p_template_body1=>'<label for="#CURRENT_ITEM_NAME#" class="uOptional"><a class="uHelpLink" href="javascript:popupFieldHelp(''#CURRENT_ITEM_ID#'',''&SESSION.'')" tabindex="999">',
@@ -7391,13 +7444,13 @@ end;
 /
 
 --application/shared_components/user_interface/templates/label/required
-prompt  ......label template 98831288064158464505
+prompt  ......label template 98828884444336776154
  
 begin
  
 begin
 wwv_flow_api.create_field_template (
-  p_id=> 98831288064158464505 + wwv_flow_api.g_id_offset,
+  p_id=> 98828884444336776154 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_template_name=>'Required',
   p_template_body1=>'<label for="#CURRENT_ITEM_NAME#" class="uRequired">',
@@ -7417,13 +7470,13 @@ end;
 /
 
 --application/shared_components/user_interface/templates/label/required_with_help
-prompt  ......label template 98831288160493464505
+prompt  ......label template 98828884540671776154
  
 begin
  
 begin
 wwv_flow_api.create_field_template (
-  p_id=> 98831288160493464505 + wwv_flow_api.g_id_offset,
+  p_id=> 98828884540671776154 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_template_name=>'Required with help',
   p_template_body1=>'<label for="#CURRENT_ITEM_NAME#" class="uRequired"><a class="uHelpLink" href="javascript:popupFieldHelp(''#CURRENT_ITEM_ID#'',''&SESSION.'')" tabindex="999">',
@@ -7445,13 +7498,13 @@ end;
 prompt  ...breadcrumb templates
 --
 --application/shared_components/user_interface/templates/breadcrumb/breadcrumb_menu
-prompt  ......template 98831289262183464505
+prompt  ......template 98828885642361776154
  
 begin
  
 begin
 wwv_flow_api.create_menu_template (
-  p_id=> 98831289262183464505 + wwv_flow_api.g_id_offset,
+  p_id=> 98828885642361776154 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_name=>'Breadcrumb Menu',
   p_before_first=>'<ul>',
@@ -7473,13 +7526,13 @@ end;
 /
 
 --application/shared_components/user_interface/templates/breadcrumb/hierarchical_menu
-prompt  ......template 98831289372669464506
+prompt  ......template 98828885752847776155
  
 begin
  
 begin
 wwv_flow_api.create_menu_template (
-  p_id=> 98831289372669464506 + wwv_flow_api.g_id_offset,
+  p_id=> 98828885752847776155 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_name=>'Hierarchical Menu',
   p_before_first=>'<ul class="t1HierarchicalMenu">',
@@ -7503,13 +7556,13 @@ end;
 --application/shared_components/user_interface/templates/popuplov
 prompt  ...popup list of values templates
 --
-prompt  ......template 98831289781460464506
+prompt  ......template 98828886161638776155
  
 begin
  
 begin
 wwv_flow_api.create_popup_lov_template (
-  p_id=> 98831289781460464506 + wwv_flow_api.g_id_offset,
+  p_id=> 98828886161638776155 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_popup_icon=>'#IMAGE_PREFIX#f_spacer.gif',
   p_popup_icon_attr=>'alt="#LIST_OF_VALUES#" title="#LIST_OF_VALUES#" class="uPopupLOVIcon"',
@@ -7560,13 +7613,13 @@ end;
 prompt  ...calendar templates
 --
 --application/shared_components/user_interface/templates/calendar/calendar
-prompt  ......template 98831289480429464506
+prompt  ......template 98828885860607776155
  
 begin
  
 begin
 wwv_flow_api.create_calendar_template(
-  p_id=> 98831289480429464506 + wwv_flow_api.g_id_offset,
+  p_id=> 98828885860607776155 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_cal_template_name=>'Calendar',
   p_translate_this_template=> 'N',
@@ -7695,13 +7748,13 @@ end;
 /
 
 --application/shared_components/user_interface/templates/calendar/calendar_alternative
-prompt  ......template 98831289570893464506
+prompt  ......template 98828885951071776155
  
 begin
  
 begin
 wwv_flow_api.create_calendar_template(
-  p_id=> 98831289570893464506 + wwv_flow_api.g_id_offset,
+  p_id=> 98828885951071776155 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_cal_template_name=>'Calendar - Alternative',
   p_translate_this_template=> 'N',
@@ -7830,13 +7883,13 @@ end;
 /
 
 --application/shared_components/user_interface/templates/calendar/small_calendar
-prompt  ......template 98831289684799464506
+prompt  ......template 98828886064977776155
  
 begin
  
 begin
 wwv_flow_api.create_calendar_template(
-  p_id=> 98831289684799464506 + wwv_flow_api.g_id_offset,
+  p_id=> 98828886064977776155 + wwv_flow_api.g_id_offset,
   p_flow_id=> wwv_flow.g_flow_id,
   p_cal_template_name=>'Small Calendar',
   p_translate_this_template=> 'N',
@@ -7961,42 +8014,42 @@ end;
 prompt  ...application themes
 --
 --application/shared_components/user_interface/themes/productivity_applications
-prompt  ......theme 98831289881244464508
+prompt  ......theme 98828886261422776157
 begin
 wwv_flow_api.create_theme (
-  p_id =>98831289881244464508 + wwv_flow_api.g_id_offset,
+  p_id =>98828886261422776157 + wwv_flow_api.g_id_offset,
   p_flow_id =>wwv_flow.g_flow_id,
   p_theme_id  => 26,
   p_theme_name=>'Productivity Applications',
   p_ui_type_name=>'DESKTOP',
   p_is_locked=>false,
-  p_default_page_template=>98831280065018464492 + wwv_flow_api.g_id_offset,
-  p_error_template=>98831279565012464491 + wwv_flow_api.g_id_offset,
-  p_printer_friendly_template=>98831280575871464494 + wwv_flow_api.g_id_offset,
+  p_default_page_template=>98828876445196776141 + wwv_flow_api.g_id_offset,
+  p_error_template=>98828875945190776140 + wwv_flow_api.g_id_offset,
+  p_printer_friendly_template=>98828876956049776143 + wwv_flow_api.g_id_offset,
   p_breadcrumb_display_point=>'REGION_POSITION_01',
   p_sidebar_display_point=>'REGION_POSITION_02',
-  p_login_template=>98831279174362464489 + wwv_flow_api.g_id_offset,
-  p_default_button_template=>98831288262132464505 + wwv_flow_api.g_id_offset,
-  p_default_region_template=>98831283585770464498 + wwv_flow_api.g_id_offset,
-  p_default_chart_template =>98831281989135464497 + wwv_flow_api.g_id_offset,
-  p_default_form_template  =>98831282274108464497 + wwv_flow_api.g_id_offset,
-  p_default_reportr_template   =>98831283585770464498 + wwv_flow_api.g_id_offset,
-  p_default_tabform_template=>98831283585770464498 + wwv_flow_api.g_id_offset,
-  p_default_wizard_template=>98831284359660464500 + wwv_flow_api.g_id_offset,
-  p_default_menur_template=>98831281564475464497 + wwv_flow_api.g_id_offset,
-  p_default_listr_template=>98831281860784464497 + wwv_flow_api.g_id_offset,
-  p_default_irr_template=>98831282683820464498 + wwv_flow_api.g_id_offset,
-  p_default_report_template   =>98831285284348464500 + wwv_flow_api.g_id_offset,
-  p_default_label_template=>98831287865392464505 + wwv_flow_api.g_id_offset,
-  p_default_menu_template=>98831289262183464505 + wwv_flow_api.g_id_offset,
-  p_default_calendar_template=>98831289480429464506 + wwv_flow_api.g_id_offset,
-  p_default_list_template=>98831287360825464503 + wwv_flow_api.g_id_offset,
-  p_default_option_label=>98831287967782464505 + wwv_flow_api.g_id_offset,
+  p_login_template=>98828875554540776138 + wwv_flow_api.g_id_offset,
+  p_default_button_template=>98828884642310776154 + wwv_flow_api.g_id_offset,
+  p_default_region_template=>98828879965948776147 + wwv_flow_api.g_id_offset,
+  p_default_chart_template =>98828878369313776146 + wwv_flow_api.g_id_offset,
+  p_default_form_template  =>98828878654286776146 + wwv_flow_api.g_id_offset,
+  p_default_reportr_template   =>98828879965948776147 + wwv_flow_api.g_id_offset,
+  p_default_tabform_template=>98828879965948776147 + wwv_flow_api.g_id_offset,
+  p_default_wizard_template=>98828880739838776149 + wwv_flow_api.g_id_offset,
+  p_default_menur_template=>98828877944653776146 + wwv_flow_api.g_id_offset,
+  p_default_listr_template=>98828878240962776146 + wwv_flow_api.g_id_offset,
+  p_default_irr_template=>98828879063998776147 + wwv_flow_api.g_id_offset,
+  p_default_report_template   =>98828881664526776149 + wwv_flow_api.g_id_offset,
+  p_default_label_template=>98828884245570776154 + wwv_flow_api.g_id_offset,
+  p_default_menu_template=>98828885642361776154 + wwv_flow_api.g_id_offset,
+  p_default_calendar_template=>98828885860607776155 + wwv_flow_api.g_id_offset,
+  p_default_list_template=>98828883741003776152 + wwv_flow_api.g_id_offset,
+  p_default_option_label=>98828884347960776154 + wwv_flow_api.g_id_offset,
   p_default_header_template=>null + wwv_flow_api.g_id_offset,
   p_default_footer_template=>null + wwv_flow_api.g_id_offset,
   p_default_page_transition=>'NONE',
   p_default_popup_transition=>'NONE',
-  p_default_required_label=>98831288160493464505 + wwv_flow_api.g_id_offset);
+  p_default_required_label=>98828884540671776154 + wwv_flow_api.g_id_offset);
 end;
 /
  
@@ -8031,7 +8084,7 @@ end;
 /
 
 --application/shared_components/globalization/language
-prompt  ...Language Maps for Application 26483
+prompt  ...Language Maps for Application 26482
 --
  
 begin
@@ -8058,12 +8111,12 @@ prompt  ...report layouts
 prompt  ...authentication schemes
 --
 --application/shared_components/security/authentication/application_express_authentication
-prompt  ......authentication 98831290160231464509
+prompt  ......authentication 98828886540409776158
  
 begin
  
 wwv_flow_api.create_authentication (
-  p_id => 98831290160231464509 + wwv_flow_api.g_id_offset
+  p_id => 98828886540409776158 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_name => 'Application Express Authentication'
  ,p_scheme_type => 'NATIVE_APEX_ACCOUNTS'
@@ -8092,32 +8145,14 @@ prompt  ...plugins
 begin
  
 wwv_flow_api.create_plugin (
-  p_id => 12047995616880774 + wwv_flow_api.g_id_offset
+  p_id => 143115008746138050 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_plugin_type => 'PROCESS TYPE'
  ,p_name => 'GPV_IR_TO_MSEXCEL'
  ,p_display_name => 'GPV Interactive Report to MSExcel'
  ,p_supported_ui_types => 'DESKTOP'
  ,p_image_prefix => '#PLUGIN_PREFIX#'
- ,p_plsql_code => 
-'function gpv_get_xlsx_from_ir ('||unistr('\000a')||
-'    p_process in apex_plugin.t_process,'||unistr('\000a')||
-'    p_plugin  in apex_plugin.t_plugin )'||unistr('\000a')||
-'    return apex_plugin.t_process_exec_result'||unistr('\000a')||
-'is'||unistr('\000a')||
-'begin'||unistr('\000a')||
-' XML_TO_XSLX.download_file(p_app_id      => :APP_ID,'||unistr('\000a')||
-'                              p_page_id  => :APP_PAGE_ID,'||unistr('\000a')||
-'                              p_max_rows => p_process.attribute_05);'||unistr('\000a')||
-'  return null;'||unistr('\000a')||
-'exception'||unistr('\000a')||
-'  when others then'||unistr('\000a')||
-'    --Afte'||
-'r adding\removing columns internal APEX views will not be refreshed - another download attempt needed'||unistr('\000a')||
-'    apex_application.g_print_success_message := apex_application.g_print_success_message||chr(10)||p_process.attribute_06;'||unistr('\000a')||
-'   return null;'||unistr('\000a')||
-'end gpv_get_xlsx_from_ir;'
- ,p_execution_function => 'gpv_get_xlsx_from_ir'
+ ,p_execution_function => 'IR_TO_MSEXCEL.get_xlsx_from_ir'
  ,p_substitute_attributes => true
  ,p_subscribe_plugin_settings => true
  ,p_help_text => '<p>'||unistr('\000a')||
@@ -8133,39 +8168,91 @@ wwv_flow_api.create_plugin (
 '	<br />'||unistr('\000a')||
 '	&nbsp;</p>'||unistr('\000a')||
 ''
- ,p_version_identifier => '1.0'
+ ,p_version_identifier => '1.9'
  ,p_about_url => 'http://glebovpavel.github.io/plugin'
+ ,p_plugin_comment => 'Do not move ExcelTemplate.zip to the WEB-Server !!!'||unistr('\000a')||
+'Package IR_TO_MSEXCEL need to be installed on each oracle-scheme where the plugin is used.'
   );
 wwv_flow_api.create_plugin_attribute (
-  p_id => 12055521253962934 + wwv_flow_api.g_id_offset
+  p_id => 70078628500541944 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
- ,p_plugin_id => 12047995616880774 + wwv_flow_api.g_id_offset
+ ,p_plugin_id => 143115008746138050 + wwv_flow_api.g_id_offset
  ,p_attribute_scope => 'COMPONENT'
  ,p_attribute_sequence => 5
  ,p_display_sequence => 50
  ,p_prompt => 'Maximum Rows'
- ,p_attribute_type => 'INTEGER'
- ,p_is_required => true
- ,p_default_value => '1000'
+ ,p_attribute_type => 'TEXT'
+ ,p_is_required => false
+ ,p_default_value => '500'
  ,p_is_translatable => false
- ,p_help_text => 'Rows grater this value will be not exported. '||unistr('\000a')||
-'To export <b>all rows</b>  set value of 1000000000. '
+ ,p_help_text => 'Rows greater than this value will not be exported. '||unistr('\000a')||
+'To export all the rows set the value to 1000000000.'||unistr('\000a')||
+'When empty - value from Interactive Report Attributes-> Maximum Row Count will be used.'||unistr('\000a')||
+''
   );
 wwv_flow_api.create_plugin_attribute (
-  p_id => 9584286054054086 + wwv_flow_api.g_id_offset
+  p_id => 137640160192148270 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
- ,p_plugin_id => 12047995616880774 + wwv_flow_api.g_id_offset
+ ,p_plugin_id => 143115008746138050 + wwv_flow_api.g_id_offset
  ,p_attribute_scope => 'COMPONENT'
  ,p_attribute_sequence => 6
  ,p_display_sequence => 60
- ,p_prompt => '"try again" message'
+ ,p_prompt => 'Download when click on (JQuery Selector)'
  ,p_attribute_type => 'TEXT'
  ,p_is_required => false
- ,p_default_value => 'Report refreshed. Please try download again.'
  ,p_is_translatable => false
- ,p_help_text => 'After adding\removing columns report need to be refreshed through pressing “Go”-Button.  When user did not do that, download stopped. After that another download attempt needed.'||unistr('\000a')||
-'In this case, this message will be displayed.'||unistr('\000a')||
-''
+ ,p_help_text => 'Download XLSX process stared when user clicks on items with this jquery selector.'
+  );
+wwv_flow_api.create_plugin_attribute (
+  p_id => 137618456915362253 + wwv_flow_api.g_id_offset
+ ,p_flow_id => wwv_flow.g_flow_id
+ ,p_plugin_id => 143115008746138050 + wwv_flow_api.g_id_offset
+ ,p_attribute_scope => 'COMPONENT'
+ ,p_attribute_sequence => 7
+ ,p_display_sequence => 70
+ ,p_prompt => 'Download Type'
+ ,p_attribute_type => 'SELECT LIST'
+ ,p_is_required => true
+ ,p_default_value => 'E'
+ ,p_is_translatable => false
+  );
+wwv_flow_api.create_plugin_attr_value (
+  p_id => 137618848720366084 + wwv_flow_api.g_id_offset
+ ,p_flow_id => wwv_flow.g_flow_id
+ ,p_plugin_attribute_id => 137618456915362253 + wwv_flow_api.g_id_offset
+ ,p_display_sequence => 10
+ ,p_display_value => 'Excel XLSX'
+ ,p_return_value => 'E'
+  );
+wwv_flow_api.create_plugin_attr_value (
+  p_id => 137619245054367752 + wwv_flow_api.g_id_offset
+ ,p_flow_id => wwv_flow.g_flow_id
+ ,p_plugin_attribute_id => 137618456915362253 + wwv_flow_api.g_id_offset
+ ,p_display_sequence => 20
+ ,p_display_value => 'XML (Debug)'
+ ,p_return_value => 'X'
+  );
+wwv_flow_api.create_plugin_attr_value (
+  p_id => 137619641387369433 + wwv_flow_api.g_id_offset
+ ,p_flow_id => wwv_flow.g_flow_id
+ ,p_plugin_attribute_id => 137618456915362253 + wwv_flow_api.g_id_offset
+ ,p_display_sequence => 30
+ ,p_display_value => 'Debug TXT'
+ ,p_return_value => 'T'
+  );
+wwv_flow_api.create_plugin_attribute (
+  p_id => 137642260460409179 + wwv_flow_api.g_id_offset
+ ,p_flow_id => wwv_flow.g_flow_id
+ ,p_plugin_id => 143115008746138050 + wwv_flow_api.g_id_offset
+ ,p_attribute_scope => 'COMPONENT'
+ ,p_attribute_sequence => 10
+ ,p_display_sequence => 10
+ ,p_prompt => 'Replace standard IR XLS download'
+ ,p_attribute_type => 'CHECKBOX'
+ ,p_is_required => false
+ ,p_default_value => 'Y'
+ ,p_is_translatable => false
+ ,p_help_text => 'Replace standard IR download XLS menu functionality to download XLSX feature. '
   );
 null;
  
@@ -8211,34 +8298,24 @@ wwv_flow_api.g_varchar2_table(32) := '0151724A51B2CBE9C8C3628F9C43ADDCAA6B110FA2
 wwv_flow_api.g_varchar2_table(33) := 'F2B83F3847FA7C2C8F01EA5D4F57D780298D2E9E75F0890EBD9DF41632DFB1CA4F465976008F7C98D6A4C62CF67378DCCE74C05E413DBBA0FB779B52FB81A6B8FFAE29F1CAC5036E6D905CBDF01820814432564B48ED0BAC4291CFBCAEC48343220BF5C2';
 wwv_flow_api.g_varchar2_table(34) := '675E9C461DF17D3BF996747D56B7663CD22237F2F53136229261A5D3BEA4F4A89EDAF90566956AB6BF668CB053505745E9779FAE53DE8BB3770DED471E7E524DA6F429AE1C34DB945DFD51F70F3EF9D49DAF3F1E648252FAD585A54B69712BD8BA44859F';
 wwv_flow_api.g_varchar2_table(35) := 'B3D556CD1657DD95B7DA08AF2924FEC0C2CDA4C7B3F36D4F1CC3E893F98992E042DCD498A6DF7CB08F3A37E6C6A5FC7EEE312A0B41C3F9F987CF9CB36B8BE2E631F839CE760DBE763FEF6ABB9CA276EE2213F7CA3F8489FE1994BD1BEF4763AE55FAEE74';
-wwv_flow_api.g_varchar2_table(36) := '1E2FA5EDE94F18311F3B23DDF109504B0304140000000800B9650C4502C73C465B030000730B00000D000000786C2F7374796C65732E786D6CCD565F6FD330107F0689EF60E5BD7552DAB196963FDDA8840468D286B4075EDCC469ADF94FE4B85B33C477';
-wwv_flow_api.g_varchar2_table(37) := 'E71C27719A6CB03190C84BEECEBEDFDDFDCEBE64FE762F38BAA63A674A2E8268180688CA58254C6E16C1D78BD5E03840B92132215C49BA080A9A076FDFBC783ECF4DC1E9F99652830042E68B606B4C36C3388FB754907CA8322A6125555A1003AADEE03C';
-wwv_flow_api.g_varchar2_table(38) := 'D39424B975121C8FC2F0080BC264E01066227E000878E8AB5D368895C888616BC699294AAC008978F6712395266B0EA9EEA331896B6CABF4E1058BB5CA556A860087559AB298F6B39CE2290624A8FAD95CEEC44A981CC56A27CD221895D6DA8CDCEB6302';
-wwv_flow_api.g_varchar2_table(39) := '4C1E8D03E4D23E5109642370828BE21BDACE8478FD2EC0F7FA4D0EFD926428C4B080C7F9CC719542A9A44AB693416599B32BA96EE4CA2E016099A1DB692510F35B744D382C4500E94CB1E24A2303AC40486F964450B7F78470B6D6AC59498960BC706BA3';
-wwv_flow_api.g_varchar2_table(40) := 'C66A79AD3D04834ED475621BBE97C81AFF071995524D27E3BCD35B67ACD0E0C419AAE50A2CA8922F8A0C129470393C322C3FDC75A349118D265DEF4A7279AD954EA8EE64569BAB009CA6A6AE5AB3CDB6518CCA4AB1743046895A4B18D92849781DD9C1DD';
-wwv_flow_api.g_varchar2_table(41) := '0B8DD001B8D52A786487019462B670990FFAC76442F714CEF5D1B86909068FC7E5D3C88E8D98727E6E235EA63D4AF669EB3285F62AC95AB47456A243730AFEB56374AF232259C68B2F3BB1A67A55DE586FB56DF6DAB2F4F2FA7BCE365250D97238D3CAD0';
-wwv_flow_api.g_varchar2_table(42) := 'D8945338AC3924F53E3BA10D8BED2106F21A26B3C60971155FD1763D789F3AE65A6C79FA5ACCBDFA63E6D03E7D0A851E21EAF312DDC14B7467A0D1A352ED37AD87EB27F83F439EFC0564678529DFC4419DC7473D44F72DE936AA89D969483FE0C1C9B6BA';
-wwv_flow_api.g_varchar2_table(43) := '8DDF7F5A47F84693EC82EE9DF35669760B48F64497F3E4AE02EC197E5C59E1D3CB7A441DE1611D3025EF2DC35FC5CBB433C4BA23CCAF2049ECC7EF8B6D396FDD95F58E71C36473F77EEF14769D3AA3C1A594ECEBA9E0F718FB2FD5CEB3044B684A76DC5C';
-wwv_flow_api.g_varchar2_table(44) := 'D48B10D0CB9F69C27662DAEC3A63D7CA54BBBCFCC9763D3AAAC2009F9FF2F2735CCA68A7D922F8FE61F96A7AFA61351A1C87CBE3C1F8259D0CA693E5E960323E599E9EAEA6E1283CF9D1FAC37BC2FF9D20FED30548B39CC356ED0AAF0B392F6D552595E2';
-wwv_flow_api.g_varchar2_table(45) := '4B69062FE4EFE86D8A9A63FFB7FCE627504B030414000600080000002100A69888AE7E010000FD02000010000801646F6350726F70732F6170702E786D6C20A2040128A00001000000000000000000000000000000000000000000000000000000000000';
-wwv_flow_api.g_varchar2_table(46) := '00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
-wwv_flow_api.g_varchar2_table(47) := '00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
-wwv_flow_api.g_varchar2_table(48) := '00000000000000000000000000000000000000000000000000009C92414FE3301085EF48FB1F22DFA9D32E5AA1CA314285158745546ACB9E8D33692C5C3BF20C51BBBF9E49A2D214F6C46D66DED3F3E7B1D5CD7EE7B31612BA180A319DE422836063E9C2';
-wwv_flow_api.g_varchar2_table(49) := 'B6109BF5EFCB6B912199501A1F0314E200286EF48F0BB54CB181440E30E3888085A8899AB994686BD8199CB01C58A962DA19E2366D65AC2A67E12EDAB71D0492B33CFF25614F104A282F9B8F403124CE5BFA6E68196DC787CFEB43C3C05ADD368D77D610';
-wwv_flow_api.g_varchar2_table(50) := 'DF523F3A9B22C68AB2FBBD05AFE458544CB702FB961C1D74AEE4B8552B6B3C2C385857C62328791AA80730DDD296C625D4AAA5790B9662CAD0FDE3B5CD44F662103A9C42B426391388B13ADBD0F4B56F9092FE1BD32BD600844AB26118F6E5D83BAEDD95';
-wwv_flow_api.g_varchar2_table(51) := '9EF6062ECE8D5DC000C2C239E2DA91077CAA9626D17F88A763E29E61E01D70183F862F78FD8DF9A04FD17F5C78C54DB38E7786E0B8BAF3A15AD52641C9DB3EEAA7817AE0AD25DF852C6A13B6501E3D5F85EEA19F87DFACA75793FC67CE6F389A2979FAB7';
-wwv_flow_api.g_varchar2_table(52) := 'FA1D0000FFFF0300504B0304140006000800000021007D21B1C23C0100005102000011000801646F6350726F70732F636F72652E786D6C20A2040128A0000100000000000000000000000000000000000000000000000000000000000000000000000000';
-wwv_flow_api.g_varchar2_table(53) := '00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
-wwv_flow_api.g_varchar2_table(54) := '00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
-wwv_flow_api.g_varchar2_table(55) := '000000000000000000000000000000000000008C925F4BC33014C5DF05BF43C97B9B3F8529A1ED40654F0E04278A6F21B9DB8A4D1A9268B76F6FDA6EB5833DF878EF39F9DD732F299607DD243FE07CDD9A12D18CA0048C6C556D76257ADBACD27B94F820';
-wwv_flow_api.g_varchar2_table(56) := '8C124D6BA04447F06859DDDE14D272D93A7871AD05176AF0492419CFA52DD13E04CB31F6720F5AF82C3A4C14B7ADD322C4D2EDB015F24BEC003342165843104A04817B606A27223A21959C90F6DB350340490C0D6830C1639A51FCE70DE0B4BFFA605066';
-wwv_flow_api.g_varchar2_table(57) := '4E5D87A38D3B9DE2CED94A8EE2E43EF87A32765D9775F91023E6A7F863FDFC3AAC9AD6A6BF950454154A72E94084D655059E17F1708DF0611D6FBCAD413D1CA37EA5A7E4107784804A62003EC63D2BEFF9E3D366852A462849294B49BE618CB33B4E169F';
-wwv_flow_api.g_varchar2_table(58) := 'FDC88BF77DA0B1A14F83FF41A4AC27E639276C463C03C6DC979FA0FA050000FFFF0300504B01022D001400060008000000210062EE9D6861010000900400001300000000000000000000000000000000005B436F6E74656E745F54797065735D2E786D6C';
-wwv_flow_api.g_varchar2_table(59) := '504B01022D0014000600080000002100B5553023F50000004C0200000B000000000000000000000000009A0300005F72656C732F2E72656C73504B01022D0014000600080000002100F04C147DD30000004A0100002300000000000000000000000000C0';
-wwv_flow_api.g_varchar2_table(60) := '060000786C2F776F726B7368656574732F5F72656C732F7368656574312E786D6C2E72656C73504B01023F001400000008001578084583AFEAE3B5050000E31B00001300240000000000000020000000D4070000786C2F7468656D652F7468656D65312E';
-wwv_flow_api.g_varchar2_table(61) := '786D6C0A0020000000000001001800FFC87F6000B3CF01E8A17F6000B3CF015F235B6000B3CF01504B01023F00140000000800B9650C4502C73C465B030000730B00000D00240000000000000020000000BA0D0000786C2F7374796C65732E786D6C0A00';
-wwv_flow_api.g_varchar2_table(62) := '20000000000001001800BAFCFA3112B6CF01D6DD0D81D48ACF01D6DD0D81D48ACF01504B01022D0014000600080000002100A69888AE7E010000FD020000100000000000000000000000000040110000646F6350726F70732F6170702E786D6C504B0102';
-wwv_flow_api.g_varchar2_table(63) := '2D00140006000800000021007D21B1C23C010000510200001100000000000000000000000000F4130000646F6350726F70732F636F72652E786D6C504B050600000000070007000C020000671600000000';
+wwv_flow_api.g_varchar2_table(36) := '1E2FA5EDE94F18311F3B23DDF109504B030414000600080000002100A69888AE7E010000FD02000010000801646F6350726F70732F6170702E786D6C20A2040128A000010000000000000000000000000000000000000000000000000000000000000000';
+wwv_flow_api.g_varchar2_table(37) := '00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
+wwv_flow_api.g_varchar2_table(38) := '00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
+wwv_flow_api.g_varchar2_table(39) := '0000000000000000000000000000000000000000000000009C92414FE3301085EF48FB1F22DFA9D32E5AA1CA314285158745546ACB9E8D33692C5C3BF20C51BBBF9E49A2D214F6C46D66DED3F3E7B1D5CD7EE7B31612BA180A319DE422836063E9C2B610';
+wwv_flow_api.g_varchar2_table(40) := '9BF5EFCB6B912199501A1F0314E200286EF48F0BB54CB181440E30E3888085A8899AB994686BD8199CB01C58A962DA19E2366D65AC2A67E12EDAB71D0492B33CFF25614F104A282F9B8F403124CE5BFA6E68196DC787CFEB43C3C05ADD368D77D610DF52';
+wwv_flow_api.g_varchar2_table(41) := '3F3A9B22C68AB2FBBD05AFE458544CB702FB961C1D74AEE4B8552B6B3C2C385857C62328791AA80730DDD296C625D4AAA5790B9662CAD0FDE3B5CD44F662103A9C42B426391388B13ADBD0F4B56F9092FE1BD32BD600844AB26118F6E5D83BAEDD959EF6';
+wwv_flow_api.g_varchar2_table(42) := '062ECE8D5DC000C2C239E2DA91077CAA9626D17F88A763E29E61E01D70183F862F78FD8DF9A04FD17F5C78C54DB38E7786E0B8BAF3A15AD52641C9DB3EEAA7817AE0AD25DF852C6A13B6501E3D5F85EEA19F87DFACA75793FC67CE6F389A2979FAB7FA1D';
+wwv_flow_api.g_varchar2_table(43) := '0000FFFF0300504B0304140006000800000021007D21B1C23C0100005102000011000801646F6350726F70732F636F72652E786D6C20A2040128A00001000000000000000000000000000000000000000000000000000000000000000000000000000000';
+wwv_flow_api.g_varchar2_table(44) := '00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
+wwv_flow_api.g_varchar2_table(45) := '00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000';
+wwv_flow_api.g_varchar2_table(46) := '00000000000000000000000000000000008C925F4BC33014C5DF05BF43C97B9B3F8529A1ED40654F0E04278A6F21B9DB8A4D1A9268B76F6FDA6EB5833DF878EF39F9DD732F299607DD243FE07CDD9A12D18CA0048C6C556D76257ADBACD27B94F8208C12';
+wwv_flow_api.g_varchar2_table(47) := '4D6BA04447F06859DDDE14D272D93A7871AD05176AF0492419CFA52DD13E04CB31F6720F5AF82C3A4C14B7ADD322C4D2EDB015F24BEC003342165843104A04817B606A27223A21959C90F6DB350340490C0D6830C1639A51FCE70DE0B4BFFA6050664E5D';
+wwv_flow_api.g_varchar2_table(48) := '87A38D3B9DE2CED94A8EE2E43EF87A32765D9775F91023E6A7F863FDFC3AAC9AD6A6BF950454154A72E94084D655059E17F1708DF0611D6FBCAD413D1CA37EA5A7E4107784804A62003EC63D2BEFF9E3D366852A462849294B49BE618CB33B4E169FFDC8';
+wwv_flow_api.g_varchar2_table(49) := '8BF77DA0B1A14F83FF41A4AC27E639276C463C03C6DC979FA0FA050000FFFF0300504B01022D001400060008000000210062EE9D6861010000900400001300000000000000000000000000000000005B436F6E74656E745F54797065735D2E786D6C504B';
+wwv_flow_api.g_varchar2_table(50) := '01022D0014000600080000002100B5553023F50000004C0200000B000000000000000000000000009A0300005F72656C732F2E72656C73504B01022D0014000600080000002100F04C147DD30000004A0100002300000000000000000000000000C00600';
+wwv_flow_api.g_varchar2_table(51) := '00786C2F776F726B7368656574732F5F72656C732F7368656574312E786D6C2E72656C73504B01023F001400000008001578084583AFEAE3B5050000E31B00001300240000000000000020000000D4070000786C2F7468656D652F7468656D65312E786D';
+wwv_flow_api.g_varchar2_table(52) := '6C0A0020000000000001001800FFC87F6000B3CF01E8A17F6000B3CF015F235B6000B3CF01504B01022D0014000600080000002100A69888AE7E010000FD0200001000000000000000000000000000BA0D0000646F6350726F70732F6170702E786D6C50';
+wwv_flow_api.g_varchar2_table(53) := '4B01022D00140006000800000021007D21B1C23C0100005102000011000000000000000000000000006E100000646F6350726F70732F636F72652E786D6C504B05060000000006000600AD010000E11200000000';
 null;
  
 end;
@@ -8248,9 +8325,9 @@ end;
 begin
  
 wwv_flow_api.create_plugin_file (
-  p_id => 4840452839393338 + wwv_flow_api.g_id_offset
+  p_id => 137611164845658510 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
- ,p_plugin_id => 12047995616880774 + wwv_flow_api.g_id_offset
+ ,p_plugin_id => 143115008746138050 + wwv_flow_api.g_id_offset
  ,p_file_name => 'ExcelTemplate.zip'
  ,p_mime_type => 'application/zip'
  ,p_file_content => wwv_flow_api.g_varchar2_table
@@ -8274,7 +8351,7 @@ declare
 begin
 s := null;
 wwv_flow_api.create_install (
-  p_id => 49415622747772197728 + wwv_flow_api.g_id_offset,
+  p_id => 49413219127950509377 + wwv_flow_api.g_id_offset,
   p_flow_id => wwv_flow.g_flow_id,
   p_include_in_export_yn => 'Y',
   p_deinstall_script_clob => s,
@@ -8314,9 +8391,9 @@ s:=s||'CREATE TABLE  "EBA_DEMO_IR_PROJECTS"'||unistr('\000a')||
 '';
 
 wwv_flow_api.create_install_script(
-  p_id => 49416021843710253371 + wwv_flow_api.g_id_offset,
+  p_id => 49413618223888565020 + wwv_flow_api.g_id_offset,
   p_flow_id => wwv_flow.g_flow_id,
-  p_install_id=> 49415622747772197728 + wwv_flow_api.g_id_offset,
+  p_install_id=> 49413219127950509377 + wwv_flow_api.g_id_offset,
   p_name => 'DDL',
   p_sequence=> 10,
   p_script_type=> 'INSTALL',
@@ -8535,9 +8612,9 @@ s:=s||'g'',''0'',''500'');'||unistr('\000a')||
 '';
 
 wwv_flow_api.create_install_script(
-  p_id => 49416381036053298454 + wwv_flow_api.g_id_offset,
+  p_id => 49413977416231610103 + wwv_flow_api.g_id_offset,
   p_flow_id => wwv_flow.g_flow_id,
-  p_install_id=> 49415622747772197728 + wwv_flow_api.g_id_offset,
+  p_install_id=> 49413219127950509377 + wwv_flow_api.g_id_offset,
   p_name => 'TABLE_INSERTS',
   p_sequence=> 30,
   p_script_type=> 'INSTALL',
@@ -8558,71 +8635,56 @@ declare
     l_clob clob;
     l_length number := 1;
 begin
-s:=s||'/**********************************************'||unistr('\000a')||
-'**'||unistr('\000a')||
-'** Author: Pavel Glebov'||unistr('\000a')||
-'** Date: 08-2014'||unistr('\000a')||
-'**'||unistr('\000a')||
-'** This all in one install script contains headrs and bodies of 3 packages'||unistr('\000a')||
-'**'||unistr('\000a')||
-'** IR_TO_XML.sql '||unistr('\000a')||
-'** AS_ZIP.sql  '||unistr('\000a')||
-'** XML_TO_XSLX.sql'||unistr('\000a')||
-'**'||unistr('\000a')||
-'**********************************************/'||unistr('\000a')||
-'CREATE OR REPLACE package ir_to_xml as    '||unistr('\000a')||
-'  --ver 1.3.'||unistr('\000a')||
+s:=s||'CREATE OR REPLACE package ir_to_xml as    '||unistr('\000a')||
+'  --ver 1.1.'||unistr('\000a')||
 '  -- download interactive report as PDF'||unistr('\000a')||
-'  PROCEDURE get_report_xml(';
-
-s:=s||'p_app_id          IN NUMBER,'||unistr('\000a')||
+'  PROCEDURE get_report_xml(p_app_id          IN NUMBER,'||unistr('\000a')||
 '                           p_page_id         in number,                                '||unistr('\000a')||
 '                           p_return_type     IN CHAR DEFAULT ''X'', -- "Q" for debug information "X" for XML-Data'||unistr('\000a')||
-'                           p_get_page_items  IN CHAR DEFAULT ''N'', -- Y,N - include page items in XML'||unistr('\000a')||
-'                           p_items_list      in varchar2,         -- "';
+'                           p_get_page_items  IN ';
 
-s:=s||'," delimetered list of items that for including in XML'||unistr('\000a')||
+s:=s||'CHAR DEFAULT ''N'', -- Y,N - include page items in XML'||unistr('\000a')||
+'                           p_items_list      in varchar2,         -- "," delimetered list of items that for including in XML'||unistr('\000a')||
 '                           p_collection_name IN VARCHAR2,         -- name of APEX COLLECTION to save XML, when null - download as file'||unistr('\000a')||
-'                           p_max_rows        IN NUMBER            -- maximum rows for export                            '||unistr('\000a')||
+'                           p_max_rows        IN NUMBER            -- maximum rows for e';
+
+s:=s||'xport                            '||unistr('\000a')||
 '                          );'||unistr('\000a')||
 '  '||unistr('\000a')||
 '  --return debug information'||unistr('\000a')||
-'  function get_log return cl';
-
-s:=s||'ob;'||unistr('\000a')||
+'  function get_log return clob;'||unistr('\000a')||
 '  '||unistr('\000a')||
 '  -- get XML '||unistr('\000a')||
 '  function get_report_xml(p_app_id          IN NUMBER,'||unistr('\000a')||
 '                          p_page_id         in number,                                '||unistr('\000a')||
 '                          p_get_page_items  IN CHAR DEFAULT ''N'', -- Y,N - include page items in XML'||unistr('\000a')||
-'                          p_items_list      in varchar2,         -- "," delimetered list of items that for including in XML'||unistr('\000a')||
-'             ';
+'              ';
 
-s:=s||'             p_max_rows        IN NUMBER            -- maximum rows for export                            '||unistr('\000a')||
+s:=s||'            p_items_list      in varchar2,         -- "," delimetered list of items that for including in XML'||unistr('\000a')||
+'                          p_max_rows        IN NUMBER            -- maximum rows for export                            '||unistr('\000a')||
 '                         )'||unistr('\000a')||
 '  return xmltype;     '||unistr('\000a')||
 '                              '||unistr('\000a')||
 'END IR_TO_XML;'||unistr('\000a')||
-''||unistr('\000a')||
 '/'||unistr('\000a')||
 ''||unistr('\000a')||
 ''||unistr('\000a')||
 'CREATE OR REPLACE package body ir_to_xml as   '||unistr('\000a')||
 '  '||unistr('\000a')||
-'  subtype largevarchar2 is varchar2(32000); '||unistr('\000a')||
+'  subtype largevarch';
+
+s:=s||'ar2 is varchar2(32000); '||unistr('\000a')||
 ' '||unistr('\000a')||
 '  cursor cur_highlight(p_report_id in APEX_APPLICATION_PAGE_IR_RPT.REPORT_ID%TYPE,'||unistr('\000a')||
-'            ';
-
-s:=s||'           p_delimetered_column_list in varchar2) '||unistr('\000a')||
+'                       p_delimetered_column_list in varchar2) '||unistr('\000a')||
 '  IS'||unistr('\000a')||
-'  select replace(replace(replace(replace(condition_sql,''#APXWS_EXPR#'',''''''''||CONDITION_EXPRESSION||''''''''),''#APXWS_EXPR2#'',''''''''||CONDITION_EXPRESSION2||''''''''),''#APXWS_HL_ID#'',''1''),''#APXWS_CC_EXPR#'',''"''||CONDITION_COLUMN_NAME||''"'')  condition_sql,'||unistr('\000a')||
+'  select replace(replace(replace(replace(condition_sql,''#APXWS_EXPR#'',''''''''||CONDITION_EXPRESSION||''''''''),''#APXWS_EXPR2#'',''''''''||CONDITION_EXPRESSION2||''''''''),''#APXWS_HL_ID#'',''1''),''#APXWS_CC_EXPR#'',''"''||CONDITION_COLUMN_NAME||';
+
+s:=s||'''"'')  condition_sql,'||unistr('\000a')||
 '       CONDITION_COLUMN_NAME,'||unistr('\000a')||
 '       CONDITION_ENABLED,'||unistr('\000a')||
 '       HIGHLIGHT_ROW_COLOR,'||unistr('\000a')||
-'       HIGHLIGHT_';
-
-s:=s||'ROW_FONT_COLOR,'||unistr('\000a')||
+'       HIGHLIGHT_ROW_FONT_COLOR,'||unistr('\000a')||
 '       HIGHLIGHT_CELL_COLOR,'||unistr('\000a')||
 '       HIGHLIGHT_CELL_FONT_COLOR,'||unistr('\000a')||
 '       rownum COND_NUMBER,'||unistr('\000a')||
@@ -8630,58 +8692,58 @@ s:=s||'ROW_FONT_COLOR,'||unistr('\000a')||
 '  from APEX_APPLICATION_PAGE_IR_COND'||unistr('\000a')||
 '  where condition_type = ''Highlight'''||unistr('\000a')||
 '    and report_id = p_report_id'||unistr('\000a')||
-'    and condition_enabled = ''Yes'''||unistr('\000a')||
-'    and instr('':''||p_delimetered_column_list||'':'','':''||CONDITION_COLUMN_NAME||'':'') > 0'||unistr('\000a')||
-'    order by --rows highlight';
+'    and condition_enabled = ';
 
-s:=s||'s first '||unistr('\000a')||
+s:=s||'''Yes'''||unistr('\000a')||
+'    and instr('':''||p_delimetered_column_list||'':'','':''||CONDITION_COLUMN_NAME||'':'') > 0'||unistr('\000a')||
+'    order by --rows highlights first '||unistr('\000a')||
 '           nvl2(HIGHLIGHT_ROW_COLOR,1,0) desc, '||unistr('\000a')||
 '           nvl2(HIGHLIGHT_ROW_FONT_COLOR,1,0) desc,'||unistr('\000a')||
 '           HIGHLIGHT_SEQUENCE;'||unistr('\000a')||
 '  '||unistr('\000a')||
 '  type t_col_names is table of apex_application_page_ir_col.report_label%type index by apex_application_page_ir_col.column_alias%type;'||unistr('\000a')||
-'  type t_col_format_mask is table of APEX_APPLICATION_PAGE_IR_COMP.computation_format_mask%TYPE index by APEX_APPLICATION_';
+'';
 
-s:=s||'PAGE_IR_COL.column_alias%TYPE;'||unistr('\000a')||
+s:=s||'  type t_col_format_mask is table of APEX_APPLICATION_PAGE_IR_COMP.computation_format_mask%TYPE index by APEX_APPLICATION_PAGE_IR_COL.column_alias%TYPE;'||unistr('\000a')||
 '  type t_header_alignment is table of APEX_APPLICATION_PAGE_IR_COL.heading_alignment%TYPE index by APEX_APPLICATION_PAGE_IR_COL.column_alias%TYPE;'||unistr('\000a')||
-'  type t_column_alignment is table of apex_application_page_ir_col.column_alignment%type index by apex_application_page_ir_col.column_alias%type;'||unistr('\000a')||
-'  type t_column_types is table of apex_application_page_ir_col.column_type%t';
+'  type t_column_alignment is table of apex_application_page_ir_col.column_alignment%type index by ap';
 
-s:=s||'ype index by apex_application_page_ir_col.column_alias%type;'||unistr('\000a')||
+s:=s||'ex_application_page_ir_col.column_alias%type;'||unistr('\000a')||
+'  type t_column_types is table of apex_application_page_ir_col.column_type%type index by apex_application_page_ir_col.column_alias%type;'||unistr('\000a')||
 '  type t_highlight is table of cur_highlight%ROWTYPE index by binary_integer;'||unistr('\000a')||
 '  '||unistr('\000a')||
 '  type ir_report is record'||unistr('\000a')||
 '   ('||unistr('\000a')||
 '    report                    apex_ir.t_report,'||unistr('\000a')||
-'    ir_data                   APEX_APPLICATION_PAGE_IR_RPT%ROWTYPE,'||unistr('\000a')||
-'    displayed_columns         APEX_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
-'    break_on                  APEX_APPLICATION_';
+'    ir_data                   APEX_APPLICATION_PAGE_IR_R';
 
-s:=s||'GLOBAL.VC_ARR2,'||unistr('\000a')||
+s:=s||'PT%ROWTYPE,'||unistr('\000a')||
+'    displayed_columns         APEX_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
+'    break_on                  APEX_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
 '    break_really_on           APEX_APPLICATION_GLOBAL.VC_ARR2, -- "break on" except hidden columns'||unistr('\000a')||
 '    sum_columns_on_break      APEX_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
 '    avg_columns_on_break      APEX_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
-'    max_columns_on_break      APEX_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
-'    min_columns_on_break      APEX_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
-'    median_columns_on_break   APE';
+'    max_columns_on_break      APEX_AP';
 
-s:=s||'X_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
+s:=s||'PLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
+'    min_columns_on_break      APEX_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
+'    median_columns_on_break   APEX_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
 '    count_columns_on_break    APEX_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
 '    count_distnt_col_on_break APEX_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
 '    skipped_columns           INTEGER default 0, -- when scpecial coluns like apxws_row_pk is used'||unistr('\000a')||
-'    start_with                INTEGER default 0, -- position of first displayed column in query'||unistr('\000a')||
-'    end_with                  INTEGER default 0, ';
+'    start_with         ';
 
-s:=s||'-- position of last displayed column in query'||unistr('\000a')||
+s:=s||'       INTEGER default 0, -- position of first displayed column in query'||unistr('\000a')||
+'    end_with                  INTEGER default 0, -- position of last displayed column in query'||unistr('\000a')||
 '    agg_cols_cnt              INTEGER default 0, '||unistr('\000a')||
 '    column_names              t_col_names,       -- column names in report header'||unistr('\000a')||
 '    col_format_mask           t_col_format_mask, -- format like $3849,56'||unistr('\000a')||
-'    row_highlight             t_highlight,'||unistr('\000a')||
+'    row_highlight          ';
+
+s:=s||'   t_highlight,'||unistr('\000a')||
 '    col_highlight             t_highlight,'||unistr('\000a')||
 '    header_alignment          t_header_alignment,'||unistr('\000a')||
-'    column_al';
-
-s:=s||'ignment          t_column_alignment,'||unistr('\000a')||
+'    column_alignment          t_column_alignment,'||unistr('\000a')||
 '    column_types              t_column_types  '||unistr('\000a')||
 '   );  '||unistr('\000a')||
 ''||unistr('\000a')||
@@ -8693,15 +8755,15 @@ s:=s||'ignment          t_column_alignment,'||unistr('\000a')||
 ''||unistr('\000a')||
 '  l_report    ir_report;   '||unistr('\000a')||
 '  v_debug     clob;'||unistr('\000a')||
-'  ------------------------------------------------------------------------------'||unistr('\000a')||
+'  -----------------------------';
+
+s:=s||'-------------------------------------------------'||unistr('\000a')||
 '  function get_log'||unistr('\000a')||
 '  return clob'||unistr('\000a')||
 '  is'||unistr('\000a')||
 '  begin'||unistr('\000a')||
 '    return v_debug;'||unistr('\000a')||
-'  end ';
-
-s:=s||' get_log;'||unistr('\000a')||
+'  end  get_log;'||unistr('\000a')||
 '  ------------------------------------------------------------------------------'||unistr('\000a')||
 '  procedure add(p_clob in out nocopy clob,p_str varchar2)'||unistr('\000a')||
 '  is'||unistr('\000a')||
@@ -8710,47 +8772,47 @@ s:=s||' get_log;'||unistr('\000a')||
 '      dbms_lob.writeappend(p_clob,length(p_str),p_str);'||unistr('\000a')||
 '    end if;  '||unistr('\000a')||
 '  end;'||unistr('\000a')||
-'  ------------------------------------------------------------------------------'||unistr('\000a')||
+'  -------';
+
+s:=s||'-----------------------------------------------------------------------'||unistr('\000a')||
 '  procedure log(p_message in varchar2)'||unistr('\000a')||
 '  is'||unistr('\000a')||
-'  begi';
-
-s:=s||'n'||unistr('\000a')||
+'  begin'||unistr('\000a')||
 '    add(v_debug,p_message||chr(10));'||unistr('\000a')||
 '    apex_debug_message.log_message(p_message => substr(p_message,1,32767),'||unistr('\000a')||
 '                                   p_enabled => false,'||unistr('\000a')||
 '                                   p_level   => 4);'||unistr('\000a')||
 '  end log; '||unistr('\000a')||
-'  ------------------------------------------------------------------------------'||unistr('\000a')||
-'  function bcoll(p_font_color    in varchar2 default null,'||unistr('\000a')||
-'                 p_back_col';
+'  -------------------------------------------';
 
-s:=s||'or    in varchar2 default null,'||unistr('\000a')||
+s:=s||'-----------------------------------'||unistr('\000a')||
+'  function bcoll(p_font_color    in varchar2 default null,'||unistr('\000a')||
+'                 p_back_color    in varchar2 default null,'||unistr('\000a')||
 '                 p_align         in varchar2 default null,'||unistr('\000a')||
 '                 p_width         in varchar2 default null,'||unistr('\000a')||
 '                 p_column_alias  IN VARCHAR2 DEFAULT NULL,'||unistr('\000a')||
 '                 p_colmn_type    IN VARCHAR2 DEFAULT NULL,'||unistr('\000a')||
-'                 p_value         IN VARCHAR2 DEFAULT NULL,'||unistr('\000a')||
-'                 p_format_mask   IN VARCHAR2 DEFAULT NULL) '||unistr('\000a')||
-'  return varc';
+'          ';
 
-s:=s||'har2'||unistr('\000a')||
+s:=s||'       p_value         IN VARCHAR2 DEFAULT NULL,'||unistr('\000a')||
+'                 p_format_mask   IN VARCHAR2 DEFAULT NULL) '||unistr('\000a')||
+'  return varchar2'||unistr('\000a')||
 '  is'||unistr('\000a')||
 '    v_str varchar2(500);'||unistr('\000a')||
 '  begin'||unistr('\000a')||
 '    v_str := v_str||''<CELL '';'||unistr('\000a')||
 '    if p_column_alias is not null then v_str := v_str||''column-alias="''||p_column_alias||''" ''; end if;'||unistr('\000a')||
 '    if p_font_color is not null then v_str := v_str||''color="''||p_font_color||''" ''; end if;'||unistr('\000a')||
-'    if p_colmn_type is not null then V_STR := V_STR||''data-type="''||p_colmn_type||''" ''; end if;'||unistr('\000a')||
-'    if p_back_color is not null then';
+'    if p_c';
 
-s:=s||' v_str := v_str||''background-color="''||p_back_color||''" ''; end if;'||unistr('\000a')||
+s:=s||'olmn_type is not null then V_STR := V_STR||''data-type="''||p_colmn_type||''" ''; end if;'||unistr('\000a')||
+'    if p_back_color is not null then v_str := v_str||''background-color="''||p_back_color||''" ''; end if;'||unistr('\000a')||
 '    if p_align is not null then V_STR := V_STR||''align="''||lower(p_align)||''" ''; end if;'||unistr('\000a')||
 '    IF p_width IS NOT NULL THEN v_str := v_str||''width="''||p_width||''" ''; END IF;        '||unistr('\000a')||
-'    IF p_value IS NOT NULL THEN v_str := v_str||''value="''||p_value||''" ''; END IF;'||unistr('\000a')||
-'    if p_format_mask is not null then v_str := v_str||''format_mask="''||p';
+'    IF p_value IS NOT NULL THEN ';
 
-s:=s||'_format_mask||''" ''; end if;'||unistr('\000a')||
+s:=s||'v_str := v_str||''value="''||p_value||''" ''; END IF;'||unistr('\000a')||
+'    if p_format_mask is not null then v_str := v_str||''format_mask="''||p_format_mask||''" ''; end if;'||unistr('\000a')||
 '    v_str := v_str||''>''; '||unistr('\000a')||
 '    '||unistr('\000a')||
 '    return v_str;'||unistr('\000a')||
@@ -8762,21 +8824,21 @@ s:=s||'_format_mask||''" ''; end if;'||unistr('\000a')||
 '  begin'||unistr('\000a')||
 '   return ''</CELL>'';'||unistr('\000a')||
 '  end ecoll;'||unistr('\000a')||
-'    ------------------------------------------------------------------------------'||unistr('\000a')||
-'  function get_column_names(p_column_alias in apex_a';
+'    ---------';
 
-s:=s||'pplication_page_ir_col.column_alias%type)'||unistr('\000a')||
+s:=s||'---------------------------------------------------------------------'||unistr('\000a')||
+'  function get_column_names(p_column_alias in apex_application_page_ir_col.column_alias%type)'||unistr('\000a')||
 '  return APEX_APPLICATION_PAGE_IR_COL.report_label%TYPE'||unistr('\000a')||
 '  is'||unistr('\000a')||
 '  begin'||unistr('\000a')||
 '    return l_report.column_names(p_column_alias);'||unistr('\000a')||
 '  exception'||unistr('\000a')||
 '    when others then'||unistr('\000a')||
-'       raise_application_error(-20001,''get_column_names: p_column_alias=''||p_column_alias||'' ''||SQLERRM);'||unistr('\000a')||
-'  end get_column_names;'||unistr('\000a')||
-'  --------------------------------------------------------------------------';
+'       raise_application_error(-20001,''get_column_names: p_column_alias=''||p_column_';
 
-s:=s||'----'||unistr('\000a')||
+s:=s||'alias||'' ''||SQLERRM);'||unistr('\000a')||
+'  end get_column_names;'||unistr('\000a')||
+'  ------------------------------------------------------------------------------'||unistr('\000a')||
 '  function get_col_format_mask(p_column_alias in apex_application_page_ir_col.column_alias%type)'||unistr('\000a')||
 '  return APEX_APPLICATION_PAGE_IR_COMP.computation_format_mask%TYPE'||unistr('\000a')||
 '  is'||unistr('\000a')||
@@ -8784,76 +8846,76 @@ s:=s||'----'||unistr('\000a')||
 '    return l_report.col_format_mask(p_column_alias);'||unistr('\000a')||
 '  exception'||unistr('\000a')||
 '    when others then'||unistr('\000a')||
-'       raise_application_error(-20001,''get_column_names: p_column_alias=''||p_column_alias||'' ''||SQLERRM);'||unistr('\000a')||
-'  end get_col_format_mask';
+'       ra';
 
-s:=s||';'||unistr('\000a')||
+s:=s||'ise_application_error(-20001,''get_column_names: p_column_alias=''||p_column_alias||'' ''||SQLERRM);'||unistr('\000a')||
+'  end get_col_format_mask;'||unistr('\000a')||
 '  ------------------------------------------------------------------------------'||unistr('\000a')||
 '  function get_header_alignment(p_column_alias in apex_application_page_ir_col.column_alias%type)'||unistr('\000a')||
 '  return APEX_APPLICATION_PAGE_IR_COL.heading_alignment%TYPE'||unistr('\000a')||
 '  is'||unistr('\000a')||
 '  begin'||unistr('\000a')||
-'    return l_report.header_alignment(p_column_alias);'||unistr('\000a')||
+'    return l_report.hea';
+
+s:=s||'der_alignment(p_column_alias);'||unistr('\000a')||
 '  exception'||unistr('\000a')||
 '    when others then'||unistr('\000a')||
-'       raise_application_error(-20001,''get_column_names: p';
-
-s:=s||'_column_alias=''||p_column_alias||'' ''||SQLERRM);'||unistr('\000a')||
+'       raise_application_error(-20001,''get_column_names: p_column_alias=''||p_column_alias||'' ''||SQLERRM);'||unistr('\000a')||
 '  end get_header_alignment;'||unistr('\000a')||
 '  ------------------------------------------------------------------------------'||unistr('\000a')||
 '  function get_column_alignment(p_column_alias in apex_application_page_ir_col.column_alias%type)'||unistr('\000a')||
-'  return apex_application_page_ir_col.column_alignment%type'||unistr('\000a')||
+'  return apex_applicati';
+
+s:=s||'on_page_ir_col.column_alignment%type'||unistr('\000a')||
 '  is'||unistr('\000a')||
 '  begin'||unistr('\000a')||
 '    return l_report.column_alignment(p_column_alias);'||unistr('\000a')||
 '  exception'||unistr('\000a')||
-'    wh';
-
-s:=s||'en others then'||unistr('\000a')||
+'    when others then'||unistr('\000a')||
 '       raise_application_error(-20001,''get_column_names: p_column_alias=''||p_column_alias||'' ''||SQLERRM);'||unistr('\000a')||
 '  end get_column_alignment;'||unistr('\000a')||
 '  ------------------------------------------------------------------------------'||unistr('\000a')||
-'  function get_column_types(p_column_alias in apex_application_page_ir_col.column_alias%type)'||unistr('\000a')||
+'  function get_column_types(p_column_alias in ap';
+
+s:=s||'ex_application_page_ir_col.column_alias%type)'||unistr('\000a')||
 '  return apex_application_page_ir_col.column_type%type'||unistr('\000a')||
 '  is'||unistr('\000a')||
 '  begin'||unistr('\000a')||
-'    retu';
-
-s:=s||'rn l_report.column_types(p_column_alias);'||unistr('\000a')||
+'    return l_report.column_types(p_column_alias);'||unistr('\000a')||
 '  exception'||unistr('\000a')||
 '    when others then'||unistr('\000a')||
 '       raise_application_error(-20001,''get_column_names: p_column_alias=''||p_column_alias||'' ''||SQLERRM);'||unistr('\000a')||
 '  END get_column_types;'||unistr('\000a')||
-'  ------------------------------------------------------------------------------  '||unistr('\000a')||
+'  -----------------------------------------------------------------------';
+
+s:=s||'-------  '||unistr('\000a')||
 '  function get_column_alias(p_num in binary_integer)'||unistr('\000a')||
 '  return varchar2'||unistr('\000a')||
 '  is'||unistr('\000a')||
 '  begin'||unistr('\000a')||
-'    return l_report.displaye';
-
-s:=s||'d_columns(p_num);'||unistr('\000a')||
+'    return l_report.displayed_columns(p_num);'||unistr('\000a')||
 '  exception'||unistr('\000a')||
 '    when others then'||unistr('\000a')||
 '       raise_application_error(-20001,''get_column_alias: p_num=''||p_num||'' ''||SQLERRM);'||unistr('\000a')||
 '  END get_column_alias;'||unistr('\000a')||
 '  ------------------------------------------------------------------------------'||unistr('\000a')||
-'  FUNCTION get_column_alias_sql(p_num IN binary_integer -- column number in sql-query'||unistr('\000a')||
+'  FUNCTION get_column_alias_sql(p_';
+
+s:=s||'num IN binary_integer -- column number in sql-query'||unistr('\000a')||
 '                               )'||unistr('\000a')||
 '  return varchar2'||unistr('\000a')||
 '  is'||unistr('\000a')||
 '  BEGIN'||unistr('\000a')||
-'    re';
-
-s:=s||'turn l_report.displayed_columns(p_num - l_report.start_with + 1);'||unistr('\000a')||
+'    return l_report.displayed_columns(p_num - l_report.start_with + 1);'||unistr('\000a')||
 '  exception'||unistr('\000a')||
 '    WHEN others THEN'||unistr('\000a')||
 '       raise_application_error(-20001,''get_column_alias_sql: p_num=''||p_num||'' ''||SQLERRM);'||unistr('\000a')||
 '  END get_column_alias_sql;'||unistr('\000a')||
-'  ------------------------------------------------------------------------------'||unistr('\000a')||
-'  function get_current_row(p_current_row in apex_application_global.vc_arr2,'||unistr('\000a')||
-'                       ';
+'  ---------------------------------------------------------';
 
-s:=s||'    p_id in binary_integer)'||unistr('\000a')||
+s:=s||'---------------------'||unistr('\000a')||
+'  function get_current_row(p_current_row in apex_application_global.vc_arr2,'||unistr('\000a')||
+'                           p_id in binary_integer)'||unistr('\000a')||
 '  return apex_application_page_ir_col.column_type%type'||unistr('\000a')||
 '  is'||unistr('\000a')||
 '  begin'||unistr('\000a')||
@@ -8862,12 +8924,12 @@ s:=s||'    p_id in binary_integer)'||unistr('\000a')||
 '    when others then'||unistr('\000a')||
 '       raise_application_error(-20001,''get_current_row: p_id=''||p_id||'' ''||SQLERRM);'||unistr('\000a')||
 '  end get_current_row; '||unistr('\000a')||
-'  ------------------------------------------------------------------------------'||unistr('\000a')||
+'  ------';
+
+s:=s||'------------------------------------------------------------------------'||unistr('\000a')||
 '  -- :::: -> :'||unistr('\000a')||
 '  function rr(p_str in varchar2)'||unistr('\000a')||
-' ';
-
-s:=s||' return varchar2'||unistr('\000a')||
+'  return varchar2'||unistr('\000a')||
 '  is '||unistr('\000a')||
 '  begin'||unistr('\000a')||
 '    return ltrim(rtrim(regexp_replace(p_str,''[:]+'','':''),'':''),'':'');'||unistr('\000a')||
@@ -8877,21 +8939,21 @@ s:=s||' return varchar2'||unistr('\000a')||
 '  return varchar2'||unistr('\000a')||
 '  is   '||unistr('\000a')||
 '  begin'||unistr('\000a')||
-'    return dbms_xmlgen.convert(p_str);'||unistr('\000a')||
-'    --RETURN REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(p_str,''<'',''%26lt;''),''>'',''%26gt;''),''&'',''%26am';
+'    return dbm';
 
-s:=s||'p;''),''"'',''%26quot;''),'''''''',''%26apos;'');'||unistr('\000a')||
+s:=s||'s_xmlgen.convert(p_str);'||unistr('\000a')||
+'    --RETURN REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(p_str,''<'',''%26lt;''),''>'',''%26gt;''),''&'',''%26amp;''),''"'',''%26quot;''),'''''''',''%26apos;'');'||unistr('\000a')||
 '  end get_xmlval;  '||unistr('\000a')||
 '  ------------------------------------------------------------------------------  '||unistr('\000a')||
 '  function intersect_arrays(p_one IN APEX_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
-'                            p_two IN APEX_APPLICATION_GLOBAL.VC_ARR2)'||unistr('\000a')||
+'                            p_two IN APEX_APPLICATION_GLOBAL.VC_AR';
+
+s:=s||'R2)'||unistr('\000a')||
 '  return APEX_APPLICATION_GLOBAL.VC_ARR2'||unistr('\000a')||
 '  is    '||unistr('\000a')||
 '    v_ret APEX_APPLICATION_GLOBAL.VC_ARR2;'||unistr('\000a')||
 '  begin    '||unistr('\000a')||
-'    for i in ';
-
-s:=s||'1..p_one.count loop'||unistr('\000a')||
+'    for i in 1..p_one.count loop'||unistr('\000a')||
 '       for b in 1..p_two.count loop'||unistr('\000a')||
 '         if p_one(i) = p_two(b) then'||unistr('\000a')||
 '            v_ret(v_ret.count + 1) := p_one(i);'||unistr('\000a')||
@@ -8902,10 +8964,10 @@ s:=s||'1..p_one.count loop'||unistr('\000a')||
 '    '||unistr('\000a')||
 '    return v_ret;'||unistr('\000a')||
 '  end intersect_arrays;'||unistr('\000a')||
-'  ------------------------------------------------------------------------------'||unistr('\000a')||
-'  function intersect_count(p_one IN APEX_APPLICATION_GLOBA';
+'  ---------------';
 
-s:=s||'L.VC_ARR2,'||unistr('\000a')||
+s:=s||'---------------------------------------------------------------'||unistr('\000a')||
+'  function intersect_count(p_one IN APEX_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
 '                           p_two IN APEX_APPLICATION_GLOBAL.VC_ARR2)'||unistr('\000a')||
 '  return integer'||unistr('\000a')||
 '  is'||unistr('\000a')||
@@ -8914,12 +8976,12 @@ s:=s||'L.VC_ARR2,'||unistr('\000a')||
 '    v_rez := intersect_arrays(p_one,p_two);'||unistr('\000a')||
 '    return v_rez.count;'||unistr('\000a')||
 '  end intersect_count; '||unistr('\000a')||
-'  ------------------------------------------------------------------------------'||unistr('\000a')||
+'  --------------------------------';
+
+s:=s||'----------------------------------------------'||unistr('\000a')||
 '  '||unistr('\000a')||
 '  procedure init_t_report(p_app_id       in number,'||unistr('\000a')||
-'                    ';
-
-s:=s||'      p_page_id      in number)'||unistr('\000a')||
+'                          p_page_id      in number)'||unistr('\000a')||
 '  is'||unistr('\000a')||
 '    l_region_id     number;'||unistr('\000a')||
 '    l_report_id     number;'||unistr('\000a')||
@@ -8930,12 +8992,12 @@ s:=s||'      p_page_id      in number)'||unistr('\000a')||
 ''||unistr('\000a')||
 '    select region_id '||unistr('\000a')||
 '    into l_region_id '||unistr('\000a')||
-'    from APEX_APPLICATION_PAGE_REGIONS '||unistr('\000a')||
+'    from APEX_APPL';
+
+s:=s||'ICATION_PAGE_REGIONS '||unistr('\000a')||
 '    where application_id = p_app_id '||unistr('\000a')||
 '      and page_id = p_page_id '||unistr('\000a')||
-'      and source_type = ''Interac';
-
-s:=s||'tive Report'';    '||unistr('\000a')||
+'      and source_type = ''Interactive Report'';    '||unistr('\000a')||
 '    '||unistr('\000a')||
 '    --get base report id    '||unistr('\000a')||
 '    log(''l_region_id=''||l_region_id);'||unistr('\000a')||
@@ -8943,193 +9005,193 @@ s:=s||'tive Report'';    '||unistr('\000a')||
 '    l_report_id := apex_ir.get_last_viewed_report_id (p_page_id   => p_page_id,'||unistr('\000a')||
 '                                                      p_region_id => l_region_id);'||unistr('\000a')||
 '    '||unistr('\000a')||
-'    log(''l_base_report_id=''||l_report_id);'||unistr('\000a')||
+'    log(''l_base';
+
+s:=s||'_report_id=''||l_report_id);'||unistr('\000a')||
 '    '||unistr('\000a')||
 '    select r.* '||unistr('\000a')||
 '    into l_report.ir_data       '||unistr('\000a')||
 '    from apex_application_page_ir_rpt r'||unistr('\000a')||
-'';
-
-s:=s||'    where application_id = p_app_id '||unistr('\000a')||
+'    where application_id = p_app_id '||unistr('\000a')||
 '      and page_id = p_page_id'||unistr('\000a')||
 '      and session_id = v(''APP_SESSION'')'||unistr('\000a')||
 '      and application_user = v(''APP_USER'')'||unistr('\000a')||
 '      and base_report_id = l_report_id;'||unistr('\000a')||
 '  '||unistr('\000a')||
 '    log(''l_report_id=''||l_report_id);'||unistr('\000a')||
-'    l_report_id := l_report.ir_data.report_id;                                                                 '||unistr('\000a')||
-'      '||unistr('\000a')||
-'      '||unistr('\000a')||
-'    l_report.report := apex_ir.get_report (';
+'    l_report_id := l_report.ir_data.report_id; ';
 
-s:=s||'p_page_id        => p_page_id,'||unistr('\000a')||
+s:=s||'                                                                '||unistr('\000a')||
+'      '||unistr('\000a')||
+'      '||unistr('\000a')||
+'    l_report.report := apex_ir.get_report (p_page_id        => p_page_id,'||unistr('\000a')||
 '                                           p_region_id      => l_region_id'||unistr('\000a')||
 '                                           --p_report_id      => l_report_id'||unistr('\000a')||
 '                                          );'||unistr('\000a')||
 '    for i in (select column_alias,'||unistr('\000a')||
-'                     report_label,'||unistr('\000a')||
+'               ';
+
+s:=s||'      report_label,'||unistr('\000a')||
 '                     heading_alignment,'||unistr('\000a')||
 '                     column_alignment,'||unistr('\000a')||
-'                     co';
-
-s:=s||'lumn_type,'||unistr('\000a')||
+'                     column_type,'||unistr('\000a')||
 '                     format_mask as  computation_format_mask,'||unistr('\000a')||
 '                     nvl(instr('':''||l_report.ir_data.report_columns||'':'','':''||column_alias||'':''),0) column_order ,'||unistr('\000a')||
-'                     nvl(instr('':''||l_report.ir_data.break_enabled_on||'':'','':''||column_alias||'':''),0) break_column_order'||unistr('\000a')||
-'                from APEX_APPLICATION_PAGE_IR_COL'||unistr('\000a')||
-'               where application_id = p_a';
+'                     nvl(instr('':''||l_report.ir_data.break_enabled_on||'':'','':''||column_ali';
 
-s:=s||'pp_id'||unistr('\000a')||
+s:=s||'as||'':''),0) break_column_order'||unistr('\000a')||
+'                from APEX_APPLICATION_PAGE_IR_COL'||unistr('\000a')||
+'               where application_id = p_app_id'||unistr('\000a')||
 '                 AND page_id = p_page_id'||unistr('\000a')||
 '                 and display_text_as != ''HIDDEN'' --after report RESETTING l_report.ir_data.report_columns consists HIDDEN column - APEX bug????'||unistr('\000a')||
-'                 and instr('':''||l_report.ir_data.report_columns||'':'','':''||column_alias||'':'') > 0'||unistr('\000a')||
+'                 and instr('':''||l_report.ir_data.report_columns||'':'','':''||column_alias|';
+
+s:=s||'|'':'') > 0'||unistr('\000a')||
 '              UNION'||unistr('\000a')||
 '              select computation_column_alias,'||unistr('\000a')||
-'                     computation_report_label';
-
-s:=s||','||unistr('\000a')||
+'                     computation_report_label,'||unistr('\000a')||
 '                     ''center'' as heading_alignment,'||unistr('\000a')||
 '                     ''right'' AS column_alignment,'||unistr('\000a')||
 '                     computation_column_type,'||unistr('\000a')||
 '                     computation_format_mask,'||unistr('\000a')||
-'                     nvl(instr('':''||l_report.ir_data.report_columns||'':'','':''||computation_column_alias||'':''),0) column_order,'||unistr('\000a')||
-'                     nvl(instr('':''||l_report.ir_data.break_enabled_on||'':'','':''';
+'                     nvl(instr('':''||l_report.ir_data.report_columns||'':'','':''||comp';
 
-s:=s||'||computation_column_alias||'':''),0) break_column_order'||unistr('\000a')||
+s:=s||'utation_column_alias||'':''),0) column_order,'||unistr('\000a')||
+'                     nvl(instr('':''||l_report.ir_data.break_enabled_on||'':'','':''||computation_column_alias||'':''),0) break_column_order'||unistr('\000a')||
 '              from apex_application_page_ir_comp'||unistr('\000a')||
 '              where application_id = p_app_id'||unistr('\000a')||
 '                and page_id = p_page_id'||unistr('\000a')||
 '                and report_id = l_report_id'||unistr('\000a')||
-'                AND instr('':''||l_report.ir_data.report_columns||'':'','':''||computation_column_alias||'':'') > 0'||unistr('\000a')||
-'              order by  break_column_order asc,column_orde';
+'                AND instr('':''||l_report.ir_d';
 
-s:=s||'r asc)'||unistr('\000a')||
+s:=s||'ata.report_columns||'':'','':''||computation_column_alias||'':'') > 0'||unistr('\000a')||
+'              order by  break_column_order asc,column_order asc)'||unistr('\000a')||
 '    loop                 '||unistr('\000a')||
 '      l_report.column_names(i.column_alias) := i.report_label; '||unistr('\000a')||
 '      l_report.col_format_mask(i.column_alias) := i.computation_format_mask;'||unistr('\000a')||
 '      l_report.header_alignment(i.column_alias) := i.heading_alignment; '||unistr('\000a')||
-'      l_report.column_alignment(i.column_alias) := i.column_alignment; '||unistr('\000a')||
-'      l_report.column_types(i.column_alias) := i.column_type;'||unistr('\000a')||
-'      IF i.column_o';
+'      l_report.column_alignment';
 
-s:=s||'rder > 0 THEN'||unistr('\000a')||
+s:=s||'(i.column_alias) := i.column_alignment; '||unistr('\000a')||
+'      l_report.column_types(i.column_alias) := i.column_type;'||unistr('\000a')||
+'      IF i.column_order > 0 THEN'||unistr('\000a')||
 '        IF i.break_column_order = 0 THEN '||unistr('\000a')||
 '          --displayed column'||unistr('\000a')||
 '          l_report.displayed_columns(l_report.displayed_columns.count + 1) := i.column_alias;'||unistr('\000a')||
 '        ELSE  '||unistr('\000a')||
 '          --break column'||unistr('\000a')||
-'          l_report.break_really_on(l_report.break_really_on.count + 1) := i.column_alias;'||unistr('\000a')||
+'          l_report.break_really_on(l_report.break_really_on';
+
+s:=s||'.count + 1) := i.column_alias;'||unistr('\000a')||
 '        end if;'||unistr('\000a')||
 '      end if;  '||unistr('\000a')||
 '      '||unistr('\000a')||
-'      log(''column=''||i.column_alias||'' l_report.colu';
-
-s:=s||'mn_names=''||i.report_label);'||unistr('\000a')||
+'      log(''column=''||i.column_alias||'' l_report.column_names=''||i.report_label);'||unistr('\000a')||
 '      log(''column=''||i.column_alias||'' l_report.col_format_mask=''||i.computation_format_mask);'||unistr('\000a')||
 '      log(''column=''||i.column_alias||'' l_report.header_alignment=''||i.heading_alignment);'||unistr('\000a')||
-'      log(''column=''||i.column_alias||'' l_report.column_alignment=''||i.column_alignment);'||unistr('\000a')||
-'      log(''column=''||i.column_alias||'' l_report.column_types=''||i.column_type);'||unistr('\000a')||
-'    end loop;    ';
+'      log(''column=''||i.column_alias||'' l_report.column_alignment';
 
-s:=s||''||unistr('\000a')||
+s:=s||'=''||i.column_alignment);'||unistr('\000a')||
+'      log(''column=''||i.column_alias||'' l_report.column_types=''||i.column_type);'||unistr('\000a')||
+'    end loop;    '||unistr('\000a')||
 ''||unistr('\000a')||
 '    --l_report.break_on := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.break_enabled_on));    '||unistr('\000a')||
 '    l_report.sum_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.sum_columns_on_break));  '||unistr('\000a')||
-'    l_report.avg_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.avg_columns_on_break));  '||unistr('\000a')||
-'    l_report.max_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.';
+'    l_report.avg_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_re';
 
-s:=s||'max_columns_on_break));  '||unistr('\000a')||
+s:=s||'port.ir_data.avg_columns_on_break));  '||unistr('\000a')||
+'    l_report.max_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.max_columns_on_break));  '||unistr('\000a')||
 '    l_report.min_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.min_columns_on_break));  '||unistr('\000a')||
 '    l_report.median_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.median_columns_on_break)); '||unistr('\000a')||
-'    l_report.count_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.count_columns_on_break));  '||unistr('\000a')||
-'    l_report.count_distnt_col_on_break';
+'    l_report.count_columns_on';
 
-s:=s||' := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.count_distnt_col_on_break)); '||unistr('\000a')||
+s:=s||'_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.count_columns_on_break));  '||unistr('\000a')||
+'    l_report.count_distnt_col_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.count_distnt_col_on_break)); '||unistr('\000a')||
 '      '||unistr('\000a')||
 '    l_report.agg_cols_cnt := l_report.sum_columns_on_break.count + '||unistr('\000a')||
 '                             l_report.avg_columns_on_break.count +'||unistr('\000a')||
-'                             l_report.max_columns_on_break.count + '||unistr('\000a')||
-'                             l_report.min_columns_on_break.count +'||unistr('\000a')||
-'                             l_report.media';
+'                             l_report.max_columns_on_bre';
 
-s:=s||'n_columns_on_break.count +'||unistr('\000a')||
+s:=s||'ak.count + '||unistr('\000a')||
+'                             l_report.min_columns_on_break.count +'||unistr('\000a')||
+'                             l_report.median_columns_on_break.count +'||unistr('\000a')||
 '                             l_report.count_columns_on_break.count +'||unistr('\000a')||
 '                             l_report.count_distnt_col_on_break.count;'||unistr('\000a')||
 '    '||unistr('\000a')||
 '    log(''l_report.displayed_columns=''||rr(l_report.ir_data.report_columns));'||unistr('\000a')||
-'    log(''l_report.break_on=''||rr(l_report.ir_data.break_enabled_on));'||unistr('\000a')||
-'    log(''l_report.sum_columns_on_break=''||rr(l_report.ir_data.sum_columns_on_brea';
+'    log(''l_report.break_on=''|';
 
-s:=s||'k));'||unistr('\000a')||
+s:=s||'|rr(l_report.ir_data.break_enabled_on));'||unistr('\000a')||
+'    log(''l_report.sum_columns_on_break=''||rr(l_report.ir_data.sum_columns_on_break));'||unistr('\000a')||
 '    log(''l_report.avg_columns_on_break=''||rr(l_report.ir_data.avg_columns_on_break));'||unistr('\000a')||
 '    log(''l_report.max_columns_on_break=''||rr(l_report.ir_data.max_columns_on_break));'||unistr('\000a')||
 '    LOG(''l_report.min_columns_on_break=''||rr(l_report.ir_data.min_columns_on_break));'||unistr('\000a')||
-'    log(''l_report.median_columns_on_break=''||rr(l_report.ir_data.median_columns_on_break));'||unistr('\000a')||
-'    log(''l_report.count_columns_on_break=''||r';
+'    log(''l_repo';
 
-s:=s||'r(l_report.ir_data.count_distnt_col_on_break));'||unistr('\000a')||
+s:=s||'rt.median_columns_on_break=''||rr(l_report.ir_data.median_columns_on_break));'||unistr('\000a')||
+'    log(''l_report.count_columns_on_break=''||rr(l_report.ir_data.count_distnt_col_on_break));'||unistr('\000a')||
 '    log(''l_report.count_distnt_col_on_break=''||rr(l_report.ir_data.count_columns_on_break));'||unistr('\000a')||
 '    log(''l_report.break_really_on=''||APEX_UTIL.TABLE_TO_STRING(l_report.break_really_on));'||unistr('\000a')||
-'    log(''l_report.agg_cols_cnt=''||l_report.agg_cols_cnt);'||unistr('\000a')||
+'    log(''l_report.agg_cols_cnt=''||l_report.agg';
+
+s:=s||'_cols_cnt);'||unistr('\000a')||
 '    '||unistr('\000a')||
 '    v_query_targets(v_query_targets.count + 1) := ''rez.*'';'||unistr('\000a')||
 '     '||unistr('\000a')||
-'    for c in cur_highlight(p_report_id =';
-
-s:=s||'> l_report_id,'||unistr('\000a')||
+'    for c in cur_highlight(p_report_id => l_report_id,'||unistr('\000a')||
 '                           p_delimetered_column_list => l_report.ir_data.report_columns'||unistr('\000a')||
 '                          ) '||unistr('\000a')||
 '    loop'||unistr('\000a')||
 '        if c.HIGHLIGHT_ROW_COLOR is not null or c.HIGHLIGHT_ROW_FONT_COLOR is not null then'||unistr('\000a')||
 '          --is row highlight'||unistr('\000a')||
-'          l_report.row_highlight(l_report.row_highlight.count + 1) := c;        '||unistr('\000a')||
-'        else'||unistr('\000a')||
-'          l_report.col_highlight(l_report.co';
+'          l_repo';
 
-s:=s||'l_highlight.count + 1) := c;           '||unistr('\000a')||
+s:=s||'rt.row_highlight(l_report.row_highlight.count + 1) := c;        '||unistr('\000a')||
+'        else'||unistr('\000a')||
+'          l_report.col_highlight(l_report.col_highlight.count + 1) := c;           '||unistr('\000a')||
 '        end if;  '||unistr('\000a')||
 '        v_query_targets(v_query_targets.count + 1) := c.condition_sql;'||unistr('\000a')||
 '    end loop;    '||unistr('\000a')||
 '        '||unistr('\000a')||
 '    l_report.report.sql_query := ''SELECT ''||APEX_UTIL.TABLE_TO_STRING(v_query_targets,'','')||'' from ( '''||unistr('\000a')||
-'                                          ||l_report.report.sql_query||'' ) rez'';'||unistr('\000a')||
-'    log(''l_report.report.sql_query=''||chr(10)||l_report.repo';
+'                   ';
 
-s:=s||'rt.sql_query||chr(10));'||unistr('\000a')||
+s:=s||'                       ||l_report.report.sql_query||'' ) rez'';'||unistr('\000a')||
+'    log(''l_report.report.sql_query=''||chr(10)||l_report.report.sql_query||chr(10));'||unistr('\000a')||
 '  exception'||unistr('\000a')||
 '    when no_data_found then'||unistr('\000a')||
 '      raise_application_error(-20001,''No Interactive Report found on Page=''||p_page_id||'' Application=''||p_app_id||'' Please make sure that the report was running at least once by this session.'');'||unistr('\000a')||
-'    when others then '||unistr('\000a')||
-'      raise_application_error(-20001,''init_t_report: Page=''||p_page_id||'' Application=''||p_app_id||'' ''||sqlerrm);'||unistr('\000a')||
-'  en';
+'    when others th';
 
-s:=s||'d init_t_report;  '||unistr('\000a')||
+s:=s||'en '||unistr('\000a')||
+'      raise_application_error(-20001,''init_t_report: Page=''||p_page_id||'' Application=''||p_app_id||'' ''||sqlerrm);'||unistr('\000a')||
+'  end init_t_report;  '||unistr('\000a')||
 '  ------------------------------------------------------------------------------'||unistr('\000a')||
 ' '||unistr('\000a')||
 '  function is_control_break(p_curr_row  IN APEX_APPLICATION_GLOBAL.VC_ARR2,'||unistr('\000a')||
 '                            p_prev_row  IN APEX_APPLICATION_GLOBAL.VC_ARR2)'||unistr('\000a')||
 '  return boolean'||unistr('\000a')||
 '  is'||unistr('\000a')||
-'    v_start_with      integer;'||unistr('\000a')||
+'  ';
+
+s:=s||'  v_start_with      integer;'||unistr('\000a')||
 '    v_end_with        integer;    '||unistr('\000a')||
 '    v_tmp             integer;'||unistr('\000a')||
 '  begin'||unistr('\000a')||
-'    if nvl(l_report';
-
-s:=s||'.break_really_on.count,0) = 0  then'||unistr('\000a')||
+'    if nvl(l_report.break_really_on.count,0) = 0  then'||unistr('\000a')||
 '      return false; --no control break'||unistr('\000a')||
 '    end if;'||unistr('\000a')||
 '    v_start_with := 1 + l_report.skipped_columns;    '||unistr('\000a')||
 '    v_end_with   := l_report.skipped_columns + nvl(l_report.break_really_on.count,0);'||unistr('\000a')||
 '    for i in v_start_with..v_end_with loop'||unistr('\000a')||
-'      if p_curr_row(i) != p_prev_row(i) then'||unistr('\000a')||
+'      if';
+
+s:=s||' p_curr_row(i) != p_prev_row(i) then'||unistr('\000a')||
 '        return true;'||unistr('\000a')||
 '      end if;'||unistr('\000a')||
 '    end loop;'||unistr('\000a')||
 '    return false;'||unistr('\000a')||
-'  end is_control_b';
-
-s:=s||'reak;'||unistr('\000a')||
+'  end is_control_break;'||unistr('\000a')||
 '  ------------------------------------------------------------------------------'||unistr('\000a')||
 '  FUNCTION get_cell_date(p_query_value IN VARCHAR2,p_format_mask IN VARCHAR2)'||unistr('\000a')||
 '  RETURN t_cell_data'||unistr('\000a')||
@@ -9137,11 +9199,11 @@ s:=s||'reak;'||unistr('\000a')||
 '    v_data t_cell_data;'||unistr('\000a')||
 '  BEGIN'||unistr('\000a')||
 '     BEGIN'||unistr('\000a')||
-'       v_data.value := to_date(p_query_value) - to_date(''01-03-1900'',''DD-MM-YYYY'') + 61;'||unistr('\000a')||
-'       if p_format_mask is not null then'||unistr('\000a')||
-'         v_data.text := to_char(to_d';
+'       v_data.value := to_date(p_query_value';
 
-s:=s||'ate(p_query_value),p_format_mask);'||unistr('\000a')||
+s:=s||') - to_date(''01-03-1900'',''DD-MM-YYYY'') + 61;'||unistr('\000a')||
+'       if p_format_mask is not null then'||unistr('\000a')||
+'         v_data.text := to_char(to_date(p_query_value),p_format_mask);'||unistr('\000a')||
 '       ELSE'||unistr('\000a')||
 '         v_data.text := p_query_value;'||unistr('\000a')||
 '       end if;'||unistr('\000a')||
@@ -9152,17 +9214,16 @@ s:=s||'ate(p_query_value),p_format_mask);'||unistr('\000a')||
 '      '||unistr('\000a')||
 '      return v_data;'||unistr('\000a')||
 '  end get_cell_date;'||unistr('\000a')||
-'  ------------------------------------------------------------------------------'||unistr('\000a')||
-'  FUNCTION get_cell_number(p_query_value IN VARCHAR2,p_format_mask IN ';
+'  ---------------------------';
 
-s:=s||'VARCHAR2)'||unistr('\000a')||
+s:=s||'---------------------------------------------------'||unistr('\000a')||
+'  FUNCTION get_cell_number(p_query_value IN VARCHAR2,p_format_mask IN VARCHAR2)'||unistr('\000a')||
 '  RETURN t_cell_data'||unistr('\000a')||
 '  IS'||unistr('\000a')||
 '    v_data t_cell_data;'||unistr('\000a')||
 '  BEGIN'||unistr('\000a')||
-'     begin'||unistr('\000a')||
-'       v_data.value := trim(to_char(to_number(p_query_value),''9999999999999999999999990D0000000000000000000000000'',''NLS_NUMERIC_CHARACTERS = ''''.,''''''));'||unistr('\000a')||
-'       '||unistr('\000a')||
+'     BEGIN'||unistr('\000a')||
+'       v_data.value := p_query_value;'||unistr('\000a')||
 '       if p_format_mask is not null then'||unistr('\000a')||
 '         v_data.text := trim(to_char(to_number(p_query_value),p_format_mask));'||unistr('\000a')||
 '       ELSE'||unistr('\000a')||
@@ -9352,11 +9413,21 @@ s:=s||'OBAL.VC_ARR2,'||unistr('\000a')||
 '                        p_default_format_mask     IN varchar2 default null )  '||unistr('\000a')||
 '  r';
 
+s:=s||'eturn varchar2'||unistr('\000a')||
+'  is'||unistr('\000a')||
+'    v_tmp_pos       integer;  -- current column position in sql-query '||unistr('\000a')||
+'    v_format_mask   apex_application_page_ir_comp.computation_format_mask%type;'||unistr('\000a')||
+'    v_agg_value     varchar2(1000);'||unistr('\000a')||
+'  begin'||unistr('\000a')||
+'      v_tmp_pos := find_rel_position (p_curr_col_name,p_agg_rows); '||unistr('\000a')||
+'      if v_tmp_pos is not null then'||unistr('\000a')||
+'        v_format_mask := nvl(get_col_format_mask(get_column_alias_sql(p_col_numbe';
+
 wwv_flow_api.create_install_script(
-  p_id => 2986818195418105 + wwv_flow_api.g_id_offset,
+  p_id => 2424216548158239 + wwv_flow_api.g_id_offset,
   p_flow_id => wwv_flow.g_flow_id,
-  p_install_id=> 49415622747772197728 + wwv_flow_api.g_id_offset,
-  p_name => 'Packages',
+  p_install_id=> 49413219127950509377 + wwv_flow_api.g_id_offset,
+  p_name => 'IR_TO_XML Package',
   p_sequence=> 40,
   p_script_type=> 'INSTALL',
   p_script_clob=> s);
@@ -9372,16 +9443,6 @@ begin
 declare
     s varchar2(32767) := null;
 begin
-s:=s||'eturn varchar2'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'    v_tmp_pos       integer;  -- current column position in sql-query '||unistr('\000a')||
-'    v_format_mask   apex_application_page_ir_comp.computation_format_mask%type;'||unistr('\000a')||
-'    v_agg_value     varchar2(1000);'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'      v_tmp_pos := find_rel_position (p_curr_col_name,p_agg_rows); '||unistr('\000a')||
-'      if v_tmp_pos is not null then'||unistr('\000a')||
-'        v_format_mask := nvl(get_col_format_mask(get_column_alias_sql(p_col_numbe';
-
 s:=s||'r)),p_default_format_mask);'||unistr('\000a')||
 '        v_agg_value := trim(to_char(get_current_row(p_current_row,p_position + v_tmp_pos),v_format_mask));'||unistr('\000a')||
 '        '||unistr('\000a')||
@@ -9848,1023 +9909,10 @@ s:=s||'ist);'||unistr('\000a')||
 '  dbms_lob.createtemporary(v_debug,true, DBMS_LOB.CALL);  '||unistr('\000a')||
 'END IR_TO_XML;'||unistr('\000a')||
 '/'||unistr('\000a')||
-'CREATE OR REPLACE package as_zip'||unistr('\000a')||
-'is'||unistr('\000a')||
-'/*******************************************';
-
-s:=s||'***'||unistr('\000a')||
-'**'||unistr('\000a')||
-'** Author: Anton Scheffer'||unistr('\000a')||
-'** Date: 25-01-2012'||unistr('\000a')||
-'** Website: http://technology.amis.nl/blog'||unistr('\000a')||
-'**'||unistr('\000a')||
-'** Changelog:'||unistr('\000a')||
-'**   Date: 29-04-2012'||unistr('\000a')||
-'**    fixed bug for large uncompressed files, thanks Morten Braten'||unistr('\000a')||
-'**   Date: 21-03-2012'||unistr('\000a')||
-'**     Take CRC32, compressed length and uncompressed length from '||unistr('\000a')||
-'**     Central file header instead of Local file header'||unistr('\000a')||
-'**   Date: 17-02-2012'||unistr('\000a')||
-'**     Added more support for n';
-
-s:=s||'on-ascii filenames'||unistr('\000a')||
-'**   Date: 25-01-2012'||unistr('\000a')||
-'**     Added MIT-license'||unistr('\000a')||
-'**     Some minor improvements'||unistr('\000a')||
-'**'||unistr('\000a')||
-'******************************************************************************'||unistr('\000a')||
-'******************************************************************************'||unistr('\000a')||
-'Copyright (C) 2010,2011 by Anton Scheffer'||unistr('\000a')||
-''||unistr('\000a')||
-'Permission is hereby granted, free of charge, to any person obtaining a copy'||unistr('\000a')||
-'of this software and a';
-
-s:=s||'ssociated documentation files (the "Software"), to deal'||unistr('\000a')||
-'in the Software without restriction, including without limitation the rights'||unistr('\000a')||
-'to use, copy, modify, merge, publish, distribute, sublicense, and/or sell'||unistr('\000a')||
-'copies of the Software, and to permit persons to whom the Software is'||unistr('\000a')||
-'furnished to do so, subject to the following conditions:'||unistr('\000a')||
-''||unistr('\000a')||
-'The above copyright notice and this permission notice shall be in';
-
-s:=s||'cluded in'||unistr('\000a')||
-'all copies or substantial portions of the Software.'||unistr('\000a')||
-''||unistr('\000a')||
-'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR'||unistr('\000a')||
-'IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,'||unistr('\000a')||
-'FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE'||unistr('\000a')||
-'AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER'||unistr('\000a')||
-'LIABILITY, WHETHER IN AN ACTION OF CONTRAC';
-
-s:=s||'T, TORT OR OTHERWISE, ARISING FROM,'||unistr('\000a')||
-'OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN'||unistr('\000a')||
-'THE SOFTWARE.'||unistr('\000a')||
-''||unistr('\000a')||
-'******************************************************************************'||unistr('\000a')||
-'******************************************** */'||unistr('\000a')||
-'  type file_list is table of clob;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  function file2blob'||unistr('\000a')||
-'    ( p_dir varchar2'||unistr('\000a')||
-'    , p_file_name varchar2'||unistr('\000a')||
-'    )'||unistr('\000a')||
-'  return blob;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  function get_fi';
-
-s:=s||'le_list'||unistr('\000a')||
-'    ( p_dir varchar2'||unistr('\000a')||
-'    , p_zip_file varchar2'||unistr('\000a')||
-'    , p_encoding varchar2 := null'||unistr('\000a')||
-'    )'||unistr('\000a')||
-'  return file_list;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  function get_file_list'||unistr('\000a')||
-'    ( p_zipped_blob blob'||unistr('\000a')||
-'    , p_encoding varchar2 := null'||unistr('\000a')||
-'    )'||unistr('\000a')||
-'  return file_list;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  function get_file'||unistr('\000a')||
-'    ( p_dir varchar2'||unistr('\000a')||
-'    , p_zip_file varchar2'||unistr('\000a')||
-'    , p_file_name varchar2'||unistr('\000a')||
-'    , p_encoding varchar2 := null'||unistr('\000a')||
-'    )'||unistr('\000a')||
-'  return blob;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  function get_fi';
-
-s:=s||'le'||unistr('\000a')||
-'    ( p_zipped_blob blob'||unistr('\000a')||
-'    , p_file_name varchar2'||unistr('\000a')||
-'    , p_encoding varchar2 := null'||unistr('\000a')||
-'    )'||unistr('\000a')||
-'  return blob;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  procedure add1file'||unistr('\000a')||
-'    ( p_zipped_blob in out blob'||unistr('\000a')||
-'    , p_name varchar2'||unistr('\000a')||
-'    , p_content blob'||unistr('\000a')||
-'    );'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  procedure finish_zip( p_zipped_blob in out blob );'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  procedure save_zip'||unistr('\000a')||
-'    ( p_zipped_blob blob'||unistr('\000a')||
-'    , p_dir varchar2 := ''MY_DIR'''||unistr('\000a')||
-'    , p_filename varchar2 := ''my.zip'''||unistr('\000a')||
-'    );'||unistr('\000a')||
-'-';
-
-s:=s||'-'||unistr('\000a')||
-'/*'||unistr('\000a')||
-'declare'||unistr('\000a')||
-'  g_zipped_blob blob;'||unistr('\000a')||
-'begin'||unistr('\000a')||
-'  as_zip.add1file( g_zipped_blob, ''test4.txt'', null ); -- a empty file'||unistr('\000a')||
-'  as_zip.add1file( g_zipped_blob, ''dir1/test1.txt'', utl_raw.cast_to_raw( q''<A file with some more text, stored in a subfolder which isn''t added>'' ) );'||unistr('\000a')||
-'  as_zip.add1file( g_zipped_blob, ''test1234.txt'', utl_raw.cast_to_raw( ''A small file'' ) );'||unistr('\000a')||
-'  as_zip.add1file( g_zipped_blob, ''dir2/'', nul';
-
-s:=s||'l ); -- a folder'||unistr('\000a')||
-'  as_zip.add1file( g_zipped_blob, ''dir3/'', null ); -- a folder'||unistr('\000a')||
-'  as_zip.add1file( g_zipped_blob, ''dir3/test2.txt'', utl_raw.cast_to_raw( ''A small filein a previous created folder'' ) );'||unistr('\000a')||
-'  as_zip.finish_zip( g_zipped_blob );'||unistr('\000a')||
-'  as_zip.save_zip( g_zipped_blob, ''MY_DIR'', ''my.zip'' );'||unistr('\000a')||
-'  dbms_lob.freetemporary( g_zipped_blob );'||unistr('\000a')||
-'end;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'declare'||unistr('\000a')||
-'  zip_files as_zip.file_list;'||unistr('\000a')||
-'begin'||unistr('\000a')||
-'  zip_file';
-
-s:=s||'s  := as_zip.get_file_list( ''MY_DIR'', ''my.zip'' );'||unistr('\000a')||
-'  for i in zip_files.first() .. zip_files.last'||unistr('\000a')||
-'  loop'||unistr('\000a')||
-'    dbms_output.put_line( zip_files( i ) );'||unistr('\000a')||
-'    dbms_output.put_line( utl_raw.cast_to_varchar2( as_zip.get_file( ''MY_DIR'', ''my.zip'', zip_files( i ) ) ) );'||unistr('\000a')||
-'  end loop;'||unistr('\000a')||
-'end;'||unistr('\000a')||
-'*/'||unistr('\000a')||
-'end;'||unistr('\000a')||
-'/'||unistr('\000a')||
-''||unistr('\000a')||
-''||unistr('\000a')||
-'CREATE OR REPLACE package body as_zip'||unistr('\000a')||
-'is'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  c_LOCAL_FILE_HEADER        constant raw(4) := hextoraw( ''504B0304''';
-
-s:=s||' ); -- Local file header signature'||unistr('\000a')||
-'  c_END_OF_CENTRAL_DIRECTORY constant raw(4) := hextoraw( ''504B0506'' ); -- End of central directory signature'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  function blob2num( p_blob blob, p_len integer, p_pos integer )'||unistr('\000a')||
-'  return number'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'    return utl_raw.cast_to_binary_integer( dbms_lob.substr( p_blob, p_len, p_pos ), utl_raw.little_endian );'||unistr('\000a')||
-'  end;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  function raw2varchar2( p_raw raw, p_e';
-
-s:=s||'ncoding varchar2 )'||unistr('\000a')||
-'  return varchar2'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'    return coalesce( utl_i18n.raw_to_char( p_raw, p_encoding )'||unistr('\000a')||
-'                   , utl_i18n.raw_to_char( p_raw, utl_i18n.map_charset( p_encoding, utl_i18n.GENERIC_CONTEXT, utl_i18n.IANA_TO_ORACLE ) )'||unistr('\000a')||
-'                   );'||unistr('\000a')||
-'  end;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  function little_endian( p_big number, p_bytes pls_integer := 4 )'||unistr('\000a')||
-'  return raw'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'    return utl_raw.subst';
-
-s:=s||'r( utl_raw.cast_from_binary_integer( p_big, utl_raw.little_endian ), 1, p_bytes );'||unistr('\000a')||
-'  end;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  function file2blob'||unistr('\000a')||
-'    ( p_dir varchar2'||unistr('\000a')||
-'    , p_file_name varchar2'||unistr('\000a')||
-'    )'||unistr('\000a')||
-'  return blob'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'    file_lob bfile;'||unistr('\000a')||
-'    file_blob blob;'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'    file_lob := bfilename( p_dir, p_file_name );'||unistr('\000a')||
-'    dbms_lob.open( file_lob, dbms_lob.file_readonly );'||unistr('\000a')||
-'    dbms_lob.createtemporary( file_blob, true );'||unistr('\000a')||
-'    dbms_lob';
-
-s:=s||'.loadfromfile( file_blob, file_lob, dbms_lob.lobmaxsize );'||unistr('\000a')||
-'    dbms_lob.close( file_lob );'||unistr('\000a')||
-'    return file_blob;'||unistr('\000a')||
-'  exception'||unistr('\000a')||
-'    when others then'||unistr('\000a')||
-'      if dbms_lob.isopen( file_lob ) = 1'||unistr('\000a')||
-'      then'||unistr('\000a')||
-'        dbms_lob.close( file_lob );'||unistr('\000a')||
-'      end if;'||unistr('\000a')||
-'      if dbms_lob.istemporary( file_blob ) = 1'||unistr('\000a')||
-'      then'||unistr('\000a')||
-'        dbms_lob.freetemporary( file_blob );'||unistr('\000a')||
-'      end if;'||unistr('\000a')||
-'      raise;'||unistr('\000a')||
-'  end;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  function g';
-
-s:=s||'et_file_list'||unistr('\000a')||
-'    ( p_zipped_blob blob'||unistr('\000a')||
-'    , p_encoding varchar2 := null'||unistr('\000a')||
-'    )'||unistr('\000a')||
-'  return file_list'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'    t_ind integer;'||unistr('\000a')||
-'    t_hd_ind integer;'||unistr('\000a')||
-'    t_rv file_list;'||unistr('\000a')||
-'    t_encoding varchar2(32767);'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'    t_ind := dbms_lob.getlength( p_zipped_blob ) - 21;'||unistr('\000a')||
-'    loop'||unistr('\000a')||
-'      exit when t_ind < 1 or dbms_lob.substr( p_zipped_blob, 4, t_ind ) = c_END_OF_CENTRAL_DIRECTORY;'||unistr('\000a')||
-'      t_ind := t_ind - 1;'||unistr('\000a')||
-'    e';
-
-s:=s||'nd loop;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'    if t_ind <= 0'||unistr('\000a')||
-'    then'||unistr('\000a')||
-'      return null;'||unistr('\000a')||
-'    end if;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'    t_hd_ind := blob2num( p_zipped_blob, 4, t_ind + 16 ) + 1;'||unistr('\000a')||
-'    t_rv := file_list();'||unistr('\000a')||
-'    t_rv.extend( blob2num( p_zipped_blob, 2, t_ind + 10 ) );'||unistr('\000a')||
-'    for i in 1 .. blob2num( p_zipped_blob, 2, t_ind + 8 )'||unistr('\000a')||
-'    loop'||unistr('\000a')||
-'      if p_encoding is null'||unistr('\000a')||
-'      then'||unistr('\000a')||
-'        if utl_raw.bit_and( dbms_lob.substr( p_zipped_blob, 1, t_hd_ind +';
-
-s:=s||' 9 ), hextoraw( ''08'' ) ) = hextoraw( ''08'' )'||unistr('\000a')||
-'        then  '||unistr('\000a')||
-'          t_encoding := ''AL32UTF8''; -- utf8'||unistr('\000a')||
-'        else'||unistr('\000a')||
-'          t_encoding := ''US8PC437''; -- IBM codepage 437'||unistr('\000a')||
-'        end if;'||unistr('\000a')||
-'      else'||unistr('\000a')||
-'        t_encoding := p_encoding;'||unistr('\000a')||
-'      end if;'||unistr('\000a')||
-'      t_rv( i ) := raw2varchar2'||unistr('\000a')||
-'                     ( dbms_lob.substr( p_zipped_blob'||unistr('\000a')||
-'                                      , blob2num( p_zipped_blob, 2,';
-
-s:=s||' t_hd_ind + 28 )'||unistr('\000a')||
-'                                      , t_hd_ind + 46'||unistr('\000a')||
-'                                      )'||unistr('\000a')||
-'                     , t_encoding'||unistr('\000a')||
-'                     );'||unistr('\000a')||
-'      t_hd_ind := t_hd_ind + 46'||unistr('\000a')||
-'                + blob2num( p_zipped_blob, 2, t_hd_ind + 28 )  -- File name length'||unistr('\000a')||
-'                + blob2num( p_zipped_blob, 2, t_hd_ind + 30 )  -- Extra field length'||unistr('\000a')||
-'                + blob2num( p_z';
-
-s:=s||'ipped_blob, 2, t_hd_ind + 32 ); -- File comment length'||unistr('\000a')||
-'    end loop;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'    return t_rv;'||unistr('\000a')||
-'  end;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  function get_file_list'||unistr('\000a')||
-'    ( p_dir varchar2'||unistr('\000a')||
-'    , p_zip_file varchar2'||unistr('\000a')||
-'    , p_encoding varchar2 := null'||unistr('\000a')||
-'    )'||unistr('\000a')||
-'  return file_list'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'    return get_file_list( file2blob( p_dir, p_zip_file ), p_encoding );'||unistr('\000a')||
-'  end;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  function get_file'||unistr('\000a')||
-'    ( p_zipped_blob blob'||unistr('\000a')||
-'    , p_file_name varchar2'||unistr('\000a')||
-'   ';
-
-s:=s||' , p_encoding varchar2 := null'||unistr('\000a')||
-'    )'||unistr('\000a')||
-'  return blob'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'    t_tmp blob;'||unistr('\000a')||
-'    t_ind integer;'||unistr('\000a')||
-'    t_hd_ind integer;'||unistr('\000a')||
-'    t_fl_ind integer;'||unistr('\000a')||
-'    t_encoding varchar2(32767);'||unistr('\000a')||
-'    t_len integer;'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'    t_ind := dbms_lob.getlength( p_zipped_blob ) - 21;'||unistr('\000a')||
-'    loop'||unistr('\000a')||
-'      exit when t_ind < 1 or dbms_lob.substr( p_zipped_blob, 4, t_ind ) = c_END_OF_CENTRAL_DIRECTORY;'||unistr('\000a')||
-'      t_ind := t_ind - 1;'||unistr('\000a')||
-'    end loop;'||unistr('\000a')||
 '';
 
-s:=s||'--'||unistr('\000a')||
-'    if t_ind <= 0'||unistr('\000a')||
-'    then'||unistr('\000a')||
-'      return null;'||unistr('\000a')||
-'    end if;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'    t_hd_ind := blob2num( p_zipped_blob, 4, t_ind + 16 ) + 1;'||unistr('\000a')||
-'    for i in 1 .. blob2num( p_zipped_blob, 2, t_ind + 8 )'||unistr('\000a')||
-'    loop'||unistr('\000a')||
-'      if p_encoding is null'||unistr('\000a')||
-'      then'||unistr('\000a')||
-'        if utl_raw.bit_and( dbms_lob.substr( p_zipped_blob, 1, t_hd_ind + 9 ), hextoraw( ''08'' ) ) = hextoraw( ''08'' )'||unistr('\000a')||
-'        then  '||unistr('\000a')||
-'          t_encoding := ''AL32UTF8''; ';
-
-s:=s||'-- utf8'||unistr('\000a')||
-'        else'||unistr('\000a')||
-'          t_encoding := ''US8PC437''; -- IBM codepage 437'||unistr('\000a')||
-'        end if;'||unistr('\000a')||
-'      else'||unistr('\000a')||
-'        t_encoding := p_encoding;'||unistr('\000a')||
-'      end if;'||unistr('\000a')||
-'      if p_file_name = raw2varchar2'||unistr('\000a')||
-'                         ( dbms_lob.substr( p_zipped_blob'||unistr('\000a')||
-'                                          , blob2num( p_zipped_blob, 2, t_hd_ind + 28 )'||unistr('\000a')||
-'                                          , t_hd_ind + 46'||unistr('\000a')||
-'        ';
-
-s:=s||'                                  )'||unistr('\000a')||
-'                         , t_encoding'||unistr('\000a')||
-'                         )'||unistr('\000a')||
-'      then'||unistr('\000a')||
-'        t_len := blob2num( p_zipped_blob, 4, t_hd_ind + 24 ); -- uncompressed length '||unistr('\000a')||
-'        if t_len = 0'||unistr('\000a')||
-'        then'||unistr('\000a')||
-'          if substr( p_file_name, -1 ) in ( ''/'', ''\'' )'||unistr('\000a')||
-'          then  -- directory/folder'||unistr('\000a')||
-'            return null;'||unistr('\000a')||
-'          else -- empty file'||unistr('\000a')||
-'            return empt';
-
-s:=s||'y_blob();'||unistr('\000a')||
-'          end if;'||unistr('\000a')||
-'        end if;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'        if dbms_lob.substr( p_zipped_blob, 2, t_hd_ind + 10 ) = hextoraw( ''0800'' ) -- deflate'||unistr('\000a')||
-'        then'||unistr('\000a')||
-'          t_fl_ind := blob2num( p_zipped_blob, 4, t_hd_ind + 42 );'||unistr('\000a')||
-'          t_tmp := hextoraw( ''1F8B0800000000000003'' ); -- gzip header'||unistr('\000a')||
-'          dbms_lob.copy( t_tmp'||unistr('\000a')||
-'                       , p_zipped_blob'||unistr('\000a')||
-'                       ,  blob2num( p_z';
-
-s:=s||'ipped_blob, 4, t_hd_ind + 20 )'||unistr('\000a')||
-'                       , 11'||unistr('\000a')||
-'                       , t_fl_ind + 31'||unistr('\000a')||
-'                       + blob2num( p_zipped_blob, 2, t_fl_ind + 27 ) -- File name length'||unistr('\000a')||
-'                       + blob2num( p_zipped_blob, 2, t_fl_ind + 29 ) -- Extra field length'||unistr('\000a')||
-'                       );'||unistr('\000a')||
-'          dbms_lob.append( t_tmp, utl_raw.concat( dbms_lob.substr( p_zipped_blob, 4, t_hd_ind + ';
-
-s:=s||'16 ) -- CRC32'||unistr('\000a')||
-'                                                , little_endian( t_len ) -- uncompressed length'||unistr('\000a')||
-'                                                )'||unistr('\000a')||
-'                         );'||unistr('\000a')||
-'          return utl_compress.lz_uncompress( t_tmp );'||unistr('\000a')||
-'        end if;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'        if dbms_lob.substr( p_zipped_blob, 2, t_hd_ind + 10 ) = hextoraw( ''0000'' ) -- The file is stored (no compression)'||unistr('\000a')||
-'        then'||unistr('\000a')||
-'    ';
-
-s:=s||'      t_fl_ind := blob2num( p_zipped_blob, 4, t_hd_ind + 42 );'||unistr('\000a')||
-'          dbms_lob.createtemporary( t_tmp, true );'||unistr('\000a')||
-'          dbms_lob.copy( t_tmp'||unistr('\000a')||
-'                       , p_zipped_blob'||unistr('\000a')||
-'                       , t_len'||unistr('\000a')||
-'                       , 1'||unistr('\000a')||
-'                       , t_fl_ind + 31'||unistr('\000a')||
-'                       + blob2num( p_zipped_blob, 2, t_fl_ind + 27 ) -- File name length'||unistr('\000a')||
-'                       + blob2';
-
-s:=s||'num( p_zipped_blob, 2, t_fl_ind + 29 ) -- Extra field length'||unistr('\000a')||
-'                       );'||unistr('\000a')||
-'          return t_tmp;'||unistr('\000a')||
-'        end if;'||unistr('\000a')||
-'      end if;'||unistr('\000a')||
-'      t_hd_ind := t_hd_ind + 46'||unistr('\000a')||
-'                + blob2num( p_zipped_blob, 2, t_hd_ind + 28 )  -- File name length'||unistr('\000a')||
-'                + blob2num( p_zipped_blob, 2, t_hd_ind + 30 )  -- Extra field length'||unistr('\000a')||
-'                + blob2num( p_zipped_blob, 2, t_hd_ind + 32';
-
-s:=s||' ); -- File comment length'||unistr('\000a')||
-'    end loop;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'    return null;'||unistr('\000a')||
-'  end;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  function get_file'||unistr('\000a')||
-'    ( p_dir varchar2'||unistr('\000a')||
-'    , p_zip_file varchar2'||unistr('\000a')||
-'    , p_file_name varchar2'||unistr('\000a')||
-'    , p_encoding varchar2 := null'||unistr('\000a')||
-'    )'||unistr('\000a')||
-'  return blob'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'    return get_file( file2blob( p_dir, p_zip_file ), p_file_name, p_encoding );'||unistr('\000a')||
-'  end;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  procedure add1file'||unistr('\000a')||
-'    ( p_zipped_blob in out blob'||unistr('\000a')||
-'    , p_name varchar2'||unistr('\000a')||
-'   ';
-
 wwv_flow_api.append_to_install_script(
-  p_id => 2986818195418105 + wwv_flow_api.g_id_offset,
-  p_flow_id => wwv_flow.g_flow_id,
-  p_script_clob => s);
-end;
- 
- 
-end;
-/
-
- 
-begin
- 
-declare
-    s varchar2(32767) := null;
-begin
-s:=s||' , p_content blob'||unistr('\000a')||
-'    )'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'    t_now date;'||unistr('\000a')||
-'    t_blob blob;'||unistr('\000a')||
-'    t_len integer;'||unistr('\000a')||
-'    t_clen integer;'||unistr('\000a')||
-'    t_crc32 raw(4) := hextoraw( ''00000000'' );'||unistr('\000a')||
-'    t_compressed boolean := false;'||unistr('\000a')||
-'    t_name raw(32767);'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'    t_now := sysdate;'||unistr('\000a')||
-'    t_len := nvl( dbms_lob.getlength( p_content ), 0 );'||unistr('\000a')||
-'    if t_len > 0'||unistr('\000a')||
-'    then '||unistr('\000a')||
-'      t_blob := utl_compress.lz_compress( p_content );'||unistr('\000a')||
-'      t_clen := dbms_lob.ge';
-
-s:=s||'tlength( t_blob ) - 18;'||unistr('\000a')||
-'      t_compressed := t_clen < t_len;'||unistr('\000a')||
-'      t_crc32 := dbms_lob.substr( t_blob, 4, t_clen + 11 );       '||unistr('\000a')||
-'    end if;'||unistr('\000a')||
-'    if not t_compressed'||unistr('\000a')||
-'    then '||unistr('\000a')||
-'      t_clen := t_len;'||unistr('\000a')||
-'      t_blob := p_content;'||unistr('\000a')||
-'    end if;'||unistr('\000a')||
-'    if p_zipped_blob is null'||unistr('\000a')||
-'    then'||unistr('\000a')||
-'      dbms_lob.createtemporary( p_zipped_blob, true );'||unistr('\000a')||
-'    end if;'||unistr('\000a')||
-'    t_name := utl_i18n.string_to_raw( p_name, ''AL32UTF8'' )';
-
-s:=s||';'||unistr('\000a')||
-'    dbms_lob.append( p_zipped_blob'||unistr('\000a')||
-'                   , utl_raw.concat( c_LOCAL_FILE_HEADER -- Local file header signature'||unistr('\000a')||
-'                                   , hextoraw( ''1400'' )  -- version 2.0'||unistr('\000a')||
-'                                   , case when t_name = utl_i18n.string_to_raw( p_name, ''US8PC437'' )'||unistr('\000a')||
-'                                       then hextoraw( ''0000'' ) -- no General purpose bits'||unistr('\000a')||
-'            ';
-
-s:=s||'                           else hextoraw( ''0008'' ) -- set Language encoding flag (EFS)'||unistr('\000a')||
-'                                     end '||unistr('\000a')||
-'                                   , case when t_compressed'||unistr('\000a')||
-'                                        then hextoraw( ''0800'' ) -- deflate'||unistr('\000a')||
-'                                        else hextoraw( ''0000'' ) -- stored'||unistr('\000a')||
-'                                     end'||unistr('\000a')||
-'                     ';
-
-s:=s||'              , little_endian( to_number( to_char( t_now, ''ss'' ) ) / 2'||unistr('\000a')||
-'                                                  + to_number( to_char( t_now, ''mi'' ) ) * 32'||unistr('\000a')||
-'                                                  + to_number( to_char( t_now, ''hh24'' ) ) * 2048'||unistr('\000a')||
-'                                                  , 2'||unistr('\000a')||
-'                                                  ) -- File last modification time'||unistr('\000a')||
-'  ';
-
-s:=s||'                                 , little_endian( to_number( to_char( t_now, ''dd'' ) )'||unistr('\000a')||
-'                                                  + to_number( to_char( t_now, ''mm'' ) ) * 32'||unistr('\000a')||
-'                                                  + ( to_number( to_char( t_now, ''yyyy'' ) ) - 1980 ) * 512'||unistr('\000a')||
-'                                                  , 2'||unistr('\000a')||
-'                                                  ) -- File ';
-
-s:=s||'last modification date'||unistr('\000a')||
-'                                   , t_crc32 -- CRC-32'||unistr('\000a')||
-'                                   , little_endian( t_clen )                      -- compressed size'||unistr('\000a')||
-'                                   , little_endian( t_len )                       -- uncompressed size'||unistr('\000a')||
-'                                   , little_endian( utl_raw.length( t_name ), 2 ) -- File name length'||unistr('\000a')||
-'                ';
-
-s:=s||'                   , hextoraw( ''0000'' )                           -- Extra field length'||unistr('\000a')||
-'                                   , t_name                                       -- File name'||unistr('\000a')||
-'                                   )'||unistr('\000a')||
-'                   );'||unistr('\000a')||
-'    if t_compressed'||unistr('\000a')||
-'    then                   '||unistr('\000a')||
-'      dbms_lob.copy( p_zipped_blob, t_blob, t_clen, dbms_lob.getlength( p_zipped_blob ) + 1, 11 ); -- compress';
-
-s:=s||'ed content'||unistr('\000a')||
-'    elsif t_clen > 0'||unistr('\000a')||
-'    then                   '||unistr('\000a')||
-'      dbms_lob.copy( p_zipped_blob, t_blob, t_clen, dbms_lob.getlength( p_zipped_blob ) + 1, 1 ); --  content'||unistr('\000a')||
-'    end if;'||unistr('\000a')||
-'    if dbms_lob.istemporary( t_blob ) = 1'||unistr('\000a')||
-'    then      '||unistr('\000a')||
-'      dbms_lob.freetemporary( t_blob );'||unistr('\000a')||
-'    end if;'||unistr('\000a')||
-'  end;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  procedure finish_zip( p_zipped_blob in out blob )'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'    t_cnt pls_integer := 0;'||unistr('\000a')||
-'    t_offs int';
-
-s:=s||'eger;'||unistr('\000a')||
-'    t_offs_dir_header integer;'||unistr('\000a')||
-'    t_offs_end_header integer;'||unistr('\000a')||
-'    t_comment raw(32767) := utl_raw.cast_to_raw( ''Implementation by Anton Scheffer'' );'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'    t_offs_dir_header := dbms_lob.getlength( p_zipped_blob );'||unistr('\000a')||
-'    t_offs := 1;'||unistr('\000a')||
-'    while dbms_lob.substr( p_zipped_blob, utl_raw.length( c_LOCAL_FILE_HEADER ), t_offs ) = c_LOCAL_FILE_HEADER'||unistr('\000a')||
-'    loop'||unistr('\000a')||
-'      t_cnt := t_cnt + 1;'||unistr('\000a')||
-'      dbms_';
-
-s:=s||'lob.append( p_zipped_blob'||unistr('\000a')||
-'                     , utl_raw.concat( hextoraw( ''504B0102'' )      -- Central directory file header signature'||unistr('\000a')||
-'                                     , hextoraw( ''1400'' )          -- version 2.0'||unistr('\000a')||
-'                                     , dbms_lob.substr( p_zipped_blob, 26, t_offs + 4 )'||unistr('\000a')||
-'                                     , hextoraw( ''0000'' )          -- File comment length'||unistr('\000a')||
-'    ';
-
-s:=s||'                                 , hextoraw( ''0000'' )          -- Disk number where file starts'||unistr('\000a')||
-'                                     , hextoraw( ''0000'' )          -- Internal file attributes => '||unistr('\000a')||
-'                                                                   --     0000 binary file'||unistr('\000a')||
-'                                                                   --     0100 (ascii)text file'||unistr('\000a')||
-'                  ';
-
-s:=s||'                   , case'||unistr('\000a')||
-'                                         when dbms_lob.substr( p_zipped_blob'||unistr('\000a')||
-'                                                             , 1'||unistr('\000a')||
-'                                                             , t_offs + 30 + blob2num( p_zipped_blob, 2, t_offs + 26 ) - 1'||unistr('\000a')||
-'                                                             ) in ( hextoraw( ''2F'' ) -- /'||unistr('\000a')||
-'                   ';
-
-s:=s||'                                               , hextoraw( ''5C'' ) -- \'||unistr('\000a')||
-'                                                                  )'||unistr('\000a')||
-'                                         then hextoraw( ''10000000'' ) -- a directory/folder'||unistr('\000a')||
-'                                         else hextoraw( ''2000B681'' ) -- a file'||unistr('\000a')||
-'                                       end                         -- External file attribu';
-
-s:=s||'tes'||unistr('\000a')||
-'                                     , little_endian( t_offs - 1 ) -- Relative offset of local file header'||unistr('\000a')||
-'                                     , dbms_lob.substr( p_zipped_blob'||unistr('\000a')||
-'                                                      , blob2num( p_zipped_blob, 2, t_offs + 26 )'||unistr('\000a')||
-'                                                      , t_offs + 30'||unistr('\000a')||
-'                                                     ';
-
-s:=s||' )            -- File name'||unistr('\000a')||
-'                                     )'||unistr('\000a')||
-'                     );'||unistr('\000a')||
-'      t_offs := t_offs + 30 + blob2num( p_zipped_blob, 4, t_offs + 18 )  -- compressed size'||unistr('\000a')||
-'                            + blob2num( p_zipped_blob, 2, t_offs + 26 )  -- File name length '||unistr('\000a')||
-'                            + blob2num( p_zipped_blob, 2, t_offs + 28 ); -- Extra field length'||unistr('\000a')||
-'    end loop;'||unistr('\000a')||
-'    t_offs_end_';
-
-s:=s||'header := dbms_lob.getlength( p_zipped_blob );'||unistr('\000a')||
-'    dbms_lob.append( p_zipped_blob'||unistr('\000a')||
-'                   , utl_raw.concat( c_END_OF_CENTRAL_DIRECTORY                                -- End of central directory signature'||unistr('\000a')||
-'                                   , hextoraw( ''0000'' )                                        -- Number of this disk'||unistr('\000a')||
-'                                   , hextoraw( ''0000'' )            ';
-
-s:=s||'                            -- Disk where central directory starts'||unistr('\000a')||
-'                                   , little_endian( t_cnt, 2 )                                 -- Number of central directory records on this disk'||unistr('\000a')||
-'                                   , little_endian( t_cnt, 2 )                                 -- Total number of central directory records'||unistr('\000a')||
-'                                   , little_en';
-
-s:=s||'dian( t_offs_end_header - t_offs_dir_header )    -- Size of central directory'||unistr('\000a')||
-'                                   , little_endian( t_offs_dir_header )                        -- Offset of start of central directory, relative to start of archive'||unistr('\000a')||
-'                                   , little_endian( nvl( utl_raw.length( t_comment ), 0 ), 2 ) -- ZIP file comment length'||unistr('\000a')||
-'                                   ';
-
-s:=s||', t_comment'||unistr('\000a')||
-'                                   )'||unistr('\000a')||
-'                   );'||unistr('\000a')||
-'  end;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'  procedure save_zip'||unistr('\000a')||
-'    ( p_zipped_blob blob'||unistr('\000a')||
-'    , p_dir varchar2 := ''MY_DIR'''||unistr('\000a')||
-'    , p_filename varchar2 := ''my.zip'''||unistr('\000a')||
-'    )'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'    t_fh utl_file.file_type;'||unistr('\000a')||
-'    t_len pls_integer := 32767;'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'    t_fh := utl_file.fopen( p_dir, p_filename, ''wb'' );'||unistr('\000a')||
-'    for i in 0 .. trunc( ( dbms_lob.getlength( p_zipped_blob ) - 1 ';
-
-s:=s||') / t_len )'||unistr('\000a')||
-'    loop'||unistr('\000a')||
-'      utl_file.put_raw( t_fh, dbms_lob.substr( p_zipped_blob, t_len, i * t_len + 1 ) );'||unistr('\000a')||
-'    end loop;'||unistr('\000a')||
-'    utl_file.fclose( t_fh );'||unistr('\000a')||
-'  end;'||unistr('\000a')||
-'--'||unistr('\000a')||
-'end;'||unistr('\000a')||
-'/'||unistr('\000a')||
-'CREATE OR REPLACE package xml_to_xslx'||unistr('\000a')||
-'-- ver 1.0.'||unistr('\000a')||
-'IS'||unistr('\000a')||
-'  procedure download_file(p_app_id in number,'||unistr('\000a')||
-'                    p_page_id      in number,'||unistr('\000a')||
-'                    p_max_rows     in number,'||unistr('\000a')||
-'                    p_file_name    in va';
-
-s:=s||'rchar2 default ''Excel''); '||unistr('\000a')||
-'end;'||unistr('\000a')||
-'/'||unistr('\000a')||
-''||unistr('\000a')||
-''||unistr('\000a')||
-'CREATE OR REPLACE PACKAGE body XML_TO_XSLX'||unistr('\000a')||
-'is'||unistr('\000a')||
-'  ------------------------------------------------------------------------------'||unistr('\000a')||
-'  t_sheet_rels clob default ''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||unistr('\000a')||
-'  <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'||unistr('\000a')||
-'    <Relationship Id="rId3" Type="http://schemas.openxmlformats.or';
-
-s:=s||'g/officeDocument/2006/relationships/styles" Target="styles.xml"/>'||unistr('\000a')||
-'    <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>'||unistr('\000a')||
-'    <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'||unistr('\000a')||
-'    <Relationship Id="rId4" Type="http://schemas.op';
-
-s:=s||'enxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>'||unistr('\000a')||
-'  </Relationships>'';'||unistr('\000a')||
-'  '||unistr('\000a')||
-'  t_workbook clob default ''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||unistr('\000a')||
-'  <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'||unistr('\000a')||
-'    <fileVersion appName="xl" lastEdited=';
-
-s:=s||'"4" lowestEdited="4" rupBuild="4506"/>'||unistr('\000a')||
-'    <workbookPr filterPrivacy="1" defaultThemeVersion="124226"/>'||unistr('\000a')||
-'    <bookViews>'||unistr('\000a')||
-'      <workbookView xWindow="120" yWindow="120" windowWidth="24780" windowHeight="12150"/>'||unistr('\000a')||
-'    </bookViews>'||unistr('\000a')||
-'    <sheets>'||unistr('\000a')||
-'      <sheet name="Sheet1" sheetId="1" r:id="rId1"/>'||unistr('\000a')||
-'    </sheets>'||unistr('\000a')||
-'    <definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">Shee';
-
-s:=s||'t1!$A$1:$H$1</definedName></definedNames>'||unistr('\000a')||
-'    <calcPr calcId="125725"/>'||unistr('\000a')||
-'    <fileRecoveryPr repairLoad="1"/>'||unistr('\000a')||
-'  </workbook>'';'||unistr('\000a')||
-'  '||unistr('\000a')||
-'  cursor cur_row(p_xml xmltype) is '||unistr('\000a')||
-'  SELECT rownum coll_num,'||unistr('\000a')||
-'                                 extractvalue(COLUMN_VALUE, ''CELL/@background-color'') AS background_color,'||unistr('\000a')||
-'                                 extractvalue(COLUMN_VALUE, ''CELL/@color'') AS font_color, '||unistr('\000a')||
-'            ';
-
-s:=s||'                     extractvalue(COLUMN_VALUE, ''CELL/@data-type'') AS data_type,'||unistr('\000a')||
-'                                 extractvalue(COLUMN_VALUE, ''CELL/@value'') AS cell_value,'||unistr('\000a')||
-'                                 extractvalue(column_value, ''CELL'') as cell_text'||unistr('\000a')||
-'                          from table (select xmlsequence(extract(p_xml,''DOCUMENT/DATA/ROWSET/ROW/CELL'')) from dual);'||unistr('\000a')||
-'  '||unistr('\000a')||
-'  --------------------------';
-
-s:=s||'----------------------------------------------------'||unistr('\000a')||
-'  procedure add(p_clob in out nocopy clob,p_str varchar2)'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'    DBMS_LOB.WRITEAPPEND(p_clob,length(p_str),p_str);'||unistr('\000a')||
-'  end;'||unistr('\000a')||
-'  ------------------------------------------------------------------------------'||unistr('\000a')||
-'  FUNCTION get_cell_name(p_coll IN binary_integer,'||unistr('\000a')||
-'                         p_row  IN binary_integer)'||unistr('\000a')||
-'  RETURN varchar2'||unistr('\000a')||
-'  IS   '||unistr('\000a')||
-'  BEGI';
-
-s:=s||'N'||unistr('\000a')||
-'   if p_coll > 26 then'||unistr('\000a')||
-'     return chr(64 + trunc(p_coll/26))||chr(64 + p_coll - trunc(p_coll/26)*26 +1)||p_row;'||unistr('\000a')||
-'   ELSE'||unistr('\000a')||
-'     return chr( 64 + p_coll)||p_row;'||unistr('\000a')||
-'   end if;  '||unistr('\000a')||
-'  end get_cell_name;'||unistr('\000a')||
-' '||unistr('\000a')||
-'  ------------------------------------------------------------------------------  '||unistr('\000a')||
-'  procedure add1file'||unistr('\000a')||
-'    ( p_zipped_blob in out blob'||unistr('\000a')||
-'    , p_name in varchar2'||unistr('\000a')||
-'    , p_content in clob'||unistr('\000a')||
-'    )'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'   v_de';
-
-s:=s||'sc_offset pls_integer := 1;'||unistr('\000a')||
-'   v_src_offset  PLS_INTEGER := 1;'||unistr('\000a')||
-'   v_lang        pls_integer := 0;'||unistr('\000a')||
-'   v_warning     pls_integer := 0;'||unistr('\000a')||
-'   v_blob        BLOB;'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'    dbms_lob.createtemporary(v_blob,true);    '||unistr('\000a')||
-'    dbms_lob.converttoblob(v_blob,p_content, dbms_lob.getlength(p_content), v_desc_offset, v_src_offset, dbms_lob.default_csid, v_lang, v_warning);'||unistr('\000a')||
-'    as_zip.add1file( p_zipped_blob, p_nam';
-
-s:=s||'e, v_blob);'||unistr('\000a')||
-'    dbms_lob.freetemporary(v_blob);'||unistr('\000a')||
-'  end add1file;  '||unistr('\000a')||
-''||unistr('\000a')||
-'  ------------------------------------------------------------------------------'||unistr('\000a')||
-'  procedure get_excel(p_xml in xmltype,v_clob in out nocopy clob,v_strings_clob in out nocopy clob)'||unistr('\000a')||
-'  IS'||unistr('\000a')||
-'    v_strings          apex_application_global.vc_arr2;'||unistr('\000a')||
-'    v_rownum           binary_integer default 1;'||unistr('\000a')||
-'    v_colls_count      binary_integer defa';
-
-s:=s||'ult 0;'||unistr('\000a')||
-'    v_agg_clob         clob;'||unistr('\000a')||
-'    v_agg_strings_cnt  binary_integer default 1; '||unistr('\000a')||
-'    string_height      constant number default 14.4; '||unistr('\000a')||
-'    aggregate_style_id constant number default 5;'||unistr('\000a')||
-'    HEADER_STYLE_ID    constant number default 6;'||unistr('\000a')||
-'    --'||unistr('\000a')||
-'    procedure print_char_cell(p_coll in binary_integer, p_row in binary_integer, p_string in varchar2,p_clob in out nocopy CLOB,p_style_id in number defa';
-
-s:=s||'ult null)'||unistr('\000a')||
-'    is'||unistr('\000a')||
-'     v_style varchar2(20);'||unistr('\000a')||
-'    begin'||unistr('\000a')||
-'      if p_style_id is not null then'||unistr('\000a')||
-'       v_style := '' s="''||p_style_id||''" '';'||unistr('\000a')||
-'      end if;'||unistr('\000a')||
-'      '||unistr('\000a')||
-'      add(p_clob,''<c r="''||get_cell_name(p_coll,p_row)||''" t="s" ''||v_style||''>''||chr(10)'||unistr('\000a')||
-'                         ||''<v>'' || to_char(v_strings.count)|| ''</v>''||chr(10)                 '||unistr('\000a')||
-'                         ||''</c>''||chr(10));'||unistr('\000a')||
-'      v_strin';
-
-s:=s||'gs(v_strings.count + 1) := p_string;'||unistr('\000a')||
-'    end print_char_cell;'||unistr('\000a')||
-'    --'||unistr('\000a')||
-'    procedure print_number_cell(p_coll in binary_integer, p_row in binary_integer, p_value in varchar2,p_clob in out nocopy clob,p_style_id in number default null)'||unistr('\000a')||
-'    is'||unistr('\000a')||
-'      v_style varchar2(20);'||unistr('\000a')||
-'    begin'||unistr('\000a')||
-'      if p_style_id is not null then'||unistr('\000a')||
-'       v_style := '' s="''||p_style_id||''" '';'||unistr('\000a')||
-'      end if;'||unistr('\000a')||
-''||unistr('\000a')||
-'      add(p_clob,''<c r="''|';
-
-s:=s||'|get_cell_name(p_coll,p_row)||''" ''||v_style||''>''||chr(10)'||unistr('\000a')||
-'                         ||''<v>''||p_value|| ''</v>''||chr(10)'||unistr('\000a')||
-'                         ||''</c>''||chr(10));'||unistr('\000a')||
-'    '||unistr('\000a')||
-'    end print_number_cell;'||unistr('\000a')||
-'    --'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'     pragma inline(add,''YES'');     '||unistr('\000a')||
-'     pragma inline(get_cell_name,''YES'');'||unistr('\000a')||
-'     '||unistr('\000a')||
-'     dbms_lob.createtemporary(v_agg_clob,true);'||unistr('\000a')||
-'     '||unistr('\000a')||
-'     add(v_clob,''<?xml version="1.0" encoding="UTF-8"';
-
-s:=s||' standalone="yes"?>''||chr(10));'||unistr('\000a')||
-'     add(v_clob,''<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'||unistr('\000a')||
-'        <dimension ref="A1"/>'||unistr('\000a')||
-'        <sheetViews>'||unistr('\000a')||
-'          <sheetView tabSelected="1" workbookViewId="0">'||unistr('\000a')||
-'            <pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>'||unistr('\000a')||
-'';
-
-s:=s||'            <selection pane="bottomLeft" activeCell="A2" sqref="A2"/>'||unistr('\000a')||
-'           </sheetView>'||unistr('\000a')||
-'          </sheetViews>'||unistr('\000a')||
-'        <sheetFormatPr baseColWidth="10" defaultColWidth="10" defaultRowHeight="15"/>''||chr(10));'||unistr('\000a')||
-'     add(v_clob,''<sheetData>''||chr(10));'||unistr('\000a')||
-'     '||unistr('\000a')||
-'     --header'||unistr('\000a')||
-'     add(v_clob,''<row>''||chr(10));     '||unistr('\000a')||
-'     for i in (select  extractvalue(column_value, ''CELL'') as column_header'||unistr('\000a')||
-'        ';
-
-s:=s||'       from table (select xmlsequence(extract(p_xml,''DOCUMENT/DATA/HEADER/CELL'')) from dual))'||unistr('\000a')||
-'     loop          '||unistr('\000a')||
-'       v_colls_count := v_colls_count + 1;'||unistr('\000a')||
-'       print_char_cell(p_coll => v_colls_count, p_row => v_rownum, p_string => i.column_header,p_clob => v_clob);'||unistr('\000a')||
-'     end loop; '||unistr('\000a')||
-'     v_rownum := v_rownum + 1;'||unistr('\000a')||
-'     add(v_clob,''</row>''||chr(10));     '||unistr('\000a')||
-'     '||unistr('\000a')||
-'     <<rowset>>     '||unistr('\000a')||
-'     for rowse';
-
-s:=s||'t_xml in (select column_value as rowset,'||unistr('\000a')||
-'                               extractvalue(COLUMN_VALUE, ''ROWSET/BREAK_HEADER'') AS break_header'||unistr('\000a')||
-'                        from table (select xmlsequence(extract(p_xml,''DOCUMENT/DATA/ROWSET'')) from dual)'||unistr('\000a')||
-'                       ) '||unistr('\000a')||
-'     loop'||unistr('\000a')||
-'       --header'||unistr('\000a')||
-'       if rowset_xml.break_header is not null then'||unistr('\000a')||
-'         add(v_clob,''<row>''||chr(10));'||unistr('\000a')||
-'         print_';
-
-s:=s||'char_cell(p_coll => 1,p_row => v_rownum,p_string => rowset_xml.break_header,p_clob => v_clob,p_style_id => header_style_id);         '||unistr('\000a')||
-'         --for u in 2..v_colls_count loop'||unistr('\000a')||
-'         --  print_char_cell(p_coll => 1,p_row => v_rownum,p_string => '''',p_clob => v_clob,p_style_id => HEADER_STYLE_ID);'||unistr('\000a')||
-'         --end loop;'||unistr('\000a')||
-'         v_rownum := v_rownum + 1;'||unistr('\000a')||
-'         add(v_clob,''</row>''||chr(10));'||unistr('\000a')||
-'     ';
-
-s:=s||'  end if;'||unistr('\000a')||
-'       '||unistr('\000a')||
-'       <<cells>>'||unistr('\000a')||
-'       for row_xml in (select column_value as row_ from table (select xmlsequence(extract(rowset_xml.rowset,''ROWSET/ROW'')) from dual)) loop'||unistr('\000a')||
-'         add(v_clob,''<row>''||chr(10));'||unistr('\000a')||
-'         FOR cell_xml IN (SELECT rownum coll_num,'||unistr('\000a')||
-'                                 extractvalue(COLUMN_VALUE, ''CELL/@background-color'') AS background_color,'||unistr('\000a')||
-'                             ';
-
-s:=s||'    extractvalue(COLUMN_VALUE, ''CELL/@color'') AS font_color, '||unistr('\000a')||
-'                                 extractvalue(COLUMN_VALUE, ''CELL/@data-type'') AS data_type,'||unistr('\000a')||
-'                                 extractvalue(COLUMN_VALUE, ''CELL/@value'') AS cell_value,'||unistr('\000a')||
-'                                 extractvalue(COLUMN_VALUE, ''CELL'') AS cell_text'||unistr('\000a')||
-'                          from table (select xmlsequence(extract(row_xml.r';
-
-s:=s||'ow_,''ROW/CELL'')) from dual))'||unistr('\000a')||
-'          loop'||unistr('\000a')||
-'            begin            '||unistr('\000a')||
-'              if cell_xml.data_type in (''NUMBER'') then'||unistr('\000a')||
-'                  print_number_cell(p_coll => cell_xml.coll_num, p_row => v_rownum, p_value => cell_xml.cell_value,p_clob => v_clob);'||unistr('\000a')||
-'              elsif cell_xml.data_type in (''DATE'') then'||unistr('\000a')||
-'                 add(v_clob,''<c r="''||get_cell_name(cell_xml.coll_num,v_rownum)||';
-
-s:=s||'''"  s="4">''||chr(10)'||unistr('\000a')||
-'                                    ||''<v>''||cell_xml.cell_value|| ''</v>''||chr(10)'||unistr('\000a')||
-'                                    ||''</c>''||chr(10));'||unistr('\000a')||
-'              else --STRING'||unistr('\000a')||
-'                  print_char_cell(p_coll => cell_xml.coll_num,p_row => v_rownum,p_string => cell_xml.cell_text,p_clob => v_clob);'||unistr('\000a')||
-'              END IF;              '||unistr('\000a')||
-'            exception'||unistr('\000a')||
-'              WHEN no_da';
-
-s:=s||'ta_found THEN'||unistr('\000a')||
-'                null;'||unistr('\000a')||
-'            end;'||unistr('\000a')||
-'         end loop;         '||unistr('\000a')||
-'         add(v_clob,''</row>''||chr(10));         '||unistr('\000a')||
-'         v_rownum := v_rownum + 1;'||unistr('\000a')||
-'       end loop cells;'||unistr('\000a')||
-'       '||unistr('\000a')||
-'       DBMS_LOB.TRIM(v_agg_clob,0);'||unistr('\000a')||
-'       v_agg_strings_cnt := 1;       '||unistr('\000a')||
-'       <<aggregates>>       '||unistr('\000a')||
-'       for row_xml in (select column_value as row_ from table (select xmlsequence(extract(rowset_xml.';
-
-s:=s||'rowset,''ROWSET/AGGREGATE'')) from dual)) loop'||unistr('\000a')||
-''||unistr('\000a')||
-'         for cell_xml_agg in (select rownum coll_num,'||unistr('\000a')||
-'                                 extractvalue(COLUMN_VALUE, ''CELL'') AS cell_text,'||unistr('\000a')||
-'                                 extractvalue(COLUMN_VALUE, ''CELL/@value'') AS cell_value'||unistr('\000a')||
-'                          from table (select xmlsequence(extract(row_xml.row_,''AGGREGATE/CELL'')) from dual))'||unistr('\000a')||
-'         loop'||unistr('\000a')||
-'      ';
-
-s:=s||'     v_agg_strings_cnt := greatest(length(regexp_replace(''[^:]'','''')) + 1,v_agg_strings_cnt);'||unistr('\000a')||
-'           if instr(cell_xml_agg.cell_text,'':'') > 0 then'||unistr('\000a')||
-'             print_char_cell(p_coll => cell_xml_agg.coll_num,'||unistr('\000a')||
-'                             p_row => v_rownum,'||unistr('\000a')||
-'                             p_string => rtrim(cell_xml_agg.cell_text,chr(10)),'||unistr('\000a')||
-'                             p_clob => v_agg_clob,'||unistr('\000a')||
-'         ';
-
-s:=s||'                    p_style_id => aggregate_style_id);'||unistr('\000a')||
-'           else'||unistr('\000a')||
-'             print_number_cell(p_coll => cell_xml_agg.coll_num, '||unistr('\000a')||
-'                               p_row => v_rownum, '||unistr('\000a')||
-'                               p_value => cell_xml_agg.cell_value,'||unistr('\000a')||
-'                               p_clob => v_agg_clob,'||unistr('\000a')||
-'                               p_style_id => aggregate_style_id);'||unistr('\000a')||
-'           end if;'||unistr('\000a')||
-'        ';
-
-s:=s||' end loop;'||unistr('\000a')||
-'         add(v_clob,''<row ht="''||v_agg_strings_cnt*string_height||''">''||chr(10));'||unistr('\000a')||
-'         --add(v_clob,''<row ht="40">''||chr(10));'||unistr('\000a')||
-'         dbms_lob.copy( dest_lob => v_clob,'||unistr('\000a')||
-'                        src_lob => v_agg_clob,'||unistr('\000a')||
-'                        amount => dbms_lob.getlength(v_agg_clob),'||unistr('\000a')||
-'                        dest_offset => dbms_lob.getlength(v_clob),'||unistr('\000a')||
-'                        src_offset';
-
-s:=s||' => 1);'||unistr('\000a')||
-'         add(v_clob,''</row>''||chr(10));'||unistr('\000a')||
-'         v_rownum := v_rownum + 1;'||unistr('\000a')||
-'       end loop aggregates;   '||unistr('\000a')||
-'     end loop rowset;     '||unistr('\000a')||
-'     '||unistr('\000a')||
-'     add(v_clob,''</sheetData>''||chr(10));'||unistr('\000a')||
-'     --if p_autofilter then'||unistr('\000a')||
-'     add(v_clob,''<autoFilter ref="A1:'' || get_cell_name(v_colls_count,v_rownum) || ''"/>'');'||unistr('\000a')||
-'     --end if;'||unistr('\000a')||
-'     add(v_clob,''<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75"';
-
-s:=s||' header="0.3" footer="0.3"/></worksheet>''||chr(10));'||unistr('\000a')||
-'     '||unistr('\000a')||
-'     add(v_strings_clob,''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>''||chr(10));'||unistr('\000a')||
-'     add(v_strings_clob,''<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="'' || v_strings.count() || ''" uniqueCount="'' || v_strings.count() || ''">''||chr(10));'||unistr('\000a')||
-'        '||unistr('\000a')||
-'     for i in 1 .. v_strings.count() loop'||unistr('\000a')||
-'        ad';
-
-s:=s||'d(v_strings_clob,''<si><t>''||dbms_xmlgen.convert( substr( v_strings( i ), 1, 32000 ) ) || ''</t></si>''||chr(10));'||unistr('\000a')||
-'     end loop; '||unistr('\000a')||
-'     add(v_strings_clob,''</sst>''||chr(10));'||unistr('\000a')||
-'     '||unistr('\000a')||
-'     dbms_lob.freetemporary(v_agg_clob);'||unistr('\000a')||
-'  end get_excel;'||unistr('\000a')||
-'  ------------------------------------------------------------------------------'||unistr('\000a')||
-'  procedure download_file(p_app_id      in number,'||unistr('\000a')||
-'                          p_page';
-
-s:=s||'_id     in number,'||unistr('\000a')||
-'                          p_max_rows    in number,'||unistr('\000a')||
-'                          p_file_name   in varchar2 default ''Excel'')'||unistr('\000a')||
-'  is'||unistr('\000a')||
-'    t_template blob;'||unistr('\000a')||
-'    t_excel    blob;'||unistr('\000a')||
-'    v_cells    clob;'||unistr('\000a')||
-'    v_strings  clob;'||unistr('\000a')||
-'    v_xml_data xmltype;'||unistr('\000a')||
-'    zip_files  as_zip.file_list;'||unistr('\000a')||
-'  begin'||unistr('\000a')||
-'    pragma inline(get_excel,''YES'');     '||unistr('\000a')||
-'    dbms_lob.createtemporary(t_excel,true);    '||unistr('\000a')||
-'    dbms_lob.creat';
-
-s:=s||'etemporary(v_cells,true);'||unistr('\000a')||
-'    dbms_lob.createtemporary(v_strings,true);'||unistr('\000a')||
-'    '||unistr('\000a')||
-'    '||unistr('\000a')||
-'    select file_content'||unistr('\000a')||
-'    into t_template'||unistr('\000a')||
-'    from apex_appl_plugin_files '||unistr('\000a')||
-'    where file_name = ''ExcelTemplate.zip'''||unistr('\000a')||
-'      and application_id = p_app_id;'||unistr('\000a')||
-'    '||unistr('\000a')||
-'    zip_files  := as_zip.get_file_list( t_template );'||unistr('\000a')||
-'    for i in zip_files.first() .. zip_files.last loop'||unistr('\000a')||
-'      as_zip.add1file( t_excel, zip_files( i ), a';
-
-s:=s||'s_zip.get_file( t_template, zip_files( i ) ) );'||unistr('\000a')||
-'    end loop;'||unistr('\000a')||
-'    '||unistr('\000a')||
-'    v_xml_data := IR_TO_XML.get_report_xml(p_app_id => p_app_id,'||unistr('\000a')||
-'                          p_page_id => p_page_id,                                '||unistr('\000a')||
-'                          p_get_page_items => ''N'','||unistr('\000a')||
-'                          p_items_list  => null,'||unistr('\000a')||
-'                          p_max_rows  => p_max_rows                            '||unistr('\000a')||
-'      ';
-
-s:=s||'                   );'||unistr('\000a')||
-'    '||unistr('\000a')||
-'    '||unistr('\000a')||
-'    get_excel(v_xml_data,v_cells,v_strings);'||unistr('\000a')||
-'    add1file( t_excel, ''xl/worksheets/Sheet1.xml'', v_cells);'||unistr('\000a')||
-'    add1file( t_excel, ''xl/sharedStrings.xml'',v_strings);'||unistr('\000a')||
-'    add1file( t_excel, ''xl/_rels/workbook.xml.rels'',t_sheet_rels);    '||unistr('\000a')||
-'    add1file( t_excel, ''xl/workbook.xml'',t_workbook);    '||unistr('\000a')||
-'    '||unistr('\000a')||
-'    as_zip.finish_zip( t_excel );'||unistr('\000a')||
-'      '||unistr('\000a')||
-'    htp.flush;'||unistr('\000a')||
-'    owa_util.m';
-
-s:=s||'ime_header( wwv_flow_utilities.get_excel_mime_type, false );'||unistr('\000a')||
-'    htp.print( ''Content-Length: '' || dbms_lob.getlength( t_excel ) );'||unistr('\000a')||
-'    htp.print( ''Content-disposition: attachment; filename=''||p_file_name||''.xlsx;'' );'||unistr('\000a')||
-'    owa_util.http_header_close;'||unistr('\000a')||
-'    wpg_docload.download_file( t_excel );'||unistr('\000a')||
-'    dbms_lob.freetemporary(t_excel);'||unistr('\000a')||
-'    dbms_lob.freetemporary(v_cells);'||unistr('\000a')||
-'    dbms_lob.freetemporary(v_string';
-
-s:=s||'s);    '||unistr('\000a')||
-'  end download_file;'||unistr('\000a')||
-'  '||unistr('\000a')||
-'end;'||unistr('\000a')||
-'/'||unistr('\000a')||
-'';
-
-wwv_flow_api.append_to_install_script(
-  p_id => 2986818195418105 + wwv_flow_api.g_id_offset,
+  p_id => 2424216548158239 + wwv_flow_api.g_id_offset,
   p_flow_id => wwv_flow.g_flow_id,
   p_script_clob => s);
 end;
