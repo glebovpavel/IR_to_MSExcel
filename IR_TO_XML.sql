@@ -284,7 +284,7 @@ CREATE OR REPLACE package body ir_to_xml as
   ------------------------------------------------------------------------------
   function get_current_row(p_current_row in apex_application_global.vc_arr2,
                            p_id in binary_integer)
-  return apex_application_page_ir_col.column_type%type
+  return largevarchar2
   is
   begin
     return p_current_row(p_id);
@@ -514,8 +514,11 @@ CREATE OR REPLACE package body ir_to_xml as
   exception
     when no_data_found then
       raise_application_error(-20001,'No Interactive Report found on Page='||p_page_id||' Application='||p_app_id||' Please make sure that the report was running at least once by this session.');
-    --when others then 
-    --  raise_application_error(-20001,'init_t_report: Page='||p_page_id||' Application='||p_app_id||' '||sqlerrm);
+    when others then 
+     log('Exception in init_t_report');
+     log(' Page='||p_page_id);
+     log(' Application='||p_app_id);
+     raise;
   end init_t_report;  
   ------------------------------------------------------------------------------
  
@@ -665,8 +668,7 @@ CREATE OR REPLACE package body ir_to_xml as
     return  '<ROW>'||v_clob || '</ROW>'||chr(10);    
   end print_row;
   
-  ------------------------------------------------------------------------------ 
- 
+  ------------------------------------------------------------------------------  
   function print_header
   return varchar2 is
     v_header_xml      largevarchar2;
@@ -742,17 +744,35 @@ CREATE OR REPLACE package body ir_to_xml as
   is
     v_tmp_pos       integer;  -- current column position in sql-query 
     v_format_mask   apex_application_page_ir_comp.computation_format_mask%type;
-    v_agg_value     varchar2(1000);
+    v_agg_value     largevarchar2;
+    v_row_value     largevarchar2;
+    v_g_format_mask varchar2(100);  
+    v_col_alias     varchar2(255);
   begin
       v_tmp_pos := find_rel_position (p_curr_col_name,p_agg_rows); 
       if v_tmp_pos is not null then
-        v_format_mask := nvl(get_col_format_mask(get_column_alias_sql(p_col_number)),p_default_format_mask);
-        v_agg_value := trim(to_char(get_current_row(p_current_row,p_position + v_tmp_pos),v_format_mask));
+        v_col_alias := get_column_alias_sql(p_col_number);
+        v_g_format_mask :=  get_col_format_mask(v_col_alias);   
+        v_format_mask := nvl(v_g_format_mask,p_default_format_mask);
+        v_row_value :=  get_current_row(p_current_row,p_position + v_tmp_pos);
+        v_agg_value := trim(to_char(v_row_value,v_format_mask));
         
         return  get_xmlval(p_agg_text||v_agg_value||' '||chr(10));
       else
         return  '';
-      end if;        
+      end if;    
+  exception
+     when others then
+        log('!Exception in get_agg_text');
+        log('p_col_number='||p_col_number);
+        log('v_col_alias='||v_col_alias);
+        log('v_g_format_mask='||v_g_format_mask);
+        log('p_default_format_mask='||p_default_format_mask);
+        log('v_tmp_pos='||v_tmp_pos);
+        log('p_position='||p_position);        
+        log('v_row_value='||v_row_value);
+        log('v_format_mask='||v_format_mask);
+        raise;
   end get_agg_text;
   ------------------------------------------------------------------------------
   function get_agg_value(p_curr_col_name   in varchar2,
@@ -913,11 +933,11 @@ CREATE OR REPLACE package body ir_to_xml as
     dbms_sql.parse(v_cur,v_sql,dbms_sql.native);     
     dbms_sql.describe_columns2(v_cur,v_colls_count,v_desc_tab);    
     --skip internal primary key if need
-    if lower(v_desc_tab(1).col_name) = 'apxws_row_pk' then
-      l_report.skipped_columns := 1;
-    end if;
-    --rec.col_name
-    
+    for i in 1..v_desc_tab.count loop
+      if lower(v_desc_tab(i).col_name) = 'apxws_row_pk' then
+        l_report.skipped_columns := 1;
+      end if;
+    end loop;
     
     l_report.start_with := 1 + l_report.skipped_columns +
                            nvl(l_report.break_really_on.count,0) + 
@@ -1028,7 +1048,8 @@ CREATE OR REPLACE package body ir_to_xml as
       if dbms_sql.is_open(v_cur) then
         dbms_sql.close_cursor(v_cur);   
       end if;  
-      raise_application_error(-20001,SQLERRM);
+      log('!Exception in get_xml_from_ir');
+      raise;  
   end get_xml_from_ir;
   ------------------------------------------------------------------------------
   procedure get_final_xml( p_clob           in out nocopy clob,
@@ -1127,7 +1148,7 @@ CREATE OR REPLACE package body ir_to_xml as
           end if;
         exception
           when others then
-            log('Error in IR_TO_XML.get_report_document '||sqlerrm||chr(10)||chr(10)||dbms_utility.format_error_backtrace);            
+            log('Error in IR_TO_XML.get_report_xml '||sqlerrm||chr(10)||chr(10)||dbms_utility.format_error_backtrace);            
         end;
         download_file(v_debug,'text/txt','log.txt');
     elsif p_return_type = 'X' then --XML-Data

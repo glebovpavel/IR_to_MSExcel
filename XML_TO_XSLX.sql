@@ -693,7 +693,7 @@ is
                           p_row       => v_rownum,
                           p_string    => rowset_xml.break_header,
                           p_clob      => v_clob,
-                          p_style_id  => get_header_style_id(p_align  => 'left')
+                          p_style_id  => get_header_style_id(p_back => NULL,p_align  => 'left')
                          );         
          v_rownum := v_rownum + 1;
          add(v_clob,'</row>'||chr(10));
