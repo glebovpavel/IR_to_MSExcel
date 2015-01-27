@@ -1,5 +1,5 @@
 CREATE OR REPLACE package ir_to_xml as    
-  --ver 1.4.
+  --ver 1.5.
   -- download interactive report as PDF
   PROCEDURE get_report_xml(p_app_id          IN NUMBER,
                            p_page_id         in number,                                
