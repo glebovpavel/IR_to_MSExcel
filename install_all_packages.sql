@@ -16,7 +16,7 @@ set define off;
 
 
 CREATE OR REPLACE package ir_to_xml as    
-  --ver 1.5.
+  --ver 1.4.
   -- download interactive report as PDF
   PROCEDURE get_report_xml(p_app_id          IN NUMBER,
                            p_page_id         in number,                                
@@ -323,6 +323,7 @@ CREATE OR REPLACE package body ir_to_xml as
   is   
   begin
     return dbms_xmlgen.convert(convert(p_str,'UTF8'));
+    --RETURN REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(p_str,'<','%26lt;'),'>','%26gt;'),'&','%26amp;'),'"','%26quot;'),'''','%26apos;');
   end get_xmlval;  
   ------------------------------------------------------------------------------  
   function intersect_arrays(p_one IN APEX_APPLICATION_GLOBAL.VC_ARR2,
@@ -342,6 +343,16 @@ CREATE OR REPLACE package body ir_to_xml as
     
     return v_ret;
   end intersect_arrays;
+  ------------------------------------------------------------------------------
+  function intersect_count(p_one IN APEX_APPLICATION_GLOBAL.VC_ARR2,
+                           p_two IN APEX_APPLICATION_GLOBAL.VC_ARR2)
+  return integer
+  is
+   v_rez APEX_APPLICATION_GLOBAL.VC_ARR2;
+  begin
+    v_rez := intersect_arrays(p_one,p_two);
+    return v_rez.count;
+  end intersect_count; 
   ------------------------------------------------------------------------------
   function get_query_column_list
   return APEX_APPLICATION_GLOBAL.VC_ARR2
@@ -373,16 +384,7 @@ CREATE OR REPLACE package body ir_to_xml as
         dbms_sql.close_cursor(v_cur);
       end if;  
       raise_application_error(-20001,'get_query_column_list: '||SQLERRM);
-  end get_query_column_list;  
-  ------------------------------------------------------------------------------
-  function get_cols_as_table(p_delimetered_column_list     in varchar2,
-                             p_displayed_nonbreak_columns  in apex_application_global.vc_arr2)
-  return apex_application_global.vc_arr2
-  is
-  begin
-    return intersect_arrays(APEX_UTIL.STRING_TO_TABLE(rr(p_delimetered_column_list)),p_displayed_nonbreak_columns);
-  end get_cols_as_table;
-  
+  end get_query_column_list;
   ------------------------------------------------------------------------------
   
   procedure init_t_report(p_app_id       in number,
@@ -424,9 +426,10 @@ CREATE OR REPLACE package body ir_to_xml as
       
     l_report.report := apex_ir.get_report (p_page_id        => p_page_id,
                                            p_region_id      => l_region_id
+                                           --p_report_id      => l_report_id
                                           );
-    l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list));
-    <<displayed_columns>>                                      
+    l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(intersect_arrays(APEX_UTIL.STRING_TO_TABLE(l_report.ir_data.report_columns),get_query_column_list));
+                                          
     for i in (select column_alias,
                      report_label,
                      heading_alignment,
@@ -476,16 +479,15 @@ CREATE OR REPLACE package body ir_to_xml as
       log('column='||i.column_alias||' l_report.header_alignment='||i.heading_alignment);
       log('column='||i.column_alias||' l_report.column_alignment='||i.column_alignment);
       log('column='||i.column_alias||' l_report.column_types='||i.column_type);
-    end loop displayed_columns;    
-    
+    end loop;    
     -- calculate columns count with aggregation separately
-    l_report.sum_columns_on_break := get_cols_as_table(l_report.ir_data.sum_columns_on_break,l_report.displayed_columns);  
-    l_report.avg_columns_on_break := get_cols_as_table(l_report.ir_data.avg_columns_on_break,l_report.displayed_columns);  
-    l_report.max_columns_on_break := get_cols_as_table(l_report.ir_data.max_columns_on_break,l_report.displayed_columns);  
-    l_report.min_columns_on_break := get_cols_as_table(l_report.ir_data.min_columns_on_break,l_report.displayed_columns);  
-    l_report.median_columns_on_break := get_cols_as_table(l_report.ir_data.median_columns_on_break,l_report.displayed_columns); 
-    l_report.count_columns_on_break := get_cols_as_table(l_report.ir_data.count_columns_on_break,l_report.displayed_columns);  
-    l_report.count_distnt_col_on_break := get_cols_as_table(l_report.ir_data.count_distnt_col_on_break,l_report.displayed_columns); 
+    l_report.sum_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.sum_columns_on_break));  
+    l_report.avg_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.avg_columns_on_break));  
+    l_report.max_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.max_columns_on_break));  
+    l_report.min_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.min_columns_on_break));  
+    l_report.median_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.median_columns_on_break)); 
+    l_report.count_columns_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.count_columns_on_break));  
+    l_report.count_distnt_col_on_break := APEX_UTIL.STRING_TO_TABLE(rr(l_report.ir_data.count_distnt_col_on_break)); 
       
     -- calculate total count of columns with aggregation
     l_report.agg_cols_cnt := l_report.sum_columns_on_break.count + 
@@ -833,13 +835,11 @@ CREATE OR REPLACE package body ir_to_xml as
                          p_position      => v_position
                         );
                         
-      -- print SUm value twice: once to the value-property of XML-tag
       v_aggregate_xml := v_aggregate_xml || bcoll(p_column_alias=>get_column_alias_sql(i),
                                                   p_value => v_sum_value,
                                                   p_format_mask => get_col_format_mask(get_column_alias_sql(i))
                                                   );
-      -- and second to XML-tag text to display as text concatenated with other aggregates
-      -- one column cah have only one aggregate of each type
+      --one column cah have only one aggregate of each type
       v_aggregate_xml := v_aggregate_xml || get_agg_text(p_curr_col_name => get_column_alias_sql(i),
                                        p_agg_rows      => l_report.sum_columns_on_break,
                                        p_current_row   => p_current_row,
@@ -1060,9 +1060,16 @@ CREATE OR REPLACE package body ir_to_xml as
        v_inside := false;
     end if;
    dbms_sql.close_cursor(v_cur);   
+  exception
+    when others then
+      if dbms_sql.is_open(v_cur) then
+        dbms_sql.close_cursor(v_cur);   
+      end if;  
+      log('!Exception in get_xml_from_ir');
+      raise;  
   end get_xml_from_ir;
   ------------------------------------------------------------------------------
-  procedure get_final_xml(p_clob           in out nocopy clob,
+  procedure get_final_xml( p_clob           in out nocopy clob,
                           p_app_id         in number,
                           p_page_id        in number,
                           p_items_list     in varchar2,
