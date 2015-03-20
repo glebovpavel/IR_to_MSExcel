@@ -53,7 +53,7 @@ prompt  Set Application ID...
 begin
  
    -- SET APPLICATION ID
-   wwv_flow.g_flow_id := nvl(wwv_flow_application_install.get_application_id,26482);
+   wwv_flow.g_flow_id := nvl(wwv_flow_application_install.get_application_id,102);
    wwv_flow_api.g_id_offset := nvl(wwv_flow_application_install.get_offset,0);
 null;
  
@@ -77,7 +77,7 @@ prompt  ...plugins
 begin
  
 wwv_flow_api.create_plugin (
-  p_id => 143115008746138050 + wwv_flow_api.g_id_offset
+  p_id => 143122497874382490 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
  ,p_plugin_type => 'PROCESS TYPE'
  ,p_name => 'GPV_IR_TO_MSEXCEL'
@@ -100,21 +100,22 @@ wwv_flow_api.create_plugin (
 '	<br />'||unistr('\000a')||
 '	&nbsp;</p>'||unistr('\000a')||
 ''
- ,p_version_identifier => '1.9'
+ ,p_version_identifier => '1.93'
  ,p_about_url => 'http://glebovpavel.github.io/plugin'
  ,p_plugin_comment => 'Do not move ExcelTemplate.zip to the WEB-Server !!!'||unistr('\000a')||
 'Package IR_TO_MSEXCEL need to be installed on each oracle-scheme where the plugin is used.'
   );
 wwv_flow_api.create_plugin_attribute (
-  p_id => 70078628500541944 + wwv_flow_api.g_id_offset
+  p_id => 70086117628786384 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
- ,p_plugin_id => 143115008746138050 + wwv_flow_api.g_id_offset
+ ,p_plugin_id => 143122497874382490 + wwv_flow_api.g_id_offset
  ,p_attribute_scope => 'COMPONENT'
  ,p_attribute_sequence => 5
  ,p_display_sequence => 50
  ,p_prompt => 'Maximum Rows'
  ,p_attribute_type => 'TEXT'
  ,p_is_required => false
+ ,p_default_value => '500'
  ,p_is_translatable => false
  ,p_help_text => 'Rows greater than this value will not be exported. '||unistr('\000a')||
 'To export all the rows set the value to 1000000000.'||unistr('\000a')||
@@ -122,9 +123,9 @@ wwv_flow_api.create_plugin_attribute (
 ''
   );
 wwv_flow_api.create_plugin_attribute (
-  p_id => 137640160192148270 + wwv_flow_api.g_id_offset
+  p_id => 137647649320392710 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
- ,p_plugin_id => 143115008746138050 + wwv_flow_api.g_id_offset
+ ,p_plugin_id => 143122497874382490 + wwv_flow_api.g_id_offset
  ,p_attribute_scope => 'COMPONENT'
  ,p_attribute_sequence => 6
  ,p_display_sequence => 60
@@ -135,9 +136,9 @@ wwv_flow_api.create_plugin_attribute (
  ,p_help_text => 'Download XLSX process stared when user clicks on items with this jquery selector.'
   );
 wwv_flow_api.create_plugin_attribute (
-  p_id => 137618456915362253 + wwv_flow_api.g_id_offset
+  p_id => 137625946043606693 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
- ,p_plugin_id => 143115008746138050 + wwv_flow_api.g_id_offset
+ ,p_plugin_id => 143122497874382490 + wwv_flow_api.g_id_offset
  ,p_attribute_scope => 'COMPONENT'
  ,p_attribute_sequence => 7
  ,p_display_sequence => 70
@@ -148,33 +149,33 @@ wwv_flow_api.create_plugin_attribute (
  ,p_is_translatable => false
   );
 wwv_flow_api.create_plugin_attr_value (
-  p_id => 137618848720366084 + wwv_flow_api.g_id_offset
+  p_id => 137626337848610524 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
- ,p_plugin_attribute_id => 137618456915362253 + wwv_flow_api.g_id_offset
+ ,p_plugin_attribute_id => 137625946043606693 + wwv_flow_api.g_id_offset
  ,p_display_sequence => 10
  ,p_display_value => 'Excel XLSX'
  ,p_return_value => 'E'
   );
 wwv_flow_api.create_plugin_attr_value (
-  p_id => 137619245054367752 + wwv_flow_api.g_id_offset
+  p_id => 137626734182612192 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
- ,p_plugin_attribute_id => 137618456915362253 + wwv_flow_api.g_id_offset
+ ,p_plugin_attribute_id => 137625946043606693 + wwv_flow_api.g_id_offset
  ,p_display_sequence => 20
  ,p_display_value => 'XML (Debug)'
  ,p_return_value => 'X'
   );
 wwv_flow_api.create_plugin_attr_value (
-  p_id => 137619641387369433 + wwv_flow_api.g_id_offset
+  p_id => 137627130515613873 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
- ,p_plugin_attribute_id => 137618456915362253 + wwv_flow_api.g_id_offset
+ ,p_plugin_attribute_id => 137625946043606693 + wwv_flow_api.g_id_offset
  ,p_display_sequence => 30
  ,p_display_value => 'Debug TXT'
  ,p_return_value => 'T'
   );
 wwv_flow_api.create_plugin_attribute (
-  p_id => 137642260460409179 + wwv_flow_api.g_id_offset
+  p_id => 137649749588653619 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
- ,p_plugin_id => 143115008746138050 + wwv_flow_api.g_id_offset
+ ,p_plugin_id => 143122497874382490 + wwv_flow_api.g_id_offset
  ,p_attribute_scope => 'COMPONENT'
  ,p_attribute_sequence => 10
  ,p_display_sequence => 10
@@ -184,6 +185,29 @@ wwv_flow_api.create_plugin_attribute (
  ,p_default_value => 'Y'
  ,p_is_translatable => false
  ,p_help_text => 'Replace standard IR download XLS menu functionality to download XLSX feature. '
+  );
+wwv_flow_api.create_plugin_attribute (
+  p_id => 7256925771425975 + wwv_flow_api.g_id_offset
+ ,p_flow_id => wwv_flow.g_flow_id
+ ,p_plugin_id => 143122497874382490 + wwv_flow_api.g_id_offset
+ ,p_attribute_scope => 'COMPONENT'
+ ,p_attribute_sequence => 11
+ ,p_display_sequence => 110
+ ,p_prompt => 'Custom Width'
+ ,p_attribute_type => 'TEXT'
+ ,p_is_required => false
+ ,p_is_translatable => false
+ ,p_help_text => 'Comma-delimited string with values, each value consist of  column name and column width.<br><br>'||unistr('\000a')||
+''||unistr('\000a')||
+'So,string<br> '||unistr('\000a')||
+'PROJECT=151,TASK_NAME=319,START_DATE=133,<br>'||unistr('\000a')||
+'set<br>'||unistr('\000a')||
+'     width = 151 to the column with name = “PROJECT”,<br>'||unistr('\000a')||
+'     width = 319 to the column with name = “NAME”,<br>'||unistr('\000a')||
+'     width = 133 to the column with name = “START_DATE”<br>'||unistr('\000a')||
+'<b>Please do not forgive comma at the end of the string!</b><br>'||unistr('\000a')||
+'Width are set in special units that are approximately equal to pixels.'||unistr('\000a')||
+''
   );
 null;
  
@@ -256,9 +280,9 @@ end;
 begin
  
 wwv_flow_api.create_plugin_file (
-  p_id => 137611164845658510 + wwv_flow_api.g_id_offset
+  p_id => 137618653973902950 + wwv_flow_api.g_id_offset
  ,p_flow_id => wwv_flow.g_flow_id
- ,p_plugin_id => 143115008746138050 + wwv_flow_api.g_id_offset
+ ,p_plugin_id => 143122497874382490 + wwv_flow_api.g_id_offset
  ,p_file_name => 'ExcelTemplate.zip'
  ,p_mime_type => 'application/zip'
  ,p_file_content => wwv_flow_api.g_varchar2_table

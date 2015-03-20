@@ -21,7 +21,7 @@ Here's a link to a [demo](https://apex.oracle.com/pls/apex/f?p=56154:1) page.
 
 ##Current Stable Version
 
-Version 1.92
+Version 1.93
 
 ##License
 

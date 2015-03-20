@@ -1,7 +1,7 @@
 /**********************************************
 **
 ** Author: Pavel Glebov
-** Date: 08-2014
+** Date: 03-2015
 **
 ** This all in one install script contains headrs and bodies of 4 packages
 **
@@ -2646,7 +2646,7 @@ CREATE OR REPLACE package body IR_TO_MSEXCEL
 as
     XLS_DOWNLOAD_SELECTOR constant varchar2(20) := ' #apexir_dl_XLS, ';
 
-    JAVASCRIPT_CODE  constant varchar2(850) := 
+    JAVASCRIPT_CODE  constant varchar2(2000) := 
     q'[   
     function getColWidthsDelimeteredString()
       {
@@ -2661,27 +2661,52 @@ as
         }       
         return colWidthsDelimeteredString + '#CUSTOMWIDTH#';
       }
+     function add_xlsx_download_button()
+     {     
+     $('td  [id^="apexir_dl_"] ').last().parent().after('<td nowrap="nowrap" id="download_xlsx_8458548"><img src="/i/ws/download_csv_64x64.gif" alt="XLSX" title="XLSX"></td>')
+     $('td  [for^="apexir_dl_"] ').last().parent().after('<td align="center" nowrap="nowrap"><label for="apexir_dl_EMAIL">XLSX</label><td>');
+     }
     function replaceDownloadXLS()
-      {
-        $("#apexir_CONTROL_PANEL_DROP").on('click',function(){                
-           $("#apexir_dl_XLS").attr("href",'f?p=&APP_ID.:&APP_PAGE_ID.:&APP_SESSION.:GPV_IR_TO_MSEXCEL' + getColWidthsDelimeteredString() +':NO:::');
+      {     
+        $("#apexir_CONTROL_PANEL_DROP").on('click',function(){                           
+           $("#apexir_dl_XLS").attr("href",'f?p=&APP_ID.:&APP_PAGE_ID.:&APP_SESSION.:GPV_IR_TO_MSEXCEL' + getColWidthsDelimeteredString() +':NO:::');           
         });
       }
     ]';
    ------------------------------------------------------------------------------ 
+
     ON_SELECOR_CODE constant varchar2(220) :=  q'[
     $("#SELECTOR#").on( "click", function() 
     { 
-      apex.navigation.redirect("f?p=&APP_ID.:&APP_PAGE_ID.:&APP_SESSION.:GPV_IR_TO_MSEXCEL"+getColWidthsDelimeteredString()+":NO:::") ;
+      apex.navigation.redirect("#URL#") ;
     });]';
+
   ------------------------------------------------------------------------------  
-    STANDARD_DOWNLOAD_CODE constant varchar2(150) := q'[
-    $("#apexir_WORKSHEET_REGION").bind("apexafterrefresh", function(){        
-        replaceDownloadXLS()  
+    STANDARD_DOWNLOAD_CODE constant varchar2(300) := q'[
+    $("#apexir_WORKSHEET_REGION").bind("apexafterrefresh", function(){                
+        replaceDownloadXLS() ;        
     });
-    replaceDownloadXLS();
+    replaceDownloadXLS();        
     ]';
   ------------------------------------------------------------------------------ 
+  
+  function get_prepeared_url
+  return varchar2
+  is
+    v_page_access_protection apex_application_pages.PAGE_ACCESS_PROTECTION%TYPE;
+  begin
+    select page_access_protection 
+    into v_page_access_protection
+    from apex_application_pages 
+    where page_id = v('APP_PAGE_ID')
+     and application_id = v('APP_ID');
+    
+    if v_page_access_protection = 'Unrestricted' then
+      return 'f?p=&APP_ID.:&APP_PAGE_ID.:&APP_SESSION.:GPV_IR_TO_MSEXCEL"+getColWidthsDelimeteredString()+":NO:::';    
+    else
+      return APEX_UTIL.PREPARE_URL('f?p='||v('APP_ID')||':'||v('APP_PAGE_ID')||':'||v('APP_SESSION')||':GPV_IR_TO_MSEXCEL:NO:::');    
+    end if;
+  end get_prepeared_url;
   
   procedure get_xlsx_from_ir_ext(p_maximum_rows    in number default null,
                                  p_jquery_selector in varchar2 default null,
@@ -2690,7 +2715,7 @@ as
                                  p_custom_width    in varchar2     
                                 )
   is
-    v_javascript_code       varchar2(1500);
+    v_javascript_code       varchar2(3000);
     v_xls_download_selector varchar2(500);
   begin
     v_javascript_code := JAVASCRIPT_CODE;    
@@ -2698,10 +2723,12 @@ as
     if p_replace_xls = 'Y' then
       v_javascript_code := v_javascript_code||STANDARD_DOWNLOAD_CODE;
       v_xls_download_selector := XLS_DOWNLOAD_SELECTOR;
+      
+      --v_xls_download_selector := XLS_DOWNLOAD_SELECTOR||',#download_xlsx_8458548';
     end if;
 
     if p_jquery_selector is not null then
-     v_javascript_code := v_javascript_code||replace(ON_SELECOR_CODE,'#SELECTOR#',rtrim(v_xls_download_selector||p_jquery_selector,','));
+     v_javascript_code := v_javascript_code||replace(replace(ON_SELECOR_CODE,'#URL#',get_prepeared_url),'#SELECTOR#',rtrim(v_xls_download_selector||p_jquery_selector,','));     
     end if;
     
     v_javascript_code := replace(v_javascript_code,'#CUSTOMWIDTH#',replace(p_custom_width,'''',''));
@@ -2713,7 +2740,7 @@ as
       if p_download_type = 'E' then -- Excel XLSX
         XML_TO_XSLX.download_file(p_app_id       => v('APP_ID'),
                                   p_page_id      => v('APP_PAGE_ID'),
-                                  p_col_length   => regexp_replace(v('REQUEST'),'^GPV_IR_TO_MSEXCEL',''),
+                                  p_col_length   => regexp_replace(v('REQUEST'),'^GPV_IR_TO_MSEXCEL','')||p_custom_width,
                                   p_max_rows     => nvl(p_maximum_rows,xml_to_xslx.get_max_rows (v('APP_ID'),v('APP_PAGE_ID')))
                                   );
       elsif p_download_type = 'X' then -- XML
@@ -2768,13 +2795,13 @@ as
   is
     v_javascript_code varchar2(2000);
     v_on_standard_download_code varchar2(300);
-    v_on_selecor_code varchar2(300);
   BEGIN
     check_correct_use;
     get_xlsx_from_ir_ext(p_maximum_rows    => p_process.attribute_05,
                          p_jquery_selector => p_process.attribute_06,
                          p_download_type   => p_process.attribute_07,
-                         p_replace_xls     => p_process.attribute_10
+                         p_replace_xls     => p_process.attribute_10,
+                         p_custom_width    => p_process.attribute_11
                         );
    
    return null;
