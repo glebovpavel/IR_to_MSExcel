@@ -1,7 +1,8 @@
 /**********************************************
 **
 ** Author: Pavel Glebov
-** Date: 03-2015
+** Date: 04-2015
+** Version: 1.94
 **
 ** This all in one install script contains headrs and bodies of 4 packages
 **
@@ -16,7 +17,7 @@ set define off;
 
 
 CREATE OR REPLACE package ir_to_xml as    
-  --ver 1.5.
+  --ver 1.4.
   -- download interactive report as PDF
   PROCEDURE get_report_xml(p_app_id          IN NUMBER,
                            p_page_id         in number,                                
@@ -132,35 +133,77 @@ CREATE OR REPLACE package body ir_to_xml as
    TYPE t_cell_data IS record
    (
      VALUE           VARCHAR2(100),
-     text            CLOB
+     text            largevarchar2,
+     datatype        VARCHAR2(50)
    );  
-  l_report    ir_report;   
-  v_debug     clob;
+  l_report          ir_report;   
+  v_debug           clob;  
+  v_debug_buffer    largevarchar2; 
   ------------------------------------------------------------------------------
-  function get_log
-  return clob
+  /**
+  * http://mk-commi.blogspot.co.at/2014/11/concatenating-varchar2-values-into-clob.html  
+  
+  * Procedure concatenates a VARCHAR2 to a CLOB.
+  * It uses another VARCHAR2 as a buffer until it reaches 32767 characters.
+  * Then it flushes the current buffer to the CLOB and resets the buffer using
+  * the actual VARCHAR2 to add.
+  * Your final call needs to be done setting p_eof to TRUE in order to
+  * flush everything to the CLOB.
+  *
+  * @param p_clob        The CLOB buffer.
+  * @param p_vc_buffer   The intermediate VARCHAR2 buffer. (must be VARCHAR2(32767))
+  * @param p_vc_addition The VARCHAR2 value you want to append.
+  * @param p_eof         Indicates if complete buffer should be flushed to CLOB.
+  */
+  PROCEDURE add( p_clob IN OUT NOCOPY CLOB
+               , p_vc_buffer IN OUT NOCOPY VARCHAR2
+               , p_vc_addition IN VARCHAR2
+               , p_eof IN BOOLEAN DEFAULT FALSE
+               )
+  AS
+  BEGIN
+     
+    -- Standard Flow
+    IF NVL(LENGTHB(p_vc_buffer), 0) + NVL(LENGTHB(p_vc_addition), 0) < 32767 THEN
+      p_vc_buffer := p_vc_buffer || p_vc_addition;
+    ELSE
+      IF p_clob IS NULL THEN
+        dbms_lob.createtemporary(p_clob, TRUE);
+      END IF;
+      dbms_lob.writeappend(p_clob, length(p_vc_buffer), p_vc_buffer);
+      p_vc_buffer := p_vc_addition;
+    END IF;
+     
+    -- Full Flush requested
+    IF p_eof THEN
+      IF p_clob IS NULL THEN
+         p_clob := p_vc_buffer;
+      ELSE
+        dbms_lob.writeappend(p_clob, length(p_vc_buffer), p_vc_buffer);
+      END IF;
+      p_vc_buffer := NULL;
+    END IF;
+   
+  END add;
+  ------------------------------------------------------------------------------
+  procedure log(p_message in varchar2,p_eof IN BOOLEAN DEFAULT FALSE)
   is
   begin
-    return v_debug;
-  end  get_log;
-  ------------------------------------------------------------------------------
-  procedure add(p_clob in out nocopy clob,p_str varchar2)
-  is
-  begin
-    if p_str is not null then
-      dbms_lob.writeappend(p_clob,length(p_str),p_str);
-    end if;  
-  end;
-  ------------------------------------------------------------------------------
-  procedure log(p_message in varchar2)
-  is
-  begin
-    add(v_debug,p_message||chr(10));
+    --return;
+    add(v_debug,v_debug_buffer,p_message||chr(10),p_eof);
     apex_debug_message.log_message(p_message => substr(p_message,1,32767),
                                    p_enabled => false,
                                    p_level   => 4);
   end log; 
   ------------------------------------------------------------------------------
+  function get_log
+  return clob
+  is
+  begin
+    log('LogFinish',TRUE);
+    return v_debug;
+  end  get_log;
+    ------------------------------------------------------------------------------
   function get_variables_array(p_sql in varchar2)
   return APEX_APPLICATION_GLOBAL.VC_ARR2
   is
@@ -570,39 +613,56 @@ CREATE OR REPLACE package body ir_to_xml as
   IS
     v_data t_cell_data;
   BEGIN
-     BEGIN
-       v_data.value := to_date(p_query_value) - to_date('01-03-1900','DD-MM-YYYY') + 61;
-       if p_format_mask is not null then
-         v_data.text := to_char(to_date(p_query_value),p_format_mask);
-       ELSE
-         v_data.text := p_query_value;
-       end if;
-      exception
-        WHEN others THEN 
-          v_data.text := p_query_value;
-      END;      
-      
+     v_data.value := to_date(p_query_value) - to_date('01-03-1900','DD-MM-YYYY') + 61;
+     v_data.datatype := 'DATE';
+     if p_format_mask is not null then
+       v_data.text := to_char(to_date(p_query_value),p_format_mask);
+     ELSE
+       v_data.text := p_query_value;
+     end if;
+    
+    return v_data;
+  EXCEPTION
+    WHEN invalid_number THEN 
+      v_data.value := NULL;          
+      v_data.datatype := 'STRING';
+      v_data.text := p_query_value;
       return v_data;
-  end get_cell_date;
+  END get_cell_date;
+  ------------------------------------------------------------------------------
+  function get_formatted_number(p_str_to_convert in varchar2,p_format_string in varchar2,p_nls in varchar2 default null)
+  return varchar2
+  is
+    v_str varchar2(100);
+  begin
+    v_str := trim(to_char(to_number(p_str_to_convert),p_format_string,p_nls));
+    if instr(v_str,'#') > 0 and ltrim(v_str,'#') is null then --format fail
+      raise invalid_number;
+    else
+      return v_str;
+    end if;    
+  end get_formatted_number;  
   ------------------------------------------------------------------------------
   FUNCTION get_cell_number(p_query_value IN VARCHAR2,p_format_mask IN VARCHAR2)
   RETURN t_cell_data
   IS
     v_data t_cell_data;
   BEGIN
-     begin
-       v_data.value := trim(to_char(to_number(p_query_value),'9999999999999999999999990D0000000000','NLS_NUMERIC_CHARACTERS = ''.,'''));
-       
-       if p_format_mask is not null then
-         v_data.text := trim(to_char(to_number(p_query_value),p_format_mask));
-       ELSE
-         v_data.text := p_query_value;
-       end if;
-      exception
-        WHEN others THEN 
-          v_data.text := p_query_value;
-      END;      
-      
+   v_data.datatype := 'NUMBER';
+   v_data.value := get_formatted_number(p_query_value,'9999999999999990D0000000000','NLS_NUMERIC_CHARACTERS = ''.,''');
+
+   if p_format_mask is not null then
+     v_data.text := get_formatted_number(p_query_value,p_format_mask);
+   ELSE
+     v_data.text := p_query_value;
+   end if;
+   
+   return v_data;
+  EXCEPTION
+    WHEN invalid_number THEN 
+      v_data.value := NULL;          
+      v_data.datatype := 'STRING';
+      v_data.text := p_query_value;
       return v_data;
   END get_cell_number;  
   ------------------------------------------------------------------------------
@@ -649,6 +709,7 @@ CREATE OR REPLACE package body ir_to_xml as
       ELSE --STRING
         v_format_mask := NULL;
         v_cell_data.VALUE  := NULL;  
+        v_cell_data.datatype := 'STRING';
         v_cell_data.text   := get_current_row(p_current_row,i);
       end if; 
        
@@ -673,7 +734,7 @@ CREATE OR REPLACE package body ir_to_xml as
                                p_back_color   => nvl(v_cell_back_color,v_row_back_color),
                                p_align        => get_column_alignment(v_column_alias),
                                p_column_alias => v_column_alias,
-                               p_colmn_type   => v_column_type,
+                               p_colmn_type   => v_cell_data.datatype,
                                p_value        => v_cell_data.value,
                                p_format_mask  => v_format_mask
                               )
@@ -944,6 +1005,7 @@ CREATE OR REPLACE package body ir_to_xml as
    v_inside         boolean default false;
    v_sql            largevarchar2;
    v_bind_variables APEX_APPLICATION_GLOBAL.VC_ARR2;
+   v_buffer         largevarchar2;
   begin
     v_cur := dbms_sql.open_cursor(2); 
     v_sql := apex_plugin_util.replace_substitutions(p_value => l_report.report.sql_query,p_escape => false);    
@@ -972,7 +1034,7 @@ CREATE OR REPLACE package body ir_to_xml as
     
     v_bind_variables := get_variables_array(v_sql);
        
-    add(v_data,print_header); 
+    add(v_data,v_buffer,print_header); 
     log('<<bind variables>>');
     <<bind_variables>>
     for i in 1..l_report.report.binds.count loop
@@ -1034,15 +1096,15 @@ CREATE OR REPLACE package body ir_to_xml as
             --check control break
             if v_current_row > 1 then
              if is_control_break(v_row,v_prev_row) then                                             
-               add(v_data,'</ROWSET>'||chr(10));
+               add(v_data,v_buffer,'</ROWSET>'||chr(10));
                v_inside := false;
              end if;
             end if;
             if not v_inside then
-              add(v_data,'<ROWSET>'||chr(10));
-              add(v_data,print_control_break_header(v_row));
+              add(v_data,v_buffer,'<ROWSET>'||chr(10));
+              add(v_data,v_buffer,print_control_break_header(v_row));
               --print aggregates
-              add(v_data,print_aggregate(v_row));
+              add(v_data,v_buffer,print_aggregate(v_row));
               v_inside := true;
             END IF;            --            
             <<query_columns>>
@@ -1050,15 +1112,16 @@ CREATE OR REPLACE package body ir_to_xml as
               v_prev_row(i) := v_row(i);                           
             end loop;                 
             --v_xml := v_xml||to_clob(print_row(v_row));
-            add(v_data,print_row(v_row));
+            add(v_data,v_buffer,print_row(v_row));
          ELSE --DBMS_SQL.FETCH_ROWS(v_cur)>0
            EXIT; 
          END IF; 
     END LOOP main_cycle;        
     if v_inside then
-       add(v_data,'</ROWSET>');
+       add(v_data,v_buffer,'</ROWSET>');
        v_inside := false;
     end if;
+   add(v_data,v_buffer,' ',TRUE); 
    dbms_sql.close_cursor(v_cur);   
   end get_xml_from_ir;
   ------------------------------------------------------------------------------
@@ -1069,15 +1132,16 @@ CREATE OR REPLACE package body ir_to_xml as
                           p_get_page_items in char,
                           p_max_rows       in number)
   is
-   v_rows  apex_application_global.vc_arr2;
+   v_rows    apex_application_global.vc_arr2;
+   v_buffer  largevarchar2;
   begin
-    add(p_clob,'<?xml version="1.0" encoding="UTF-8"?>'||chr(10)||'<DOCUMENT>'||chr(10));    
-    add(p_clob,get_page_items(p_app_id,p_page_id,p_items_list,p_get_page_items));
-    add(p_clob,'<DATA>'||chr(10));   
+    add(p_clob,v_buffer,'<?xml version="1.0" encoding="UTF-8"?>'||chr(10)||'<DOCUMENT>'||chr(10));    
+    add(p_clob,v_buffer,get_page_items(p_app_id,p_page_id,p_items_list,p_get_page_items));
+    add(p_clob,v_buffer,'<DATA>'||chr(10),TRUE);   
     get_xml_from_ir(p_clob,p_max_rows);    
    
-    add(p_clob,'</DATA>'||chr(10));
-    add(p_clob,'</DOCUMENT>'||chr(10));  
+    add(p_clob,v_buffer,'</DATA>'||chr(10));
+    add(p_clob,v_buffer,'</DOCUMENT>'||chr(10),TRUE);  
   end get_final_xml;
   ------------------------------------------------------------------------------
   procedure download_file(p_data        in clob,
@@ -1775,7 +1839,7 @@ is
   subtype t_style_string  is varchar2(300);
   subtype t_format_mask  is varchar2(100);
   subtype t_font  is varchar2(50);
-  subtype t_large_varchar2  is varchar2(32000);
+  subtype t_large_varchar2  is varchar2(32767);
 
   BACK_COLOR  constant  t_color default '#C6E0B4';
   
@@ -2213,11 +2277,51 @@ is
      return v_template;
   end get_styles_xml;
   ------------------------------------------------------------------------------
-  procedure add(p_clob in out nocopy clob,p_str varchar2)
-  is
-  begin
-    DBMS_LOB.WRITEAPPEND(p_clob,length(p_str),p_str);
-  end;
+  /**
+  * http://mk-commi.blogspot.co.at/2014/11/concatenating-varchar2-values-into-clob.html  
+  
+  * Procedure concatenates a VARCHAR2 to a CLOB.
+  * It uses another VARCHAR2 as a buffer until it reaches 32767 characters.
+  * Then it flushes the current buffer to the CLOB and resets the buffer using
+  * the actual VARCHAR2 to add.
+  * Your final call needs to be done setting p_eof to TRUE in order to
+  * flush everything to the CLOB.
+  *
+  * @param p_clob        The CLOB buffer.
+  * @param p_vc_buffer   The intermediate VARCHAR2 buffer. (must be VARCHAR2(32767))
+  * @param p_vc_addition The VARCHAR2 value you want to append.
+  * @param p_eof         Indicates if complete buffer should be flushed to CLOB.
+  */
+  PROCEDURE add( p_clob IN OUT NOCOPY CLOB
+               , p_vc_buffer IN OUT NOCOPY VARCHAR2
+               , p_vc_addition IN VARCHAR2
+               , p_eof IN BOOLEAN DEFAULT FALSE
+               )
+  AS
+  BEGIN
+     
+    -- Standard Flow
+    IF NVL(LENGTHB(p_vc_buffer), 0) + NVL(LENGTHB(p_vc_addition), 0) < 32767 THEN
+      p_vc_buffer := p_vc_buffer || p_vc_addition;
+    ELSE
+      IF p_clob IS NULL THEN
+        dbms_lob.createtemporary(p_clob, TRUE);
+      END IF;
+      dbms_lob.writeappend(p_clob, length(p_vc_buffer), p_vc_buffer);
+      p_vc_buffer := p_vc_addition;
+    END IF;
+     
+    -- Full Flush requested
+    IF p_eof THEN
+      IF p_clob IS NULL THEN
+         p_clob := p_vc_buffer;
+      ELSE
+        dbms_lob.writeappend(p_clob, length(p_vc_buffer), p_vc_buffer);
+      END IF;
+      p_vc_buffer := NULL;
+    END IF;
+   
+  END add;
   ------------------------------------------------------------------------------
   FUNCTION get_cell_name(p_coll IN binary_integer,
                          p_row  IN binary_integer)
@@ -2313,7 +2417,8 @@ is
     dbms_lob.freetemporary(v_blob);
   end add1file;  
   ------------------------------------------------------------------------------
-  procedure get_excel(p_xml in xmltype,v_clob in out nocopy clob,
+  procedure get_excel(p_xml in xmltype,
+                      v_clob in out nocopy clob,
                       v_strings_clob in out nocopy clob,
                       p_width_str in varchar2,
                       p_coefficient  in number)
@@ -2324,11 +2429,15 @@ is
     v_agg_clob         clob;
     v_agg_strings_cnt  binary_integer default 1; 
     v_style_id         binary_integer; 
+    v_buffer           t_large_varchar2;
+    v_agg_buffer       t_large_varchar2; 
+    v_string_buffer    t_large_varchar2;
     --
     procedure print_char_cell(p_coll      in binary_integer, 
                               p_row       in binary_integer, 
                               p_string    in varchar2,
                               p_clob      in out nocopy CLOB,
+                              p_buffer    IN OUT NOCOPY VARCHAR2,
                               p_style_id  in number default null
                              )
     is
@@ -2337,8 +2446,7 @@ is
       if p_style_id is not null then
        v_style := ' s="'||p_style_id||'" ';
       end if;
-      
-      add(p_clob,'<c r="'||get_cell_name(p_coll,p_row)||'" t="s" '||v_style||'>'||chr(10)
+      add(p_clob,p_buffer,'<c r="'||get_cell_name(p_coll,p_row)||'" t="s" '||v_style||'>'||chr(10)
                          ||'<v>' || to_char(v_strings.count)|| '</v>'||chr(10)                 
                          ||'</c>'||chr(10));
       v_strings(v_strings.count + 1) := p_string;
@@ -2348,6 +2456,7 @@ is
                                 p_row       in binary_integer, 
                                 p_value     in varchar2,
                                 p_clob      in out nocopy clob,
+                                p_buffer    IN OUT NOCOPY VARCHAR2,
                                 p_style_id  in number default null
                                )
     is
@@ -2356,7 +2465,7 @@ is
       if p_style_id is not null then
        v_style := ' s="'||p_style_id||'" ';
       end if;
-      add(p_clob,'<c r="'||get_cell_name(p_coll,p_row)||'" '||v_style||'>'||chr(10)
+      add(p_clob,p_buffer,'<c r="'||get_cell_name(p_coll,p_row)||'" '||v_style||'>'||chr(10)
                          ||'<v>'||p_value|| '</v>'||chr(10)
                          ||'</c>'||chr(10));
     
@@ -2368,8 +2477,9 @@ is
      
      dbms_lob.createtemporary(v_agg_clob,true);
      
-     add(v_clob,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
-     add(v_clob,'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+     --!
+     add(v_clob,v_buffer,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
+     add(v_clob,v_buffer,'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
         <dimension ref="A1"/>
         <sheetViews>
           <sheetView tabSelected="1" workbookViewId="0">
@@ -2377,14 +2487,14 @@ is
             <selection pane="bottomLeft" activeCell="A2" sqref="A2"/>
            </sheetView>
           </sheetViews>
-        <sheetFormatPr baseColWidth="10" defaultColWidth="10" defaultRowHeight="15"/>'||chr(10));
+        <sheetFormatPr baseColWidth="10" defaultColWidth="10" defaultRowHeight="15"/>'||chr(10),TRUE);
 
      v_clob := v_clob||get_colls_width_xml(p_width_str,p_xml,p_coefficient);
-     
-     add(v_clob,'<sheetData>'||chr(10));
+     --!
+     add(v_clob,v_buffer,'<sheetData>'||chr(10));
 
      --column header
-     add(v_clob,'<row>'||chr(10));     
+     add(v_clob,v_buffer,'<row>'||chr(10));     
      for i in (select  extractvalue(column_value, 'CELL') as column_header,
                        extractvalue(COLUMN_VALUE, 'CELL/@header_align') AS align
                from table (select xmlsequence(extract(p_xml,'DOCUMENT/DATA/HEADER/CELL')) from dual))
@@ -2394,11 +2504,12 @@ is
                         p_row       => v_rownum, 
                         p_string    => i.column_header,
                         p_clob      => v_clob,
+                        p_buffer    => v_buffer,
                         p_style_id  => get_header_style_id(p_align  => i.align)
                       );
      end loop; 
      v_rownum := v_rownum + 1;
-     add(v_clob,'</row>'||chr(10));     
+     add(v_clob,v_buffer,'</row>'||chr(10));     
      
      <<rowset>>     
      for rowset_xml in (select column_value as rowset,
@@ -2408,20 +2519,21 @@ is
      loop
        --break header
        if rowset_xml.break_header is not null then
-         add(v_clob,'<row>'||chr(10));
+         add(v_clob,v_buffer,'<row>'||chr(10));
          print_char_cell( p_coll      => 1,
                           p_row       => v_rownum,
                           p_string    => rowset_xml.break_header,
                           p_clob      => v_clob,
+                          p_buffer    => v_buffer,
                           p_style_id  => get_header_style_id(p_back => NULL,p_align  => 'left')
                          );         
          v_rownum := v_rownum + 1;
-         add(v_clob,'</row>'||chr(10));
+         add(v_clob,v_buffer,'</row>'||chr(10));
        end if;
        
        <<cells>>
        for row_xml in (select column_value as row_ from table (select xmlsequence(extract(rowset_xml.rowset,'ROWSET/ROW')) from dual)) loop
-         add(v_clob,'<row>'||chr(10));
+         add(v_clob,v_buffer,'<row>'||chr(10));
          FOR cell_xml IN (SELECT rownum coll_num,
                                  extractvalue(COLUMN_VALUE, 'CELL/@background-color') AS background_color,
                                  extractvalue(COLUMN_VALUE, 'CELL/@color') AS font_color, 
@@ -2444,11 +2556,12 @@ is
                                     p_row       => v_rownum, 
                                     p_value     => cell_xml.cell_value,
                                     p_clob      => v_clob,
+                                    p_buffer    => v_buffer,
                                     p_style_id  => v_style_id
                                    );
                   
               elsif cell_xml.data_type in ('DATE') then
-                 add(v_clob,'<c r="'||get_cell_name(cell_xml.coll_num,v_rownum)||'"  s="'||v_style_id||'">'||chr(10)
+                 add(v_clob,v_buffer,'<c r="'||get_cell_name(cell_xml.coll_num,v_rownum)||'"  s="'||v_style_id||'">'||chr(10)
                                     ||'<v>'||cell_xml.cell_value|| '</v>'||chr(10)
                                     ||'</c>'||chr(10)
                      );
@@ -2457,6 +2570,7 @@ is
                                   p_row         => v_rownum,
                                   p_string      => cell_xml.cell_text,
                                   p_clob        => v_clob,
+                                  p_buffer      => v_buffer,
                                   p_style_id    => v_style_id
                                   );
               END IF;              
@@ -2465,11 +2579,12 @@ is
                 null;
             end;
          end loop;         
-         add(v_clob,'</row>'||chr(10));         
+         add(v_clob,v_buffer,'</row>'||chr(10));         
          v_rownum := v_rownum + 1;
        end loop cells;
        
        DBMS_LOB.TRIM(v_agg_clob,0);
+       v_agg_buffer := '';       
        v_agg_strings_cnt := 1;       
        <<aggregates>>       
        for row_xml in (select column_value as row_ from table (select xmlsequence(extract(rowset_xml.rowset,'ROWSET/AGGREGATE')) from dual)) loop
@@ -2480,9 +2595,6 @@ is
                           from table (select xmlsequence(extract(row_xml.row_,'AGGREGATE/CELL')) from dual))
          loop           
            v_agg_strings_cnt := greatest(length(regexp_replace('[^:]','')) + 1,v_agg_strings_cnt);
-           if instr(cell_xml_agg.cell_text,':') > 0 or  -- 2 or more aggregates
-              cell_xml_agg.cell_text is null            -- empty cell
-           then
              v_style_id := get_aggregate_style_id(p_font         => '',
                                         p_back         => '',
                                         p_data_type    => 'CHAR',
@@ -2491,43 +2603,34 @@ is
                              p_row        => v_rownum,
                              p_string     => rtrim(cell_xml_agg.cell_text,chr(10)),
                              p_clob       => v_agg_clob,
+                             p_buffer    =>  v_agg_buffer,           
                              p_style_id   => v_style_id);
-           else
-             v_style_id := get_aggregate_style_id(p_font         => '',
-                                        p_back         => '',
-                                        p_data_type    => 'NUMBER',
-                                        p_format_mask  => cell_xml_agg.format_mask); --start with 0
-             print_number_cell(p_coll => cell_xml_agg.coll_num, 
-                               p_row => v_rownum, 
-                               p_value => cell_xml_agg.cell_value,
-                               p_clob => v_agg_clob,
-                               p_style_id => v_style_id);
-           end if;
          end loop;
-         add(v_clob,'<row ht="'||(v_agg_strings_cnt * STRING_HEIGHT)||'">'||chr(10));
+         add(v_clob,v_buffer,'<row ht="'||(v_agg_strings_cnt * STRING_HEIGHT)||'">'||chr(10),TRUE);
+         add(v_agg_clob,v_agg_buffer,' ',TRUE);
          dbms_lob.copy( dest_lob => v_clob,
                         src_lob => v_agg_clob,
                         amount => dbms_lob.getlength(v_agg_clob),
                         dest_offset => dbms_lob.getlength(v_clob),
                         src_offset => 1);
-         add(v_clob,'</row>'||chr(10));
+         add(v_clob,v_buffer,'</row>'||chr(10));
          v_rownum := v_rownum + 1;
        end loop aggregates;   
      end loop rowset;     
      
-     add(v_clob,'</sheetData>'||chr(10));
+     add(v_clob,v_buffer,'</sheetData>'||chr(10));
      --if p_autofilter then
-     add(v_clob,'<autoFilter ref="A1:' || get_cell_name(v_colls_count,v_rownum) || '"/>');
+     add(v_clob,v_buffer,'<autoFilter ref="A1:' || get_cell_name(v_colls_count,v_rownum) || '"/>');
      --end if;
-     add(v_clob,'<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>'||chr(10));
+     add(v_clob,v_buffer,'<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>'||chr(10),TRUE);
      
-     add(v_strings_clob,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
-     add(v_strings_clob,'<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="' || v_strings.count() || '" uniqueCount="' || v_strings.count() || '">'||chr(10));
+     add(v_strings_clob,v_string_buffer,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
+     add(v_strings_clob,v_string_buffer,'<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="' || v_strings.count() || '" uniqueCount="' || v_strings.count() || '">'||chr(10));
         
      for i in 1 .. v_strings.count() loop
-        add(v_strings_clob,'<si><t>'||dbms_xmlgen.convert( substr( v_strings( i ), 1, 32000 ) ) || '</t></si>'||chr(10));
+        add(v_strings_clob,v_string_buffer,'<si><t>'||dbms_xmlgen.convert( substr( v_strings( i ), 1, 32000 ) ) || '</t></si>'||chr(10));
      end loop; 
-     add(v_strings_clob,'</sst>'||chr(10));
+     add(v_strings_clob,v_string_buffer,'</sst>'||chr(10),TRUE);
      
      dbms_lob.freetemporary(v_agg_clob);
   end get_excel;

@@ -55,7 +55,7 @@ is
   subtype t_style_string  is varchar2(300);
   subtype t_format_mask  is varchar2(100);
   subtype t_font  is varchar2(50);
-  subtype t_large_varchar2  is varchar2(32000);
+  subtype t_large_varchar2  is varchar2(32767);
 
   BACK_COLOR  constant  t_color default '#C6E0B4';
   
@@ -493,11 +493,51 @@ is
      return v_template;
   end get_styles_xml;
   ------------------------------------------------------------------------------
-  procedure add(p_clob in out nocopy clob,p_str varchar2)
-  is
-  begin
-    DBMS_LOB.WRITEAPPEND(p_clob,length(p_str),p_str);
-  end;
+  /**
+  * http://mk-commi.blogspot.co.at/2014/11/concatenating-varchar2-values-into-clob.html  
+  
+  * Procedure concatenates a VARCHAR2 to a CLOB.
+  * It uses another VARCHAR2 as a buffer until it reaches 32767 characters.
+  * Then it flushes the current buffer to the CLOB and resets the buffer using
+  * the actual VARCHAR2 to add.
+  * Your final call needs to be done setting p_eof to TRUE in order to
+  * flush everything to the CLOB.
+  *
+  * @param p_clob        The CLOB buffer.
+  * @param p_vc_buffer   The intermediate VARCHAR2 buffer. (must be VARCHAR2(32767))
+  * @param p_vc_addition The VARCHAR2 value you want to append.
+  * @param p_eof         Indicates if complete buffer should be flushed to CLOB.
+  */
+  PROCEDURE add( p_clob IN OUT NOCOPY CLOB
+               , p_vc_buffer IN OUT NOCOPY VARCHAR2
+               , p_vc_addition IN VARCHAR2
+               , p_eof IN BOOLEAN DEFAULT FALSE
+               )
+  AS
+  BEGIN
+     
+    -- Standard Flow
+    IF NVL(LENGTHB(p_vc_buffer), 0) + NVL(LENGTHB(p_vc_addition), 0) < 32767 THEN
+      p_vc_buffer := p_vc_buffer || p_vc_addition;
+    ELSE
+      IF p_clob IS NULL THEN
+        dbms_lob.createtemporary(p_clob, TRUE);
+      END IF;
+      dbms_lob.writeappend(p_clob, length(p_vc_buffer), p_vc_buffer);
+      p_vc_buffer := p_vc_addition;
+    END IF;
+     
+    -- Full Flush requested
+    IF p_eof THEN
+      IF p_clob IS NULL THEN
+         p_clob := p_vc_buffer;
+      ELSE
+        dbms_lob.writeappend(p_clob, length(p_vc_buffer), p_vc_buffer);
+      END IF;
+      p_vc_buffer := NULL;
+    END IF;
+   
+  END add;
   ------------------------------------------------------------------------------
   FUNCTION get_cell_name(p_coll IN binary_integer,
                          p_row  IN binary_integer)
@@ -593,7 +633,8 @@ is
     dbms_lob.freetemporary(v_blob);
   end add1file;  
   ------------------------------------------------------------------------------
-  procedure get_excel(p_xml in xmltype,v_clob in out nocopy clob,
+  procedure get_excel(p_xml in xmltype,
+                      v_clob in out nocopy clob,
                       v_strings_clob in out nocopy clob,
                       p_width_str in varchar2,
                       p_coefficient  in number)
@@ -604,11 +645,15 @@ is
     v_agg_clob         clob;
     v_agg_strings_cnt  binary_integer default 1; 
     v_style_id         binary_integer; 
+    v_buffer           t_large_varchar2;
+    v_agg_buffer       t_large_varchar2; 
+    v_string_buffer    t_large_varchar2;
     --
     procedure print_char_cell(p_coll      in binary_integer, 
                               p_row       in binary_integer, 
                               p_string    in varchar2,
                               p_clob      in out nocopy CLOB,
+                              p_buffer    IN OUT NOCOPY VARCHAR2,
                               p_style_id  in number default null
                              )
     is
@@ -617,8 +662,7 @@ is
       if p_style_id is not null then
        v_style := ' s="'||p_style_id||'" ';
       end if;
-      
-      add(p_clob,'<c r="'||get_cell_name(p_coll,p_row)||'" t="s" '||v_style||'>'||chr(10)
+      add(p_clob,p_buffer,'<c r="'||get_cell_name(p_coll,p_row)||'" t="s" '||v_style||'>'||chr(10)
                          ||'<v>' || to_char(v_strings.count)|| '</v>'||chr(10)                 
                          ||'</c>'||chr(10));
       v_strings(v_strings.count + 1) := p_string;
@@ -628,6 +672,7 @@ is
                                 p_row       in binary_integer, 
                                 p_value     in varchar2,
                                 p_clob      in out nocopy clob,
+                                p_buffer    IN OUT NOCOPY VARCHAR2,
                                 p_style_id  in number default null
                                )
     is
@@ -636,7 +681,7 @@ is
       if p_style_id is not null then
        v_style := ' s="'||p_style_id||'" ';
       end if;
-      add(p_clob,'<c r="'||get_cell_name(p_coll,p_row)||'" '||v_style||'>'||chr(10)
+      add(p_clob,p_buffer,'<c r="'||get_cell_name(p_coll,p_row)||'" '||v_style||'>'||chr(10)
                          ||'<v>'||p_value|| '</v>'||chr(10)
                          ||'</c>'||chr(10));
     
@@ -648,8 +693,9 @@ is
      
      dbms_lob.createtemporary(v_agg_clob,true);
      
-     add(v_clob,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
-     add(v_clob,'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+     --!
+     add(v_clob,v_buffer,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
+     add(v_clob,v_buffer,'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
         <dimension ref="A1"/>
         <sheetViews>
           <sheetView tabSelected="1" workbookViewId="0">
@@ -657,14 +703,14 @@ is
             <selection pane="bottomLeft" activeCell="A2" sqref="A2"/>
            </sheetView>
           </sheetViews>
-        <sheetFormatPr baseColWidth="10" defaultColWidth="10" defaultRowHeight="15"/>'||chr(10));
+        <sheetFormatPr baseColWidth="10" defaultColWidth="10" defaultRowHeight="15"/>'||chr(10),TRUE);
 
      v_clob := v_clob||get_colls_width_xml(p_width_str,p_xml,p_coefficient);
-     
-     add(v_clob,'<sheetData>'||chr(10));
+     --!
+     add(v_clob,v_buffer,'<sheetData>'||chr(10));
 
      --column header
-     add(v_clob,'<row>'||chr(10));     
+     add(v_clob,v_buffer,'<row>'||chr(10));     
      for i in (select  extractvalue(column_value, 'CELL') as column_header,
                        extractvalue(COLUMN_VALUE, 'CELL/@header_align') AS align
                from table (select xmlsequence(extract(p_xml,'DOCUMENT/DATA/HEADER/CELL')) from dual))
@@ -674,11 +720,12 @@ is
                         p_row       => v_rownum, 
                         p_string    => i.column_header,
                         p_clob      => v_clob,
+                        p_buffer    => v_buffer,
                         p_style_id  => get_header_style_id(p_align  => i.align)
                       );
      end loop; 
      v_rownum := v_rownum + 1;
-     add(v_clob,'</row>'||chr(10));     
+     add(v_clob,v_buffer,'</row>'||chr(10));     
      
      <<rowset>>     
      for rowset_xml in (select column_value as rowset,
@@ -688,20 +735,21 @@ is
      loop
        --break header
        if rowset_xml.break_header is not null then
-         add(v_clob,'<row>'||chr(10));
+         add(v_clob,v_buffer,'<row>'||chr(10));
          print_char_cell( p_coll      => 1,
                           p_row       => v_rownum,
                           p_string    => rowset_xml.break_header,
                           p_clob      => v_clob,
+                          p_buffer    => v_buffer,
                           p_style_id  => get_header_style_id(p_back => NULL,p_align  => 'left')
                          );         
          v_rownum := v_rownum + 1;
-         add(v_clob,'</row>'||chr(10));
+         add(v_clob,v_buffer,'</row>'||chr(10));
        end if;
        
        <<cells>>
        for row_xml in (select column_value as row_ from table (select xmlsequence(extract(rowset_xml.rowset,'ROWSET/ROW')) from dual)) loop
-         add(v_clob,'<row>'||chr(10));
+         add(v_clob,v_buffer,'<row>'||chr(10));
          FOR cell_xml IN (SELECT rownum coll_num,
                                  extractvalue(COLUMN_VALUE, 'CELL/@background-color') AS background_color,
                                  extractvalue(COLUMN_VALUE, 'CELL/@color') AS font_color, 
@@ -724,11 +772,12 @@ is
                                     p_row       => v_rownum, 
                                     p_value     => cell_xml.cell_value,
                                     p_clob      => v_clob,
+                                    p_buffer    => v_buffer,
                                     p_style_id  => v_style_id
                                    );
                   
               elsif cell_xml.data_type in ('DATE') then
-                 add(v_clob,'<c r="'||get_cell_name(cell_xml.coll_num,v_rownum)||'"  s="'||v_style_id||'">'||chr(10)
+                 add(v_clob,v_buffer,'<c r="'||get_cell_name(cell_xml.coll_num,v_rownum)||'"  s="'||v_style_id||'">'||chr(10)
                                     ||'<v>'||cell_xml.cell_value|| '</v>'||chr(10)
                                     ||'</c>'||chr(10)
                      );
@@ -737,6 +786,7 @@ is
                                   p_row         => v_rownum,
                                   p_string      => cell_xml.cell_text,
                                   p_clob        => v_clob,
+                                  p_buffer      => v_buffer,
                                   p_style_id    => v_style_id
                                   );
               END IF;              
@@ -745,11 +795,12 @@ is
                 null;
             end;
          end loop;         
-         add(v_clob,'</row>'||chr(10));         
+         add(v_clob,v_buffer,'</row>'||chr(10));         
          v_rownum := v_rownum + 1;
        end loop cells;
        
        DBMS_LOB.TRIM(v_agg_clob,0);
+       v_agg_buffer := '';       
        v_agg_strings_cnt := 1;       
        <<aggregates>>       
        for row_xml in (select column_value as row_ from table (select xmlsequence(extract(rowset_xml.rowset,'ROWSET/AGGREGATE')) from dual)) loop
@@ -760,9 +811,6 @@ is
                           from table (select xmlsequence(extract(row_xml.row_,'AGGREGATE/CELL')) from dual))
          loop           
            v_agg_strings_cnt := greatest(length(regexp_replace('[^:]','')) + 1,v_agg_strings_cnt);
-           if instr(cell_xml_agg.cell_text,':') > 0 or  -- 2 or more aggregates
-              cell_xml_agg.cell_text is null            -- empty cell
-           then
              v_style_id := get_aggregate_style_id(p_font         => '',
                                         p_back         => '',
                                         p_data_type    => 'CHAR',
@@ -771,43 +819,34 @@ is
                              p_row        => v_rownum,
                              p_string     => rtrim(cell_xml_agg.cell_text,chr(10)),
                              p_clob       => v_agg_clob,
+                             p_buffer    =>  v_agg_buffer,           
                              p_style_id   => v_style_id);
-           else
-             v_style_id := get_aggregate_style_id(p_font         => '',
-                                        p_back         => '',
-                                        p_data_type    => 'NUMBER',
-                                        p_format_mask  => cell_xml_agg.format_mask); --start with 0
-             print_number_cell(p_coll => cell_xml_agg.coll_num, 
-                               p_row => v_rownum, 
-                               p_value => cell_xml_agg.cell_value,
-                               p_clob => v_agg_clob,
-                               p_style_id => v_style_id);
-           end if;
          end loop;
-         add(v_clob,'<row ht="'||(v_agg_strings_cnt * STRING_HEIGHT)||'">'||chr(10));
+         add(v_clob,v_buffer,'<row ht="'||(v_agg_strings_cnt * STRING_HEIGHT)||'">'||chr(10),TRUE);
+         add(v_agg_clob,v_agg_buffer,' ',TRUE);
          dbms_lob.copy( dest_lob => v_clob,
                         src_lob => v_agg_clob,
                         amount => dbms_lob.getlength(v_agg_clob),
                         dest_offset => dbms_lob.getlength(v_clob),
                         src_offset => 1);
-         add(v_clob,'</row>'||chr(10));
+         add(v_clob,v_buffer,'</row>'||chr(10));
          v_rownum := v_rownum + 1;
        end loop aggregates;   
      end loop rowset;     
      
-     add(v_clob,'</sheetData>'||chr(10));
+     add(v_clob,v_buffer,'</sheetData>'||chr(10));
      --if p_autofilter then
-     add(v_clob,'<autoFilter ref="A1:' || get_cell_name(v_colls_count,v_rownum) || '"/>');
+     add(v_clob,v_buffer,'<autoFilter ref="A1:' || get_cell_name(v_colls_count,v_rownum) || '"/>');
      --end if;
-     add(v_clob,'<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>'||chr(10));
+     add(v_clob,v_buffer,'<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>'||chr(10),TRUE);
      
-     add(v_strings_clob,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
-     add(v_strings_clob,'<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="' || v_strings.count() || '" uniqueCount="' || v_strings.count() || '">'||chr(10));
+     add(v_strings_clob,v_string_buffer,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
+     add(v_strings_clob,v_string_buffer,'<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="' || v_strings.count() || '" uniqueCount="' || v_strings.count() || '">'||chr(10));
         
      for i in 1 .. v_strings.count() loop
-        add(v_strings_clob,'<si><t>'||dbms_xmlgen.convert( substr( v_strings( i ), 1, 32000 ) ) || '</t></si>'||chr(10));
+        add(v_strings_clob,v_string_buffer,'<si><t>'||dbms_xmlgen.convert( substr( v_strings( i ), 1, 32000 ) ) || '</t></si>'||chr(10));
      end loop; 
-     add(v_strings_clob,'</sst>'||chr(10));
+     add(v_strings_clob,v_string_buffer,'</sst>'||chr(10),TRUE);
      
      dbms_lob.freetemporary(v_agg_clob);
   end get_excel;

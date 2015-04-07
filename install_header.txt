@@ -1,7 +1,8 @@
 /**********************************************
 **
 ** Author: Pavel Glebov
-** Date: 03-2015
+** Date: 04-2015
+** Version: 1.94
 **
 ** This all in one install script contains headrs and bodies of 4 packages
 **
