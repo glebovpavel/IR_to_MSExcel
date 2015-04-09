@@ -1,54 +1,4 @@
-CREATE OR REPLACE package ir_to_xml as    
-  --ver 1.4.
-  -- download interactive report as PDF
-  PROCEDURE get_report_xml(p_app_id          IN NUMBER,
-                           p_page_id         in number,                                
-                           p_return_type     IN CHAR DEFAULT 'X', -- "Q" for debug information "X" for XML-Data
-                           p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
-                           p_items_list      in varchar2,         -- "," delimetered list of items that for including in XML
-                           p_collection_name IN VARCHAR2,         -- name of APEX COLLECTION to save XML, when null - download as file
-                           p_max_rows        IN NUMBER            -- maximum rows for export                            
-                          );
-  
-  --return debug information
-  function get_log return clob;
-  
-  -- get XML 
-  function get_report_xml(p_app_id          IN NUMBER,
-                          p_page_id         in number,                                
-                          p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
-                          p_items_list      in varchar2,         -- "," delimetered list of items that for including in XML
-                          p_max_rows        IN NUMBER            -- maximum rows for export                            
-                         )
-  return xmltype;     
-
-  -- string to test get_variables_array
-  -- todo: make unit test
-  --  v_test_str varchar2(400) :=
-  --      q'[
-  --    select *,
-  --          '/* --test :var */'as a
-  --    /****
-  --     * Common multi-line comment style.
-  --     ****/
-  --    /****
-  --     * Another common multi-line comment :style.
-  --     */
-  --     from table
-  --    /*  
-  --      --comment
-  --    */ 
-  --     where b='O'':Relly' 
-  --      --and :c is not null
-  --      and :f>sysdate
-  --      and :forward_2 >= 4 
-  --      ]';
-                              
-END IR_TO_XML;
-/
-
-
-CREATE OR REPLACE package body ir_to_xml as   
+create or replace package body ir_to_xml as   
   
   subtype largevarchar2 is varchar2(32767); 
  
@@ -1156,9 +1106,6 @@ CREATE OR REPLACE package body ir_to_xml as
         sys.owa_util.http_header_close;
         sys.wpg_docload.download_file( v_blob );
         dbms_lob.freetemporary(v_blob);
-  exception
-     when others then 
-        raise_application_error(-20001,'Download file '||SQLERRM);
   end download_file;
   ------------------------------------------------------------------------------
   procedure set_collection(p_collection_name in varchar2,p_data in clob)
@@ -1196,9 +1143,9 @@ CREATE OR REPLACE package body ir_to_xml as
                            p_max_rows        IN NUMBER            -- maximum rows for export                            
                           )
   is
-    v_data      clob;    
-  begin  
-    dbms_lob.trim (v_debug,0);    
+    v_data      clob;
+  begin
+    dbms_lob.trim (v_debug,0);
     dbms_lob.createtemporary(v_data,true);
     --APEX_DEBUG_MESSAGE.ENABLE_DEBUG_MESSAGES(p_level => 7);
     log('p_app_id='||p_app_id);
@@ -1207,20 +1154,20 @@ CREATE OR REPLACE package body ir_to_xml as
     log('p_get_page_items='||p_get_page_items);
     log('p_items_list='||p_items_list);
     log('p_collection_name='||p_collection_name);
-    log('p_max_rows='||p_max_rows);        
-    if p_return_type = 'Q' then  -- debug information                    
-        begin        
-          init_t_report(p_app_id,p_page_id);              
-          get_final_xml(v_data,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);          
-          if p_collection_name is not null then              
+    log('p_max_rows='||p_max_rows);    
+    
+    if p_return_type = 'Q' then  -- debug information            
+        begin
+          init_t_report(p_app_id,p_page_id);    
+          get_final_xml(v_data,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);
+          if p_collection_name is not null then  
             set_collection(upper(p_collection_name),v_data);
           end if;
         exception
           when others then
             log('Error in IR_TO_XML.get_report_xml '||sqlerrm||chr(10)||chr(10)||dbms_utility.format_error_backtrace);            
-        end;        
-        log(' ',TRUE);
-        download_file(v_debug,'text/txt','log.txt');        
+        end;
+        download_file(v_debug,'text/txt','log.txt');
     elsif p_return_type = 'X' then --XML-Data
         init_t_report(p_app_id,p_page_id);    
         get_final_xml(v_data,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);
