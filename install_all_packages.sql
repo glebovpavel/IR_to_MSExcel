@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 04-2015
-** Version: 1.94
+** Version: 1.95
 **
 ** This all in one install script contains headrs and bodies of 4 packages
 **
@@ -435,6 +435,7 @@ CREATE OR REPLACE package body ir_to_xml as
     l_report_id     number;
     v_query_targets apex_application_global.vc_arr2;
     l_new_report    ir_report;
+    v_apex_application_page_ir_rpt largevarchar2;
   begin
     l_report := l_new_report;
     select region_id 
@@ -451,6 +452,16 @@ CREATE OR REPLACE package body ir_to_xml as
                                                       p_region_id => l_region_id);
     
     log('l_base_report_id='||l_report_id);
+    
+    
+    select listagg('session_id='||session_id||' APP_SESSION='||v('APP_SESSION')||' application_user='||application_user||' APP_USER='||
+       v('APP_USER')||' base_report_id='||base_report_id,chr(10)) within group (order by 1)
+    into v_apex_application_page_ir_rpt
+    from apex_application_page_ir_rpt r
+    where application_id = p_app_id
+     and page_id = p_page_id;
+     
+    log(v_apex_application_page_ir_rpt); 
     
     select r.* 
     into l_report.ir_data       
@@ -1163,6 +1174,9 @@ CREATE OR REPLACE package body ir_to_xml as
         sys.owa_util.http_header_close;
         sys.wpg_docload.download_file( v_blob );
         dbms_lob.freetemporary(v_blob);
+  exception
+     when others then 
+        raise_application_error(-20001,'Download file '||SQLERRM);
   end download_file;
   ------------------------------------------------------------------------------
   procedure set_collection(p_collection_name in varchar2,p_data in clob)
@@ -1200,9 +1214,9 @@ CREATE OR REPLACE package body ir_to_xml as
                            p_max_rows        IN NUMBER            -- maximum rows for export                            
                           )
   is
-    v_data      clob;
-  begin
-    dbms_lob.trim (v_debug,0);
+    v_data      clob;    
+  begin  
+    dbms_lob.trim (v_debug,0);    
     dbms_lob.createtemporary(v_data,true);
     --APEX_DEBUG_MESSAGE.ENABLE_DEBUG_MESSAGES(p_level => 7);
     log('p_app_id='||p_app_id);
@@ -1211,20 +1225,20 @@ CREATE OR REPLACE package body ir_to_xml as
     log('p_get_page_items='||p_get_page_items);
     log('p_items_list='||p_items_list);
     log('p_collection_name='||p_collection_name);
-    log('p_max_rows='||p_max_rows);    
-    
-    if p_return_type = 'Q' then  -- debug information            
-        begin
-          init_t_report(p_app_id,p_page_id);    
-          get_final_xml(v_data,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);
-          if p_collection_name is not null then  
+    log('p_max_rows='||p_max_rows);        
+    if p_return_type = 'Q' then  -- debug information                    
+        begin        
+          init_t_report(p_app_id,p_page_id);              
+          get_final_xml(v_data,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);          
+          if p_collection_name is not null then              
             set_collection(upper(p_collection_name),v_data);
           end if;
         exception
           when others then
             log('Error in IR_TO_XML.get_report_xml '||sqlerrm||chr(10)||chr(10)||dbms_utility.format_error_backtrace);            
-        end;
-        download_file(v_debug,'text/txt','log.txt');
+        end;        
+        log(' ',TRUE);
+        download_file(v_debug,'text/txt','log.txt');        
     elsif p_return_type = 'X' then --XML-Data
         init_t_report(p_app_id,p_page_id);    
         get_final_xml(v_data,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);
