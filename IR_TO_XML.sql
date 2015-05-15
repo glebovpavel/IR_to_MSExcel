@@ -22,6 +22,17 @@ CREATE OR REPLACE package ir_to_xml as
                          )
   return xmltype;     
 
+  /* 
+    function to handle cases of 'in' and 'not in' conditions for highlights
+   	used in cursor cur_highlight
+    
+    Author: Srihari Ravva
+  */ 
+  function get_highlight_in_cond_sql(p_condition_expression  in APEX_APPLICATION_PAGE_IR_COND.CONDITION_EXPRESSION%TYPE,
+                                     p_condition_sql         in APEX_APPLICATION_PAGE_IR_COND.CONDITION_SQL%TYPE,
+                                     p_condition_column_name in APEX_APPLICATION_PAGE_IR_COND.CONDITION_COLUMN_NAME%TYPE)
+  return varchar2; 
+
   -- string to test get_variables_array
   -- todo: make unit test
   --  v_test_str varchar2(400) :=
@@ -60,7 +71,11 @@ CREATE OR REPLACE package body ir_to_xml as
        'HIGHLIGHT_'||rownum COND_NAME
   from (
   select report_id,
-         replace(replace(replace(replace(condition_sql,'#APXWS_EXPR#',''''||CONDITION_EXPRESSION||''''),'#APXWS_EXPR2#',''''||CONDITION_EXPRESSION2||''''),'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||CONDITION_COLUMN_NAME||'"')  condition_sql,
+         case when condition_operator in ('not in', 'in') then
+		         get_highlight_in_cond_sql(CONDITION_EXPRESSION,CONDITION_SQL,CONDITION_COLUMN_NAME)
+		      else 
+		         replace(replace(replace(replace(condition_sql,'#APXWS_EXPR#',''''||CONDITION_EXPRESSION||''''),'#APXWS_EXPR2#',''''||CONDITION_EXPRESSION2||''''),'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||CONDITION_COLUMN_NAME||'"') 
+		     end condition_sql,
          CONDITION_COLUMN_NAME,
          CONDITION_ENABLED,
          HIGHLIGHT_ROW_COLOR,
@@ -1263,6 +1278,39 @@ CREATE OR REPLACE package body ir_to_xml as
     
     return xmltype(v_data);    
   end get_report_xml; 
+  
+  ------------------------------------------------------------------------------
+  /* 
+    function to handle cases of 'in' and 'not in' conditions for highlights
+   	used in cursor cur_highlight
+    
+    Author: Srihari Ravva
+  */ 
+  function get_highlight_in_cond_sql(p_condition_expression  in APEX_APPLICATION_PAGE_IR_COND.CONDITION_EXPRESSION%TYPE,
+                                     p_condition_sql         in APEX_APPLICATION_PAGE_IR_COND.CONDITION_SQL%TYPE,
+                                     p_condition_column_name in APEX_APPLICATION_PAGE_IR_COND.CONDITION_COLUMN_NAME%TYPE)
+  return varchar2 
+  is
+    v_condition_sql_tmp     varchar2(32767);
+	v_condition_sql			varchar2(32767);
+	v_arr_cond_expr APEX_APPLICATION_GLOBAL.VC_ARR2;
+	v_arr_cond_sql APEX_APPLICATION_GLOBAL.VC_ARR2;	
+  begin
+    v_condition_sql := REPLACE(REPLACE(p_condition_sql,'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||p_condition_column_name||'"');
+	v_condition_sql_tmp := SUBSTR(v_condition_sql,INSTR(v_condition_sql,'#'),INSTR(v_condition_sql,'#',-1)-INSTR(v_condition_sql,'#')+1);
+	
+    v_arr_cond_expr := APEX_UTIL.STRING_TO_TABLE(p_condition_expression,',');
+	v_arr_cond_sql := APEX_UTIL.STRING_TO_TABLE(v_condition_sql_tmp,',');
+	
+    for i in 1..v_arr_cond_expr.count
+	loop
+		-- consider everything as varchar2
+		-- 'in' and 'not in' highlight conditions are not possible for DATE columns from IR
+		v_condition_sql := REPLACE(v_condition_sql,v_arr_cond_sql(i),''''||TO_CHAR(v_arr_cond_expr(i))||'''');
+	end loop;
+    return v_condition_sql;
+  end get_highlight_in_cond_sql;  
+  
 begin
   dbms_lob.createtemporary(v_debug,true, DBMS_LOB.CALL);  
 END IR_TO_XML;

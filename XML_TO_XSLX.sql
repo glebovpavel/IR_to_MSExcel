@@ -21,7 +21,6 @@ IS
                          p_page_id     in number)
   return number;
 
-  
   /*
   -- format test cases
   select xml_to_xslx.convert_date_format('dd.mm.yyyy hh24:mi:ss'),to_char(sysdate,'dd.mm.yyyy hh24:mi:ss') from dual
@@ -539,16 +538,27 @@ is
    
   END add;
   ------------------------------------------------------------------------------
-  FUNCTION get_cell_name(p_coll IN binary_integer,
-                         p_row  IN binary_integer)
+  FUNCTION get_cell_name(p_col IN binary_integer,
+                         p_row IN binary_integer)
   RETURN varchar2
   IS   
   BEGIN
-   if p_coll > 26 then
-     return chr(64 + trunc(p_coll/26))||chr(64 + p_coll - trunc(p_coll/26)*26 +1)||p_row;
-   ELSE
-     return chr( 64 + p_coll)||p_row;
-   end if;  
+  /*
+   Author: Moritz Klein (https://github.com/commi235)
+   https://github.com/commi235/xlsx_builder/blob/master/xlsx_builder_pkg.pkb
+  */
+      RETURN CASE
+                WHEN p_col > 702
+                THEN
+                      CHR (64 + TRUNC ( (p_col - 27) / 676))
+                   || CHR (65 + MOD (TRUNC ( (p_col - 1) / 26) - 1, 26))
+                   || CHR (65 + MOD (p_col - 1, 26))
+                WHEN p_col > 26
+                THEN
+                   CHR (64 + TRUNC ( (p_col - 1) / 26)) || CHR (65 + MOD (p_col - 1, 26))
+                ELSE
+                   CHR (64 + p_col)
+             END||p_row;
   end get_cell_name;
   ------------------------------------------------------------------------------  
   function get_colls_width_xml(p_width_str    in varchar2,
