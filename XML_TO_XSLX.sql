@@ -1,5 +1,5 @@
 CREATE OR REPLACE package xml_to_xslx
--- ver 1.0.
+-- ver 1.1.
 IS
   WIDTH_COEFFICIENT constant number := 5;
   

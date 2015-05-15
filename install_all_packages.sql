@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 04-2015
-** Version: 1.95
+** Version: 1.96
 **
 ** This all in one install script contains headrs and bodies of 4 packages
 **
@@ -17,7 +17,7 @@ set define off;
 
 
 CREATE OR REPLACE package ir_to_xml as    
-  --ver 1.4.
+  --ver 1.5.
   -- download interactive report as PDF
   PROCEDURE get_report_xml(p_app_id          IN NUMBER,
                            p_page_id         in number,                                
@@ -39,6 +39,17 @@ CREATE OR REPLACE package ir_to_xml as
                           p_max_rows        IN NUMBER            -- maximum rows for export                            
                          )
   return xmltype;     
+
+  /* 
+    function to handle cases of 'in' and 'not in' conditions for highlights
+   	used in cursor cur_highlight
+    
+    Author: Srihari Ravva
+  */ 
+  function get_highlight_in_cond_sql(p_condition_expression  in APEX_APPLICATION_PAGE_IR_COND.CONDITION_EXPRESSION%TYPE,
+                                     p_condition_sql         in APEX_APPLICATION_PAGE_IR_COND.CONDITION_SQL%TYPE,
+                                     p_condition_column_name in APEX_APPLICATION_PAGE_IR_COND.CONDITION_COLUMN_NAME%TYPE)
+  return varchar2; 
 
   -- string to test get_variables_array
   -- todo: make unit test
@@ -78,7 +89,11 @@ CREATE OR REPLACE package body ir_to_xml as
        'HIGHLIGHT_'||rownum COND_NAME
   from (
   select report_id,
-         replace(replace(replace(replace(condition_sql,'#APXWS_EXPR#',''''||CONDITION_EXPRESSION||''''),'#APXWS_EXPR2#',''''||CONDITION_EXPRESSION2||''''),'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||CONDITION_COLUMN_NAME||'"')  condition_sql,
+         case when condition_operator in ('not in', 'in') then
+		         get_highlight_in_cond_sql(CONDITION_EXPRESSION,CONDITION_SQL,CONDITION_COLUMN_NAME)
+		      else 
+		         replace(replace(replace(replace(condition_sql,'#APXWS_EXPR#',''''||CONDITION_EXPRESSION||''''),'#APXWS_EXPR2#',''''||CONDITION_EXPRESSION2||''''),'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||CONDITION_COLUMN_NAME||'"') 
+		     end condition_sql,
          CONDITION_COLUMN_NAME,
          CONDITION_ENABLED,
          HIGHLIGHT_ROW_COLOR,
@@ -117,10 +132,11 @@ CREATE OR REPLACE package body ir_to_xml as
     median_columns_on_break   APEX_APPLICATION_GLOBAL.VC_ARR2,
     count_columns_on_break    APEX_APPLICATION_GLOBAL.VC_ARR2,
     count_distnt_col_on_break APEX_APPLICATION_GLOBAL.VC_ARR2,
-    skipped_columns           INTEGER default 0, -- when scpecial coluns like apxws_row_pk is used
-    start_with                INTEGER default 0, -- position of first displayed column in query
-    end_with                  INTEGER default 0, -- position of last displayed column in query
-    agg_cols_cnt              INTEGER default 0, 
+    skipped_columns           BINARY_INTEGER default 0, -- when scpecial coluns like apxws_row_pk is used
+    start_with                BINARY_INTEGER default 0, -- position of first displayed column in query
+    end_with                  BINARY_INTEGER default 0, -- position of last displayed column in query    
+    agg_cols_cnt              BINARY_INTEGER default 0, 
+    hidden_cols_cnt           BINARY_INTEGER default 0, 
     column_names              t_col_names,       -- column names in report header
     col_format_mask           t_col_format_mask, -- format like $3849,56
     row_highlight             t_highlight,
@@ -264,7 +280,7 @@ CREATE OR REPLACE package body ir_to_xml as
     return v_str;
   end bcoll;
   ------------------------------------------------------------------------------
-  function ecoll(i integer) 
+  function ecoll(i BINARY_INTEGER) 
   return varchar2
   is
   begin
@@ -390,7 +406,7 @@ CREATE OR REPLACE package body ir_to_xml as
   return APEX_APPLICATION_GLOBAL.VC_ARR2
   is
    v_cur         INTEGER; 
-   v_colls_count INTEGER; 
+   v_colls_count BINARY_INTEGER; 
    v_columns     APEX_APPLICATION_GLOBAL.VC_ARR2;
    v_desc_tab    DBMS_SQL.DESC_TAB2;
    v_sql         largevarchar2;   
@@ -427,6 +443,27 @@ CREATE OR REPLACE package body ir_to_xml as
   end get_cols_as_table;
   
   ------------------------------------------------------------------------------
+  function get_hidden_columns_cnt(p_app_id       in number,
+                                  p_page_id      in number)
+  return number
+  is 
+   v_cnt  number;
+  begin
+      select count(*)
+      into v_cnt
+      from APEX_APPLICATION_PAGE_IR_COL
+     where application_id = p_app_id
+       AND page_id = p_page_id
+       and display_text_as = 'HIDDEN' 
+       and instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') > 0;       
+      
+      return v_cnt;
+  exception
+    when no_data_found then
+      return 0;
+  end get_hidden_columns_cnt;     
+  
+  ------------------------------------------------------------------------------ 
   
   procedure init_t_report(p_app_id       in number,
                           p_page_id      in number)
@@ -480,6 +517,9 @@ CREATE OR REPLACE package body ir_to_xml as
                                            p_region_id      => l_region_id
                                           );
     l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list));
+    
+    l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id,p_page_id);
+    
     <<displayed_columns>>                                      
     for i in (select column_alias,
                      report_label,
@@ -492,7 +532,7 @@ CREATE OR REPLACE package body ir_to_xml as
                 from APEX_APPLICATION_PAGE_IR_COL
                where application_id = p_app_id
                  AND page_id = p_page_id
-                 and display_text_as != 'HIDDEN' --after report RESETTING l_report.ir_data.report_columns consists HIDDEN column - APEX bug????
+                 and display_text_as != 'HIDDEN' --l_report.ir_data.report_columns can include HIDDEN columns
                  and instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') > 0
               UNION
               select computation_column_alias,
@@ -550,7 +590,7 @@ CREATE OR REPLACE package body ir_to_xml as
                              l_report.count_columns_on_break.count +
                              l_report.count_distnt_col_on_break.count;
     
-    log('l_report.displayed_columns='||rr(l_report.ir_data.report_columns));
+    log('l_report.report_columns='||rr(l_report.ir_data.report_columns));    
     log('l_report.break_on='||rr(l_report.ir_data.break_enabled_on));
     log('l_report.sum_columns_on_break='||rr(l_report.ir_data.sum_columns_on_break));
     log('l_report.avg_columns_on_break='||rr(l_report.ir_data.avg_columns_on_break));
@@ -561,6 +601,8 @@ CREATE OR REPLACE package body ir_to_xml as
     log('l_report.count_distnt_col_on_break='||rr(l_report.ir_data.count_columns_on_break));
     log('l_report.break_really_on='||APEX_UTIL.TABLE_TO_STRING(l_report.break_really_on));
     log('l_report.agg_cols_cnt='||l_report.agg_cols_cnt);
+    log('l_report.hidden_cols_cnt='||l_report.hidden_cols_cnt);
+    
     
     for c in cur_highlight(p_report_id => l_report_id,
                            p_delimetered_column_list => l_report.ir_data.report_columns
@@ -595,9 +637,8 @@ CREATE OR REPLACE package body ir_to_xml as
                             p_prev_row  IN APEX_APPLICATION_GLOBAL.VC_ARR2)
   return boolean
   is
-    v_start_with      integer;
-    v_end_with        integer;    
-    v_tmp             integer;
+    v_start_with      BINARY_INTEGER;
+    v_end_with        BINARY_INTEGER;    
   begin
     if nvl(l_report.break_really_on.count,0) = 0  then
       return false; --no control break
@@ -806,9 +847,9 @@ CREATE OR REPLACE package body ir_to_xml as
   ------------------------------------------------------------------------------
   function find_rel_position (p_curr_col_name    IN varchar2,
                               p_agg_rows         IN APEX_APPLICATION_GLOBAL.VC_ARR2)
-  return integer
+  return BINARY_INTEGER
   is
-    v_relative_position integer;
+    v_relative_position BINARY_INTEGER;
   begin
     <<aggregated_rows>>
     for i in 1..p_agg_rows.count loop
@@ -824,12 +865,12 @@ CREATE OR REPLACE package body ir_to_xml as
                         p_agg_rows        IN APEX_APPLICATION_GLOBAL.VC_ARR2,
                         p_current_row     IN APEX_APPLICATION_GLOBAL.VC_ARR2,
                         p_agg_text        IN varchar2,
-                        p_position        in integer, --start position in sql-query
-                        p_col_number      IN INTEGER, --column position when displayed
+                        p_position        in BINARY_INTEGER, --start position in sql-query
+                        p_col_number      IN BINARY_INTEGER, --column position when displayed
                         p_default_format_mask     IN varchar2 default null )  
   return varchar2
   is
-    v_tmp_pos       integer;  -- current column position in sql-query 
+    v_tmp_pos       BINARY_INTEGER;  -- current column position in sql-query 
     v_format_mask   apex_application_page_ir_comp.computation_format_mask%type;
     v_agg_value     largevarchar2;
     v_row_value     largevarchar2;
@@ -841,7 +882,7 @@ CREATE OR REPLACE package body ir_to_xml as
         v_col_alias := get_column_alias_sql(p_col_number);
         v_g_format_mask :=  get_col_format_mask(v_col_alias);   
         v_format_mask := nvl(v_g_format_mask,p_default_format_mask);
-        v_row_value :=  get_current_row(p_current_row,p_position + v_tmp_pos);
+        v_row_value :=  get_current_row(p_current_row,p_position + l_report.hidden_cols_cnt + v_tmp_pos);
         v_agg_value := trim(to_char(v_row_value,v_format_mask));
         
         return  get_xmlval(p_agg_text||v_agg_value||' '||chr(10));
@@ -862,33 +903,11 @@ CREATE OR REPLACE package body ir_to_xml as
         raise;
   end get_agg_text;
   ------------------------------------------------------------------------------
-  function get_agg_value(p_curr_col_name   in varchar2,
-                         p_agg_rows        IN APEX_APPLICATION_GLOBAL.VC_ARR2,
-                         p_current_row     in apex_application_global.vc_arr2,
-                         p_position        in integer --start position in sql-query
-                        )  
-  return varchar2
-  is
-    v_tmp_pos       integer;  -- current column position in sql-query 
-    v_format_mask   apex_application_page_ir_comp.computation_format_mask%type;
-    v_agg_value     varchar2(100);
-  begin
-      v_tmp_pos := find_rel_position (p_curr_col_name,p_agg_rows); 
-      if v_tmp_pos is not null then
-        v_agg_value := get_current_row(p_current_row,p_position + v_tmp_pos);
-        return  get_xmlval(v_agg_value);
-      else
-        return  '';
-      end if;        
-  end get_agg_value;
-  
-  ------------------------------------------------------------------------------
   function print_aggregate(p_current_row     IN APEX_APPLICATION_GLOBAL.VC_ARR2) 
   return varchar2
   is
     v_aggregate_xml   largevarchar2;
-    v_position        integer;    
-    v_sum_value       varchar2(100);
+    v_position        BINARY_INTEGER;    
   begin
     if l_report.agg_cols_cnt  = 0 then
       return ''; --no aggregate
@@ -899,15 +918,9 @@ CREATE OR REPLACE package body ir_to_xml as
     <<visible_columns>>
     for i in l_report.start_with..l_report.end_with loop
       v_position := l_report.end_with; --aggregate are placed after displayed columns and computations
-      v_sum_value := get_agg_value(p_curr_col_name => get_column_alias_sql(i),
-                         p_agg_rows      => l_report.sum_columns_on_break,
-                         p_current_row   => p_current_row,
-                         p_position      => v_position
-                        );
-                        
-      -- print SUm value twice: once to the value-property of XML-tag
+
       v_aggregate_xml := v_aggregate_xml || bcoll(p_column_alias=>get_column_alias_sql(i),
-                                                  p_value => v_sum_value,
+                                                  --p_value => v_sum_value,
                                                   p_format_mask => get_col_format_mask(get_column_alias_sql(i))
                                                   );
       -- and second to XML-tag text to display as text concatenated with other aggregates
@@ -1007,7 +1020,7 @@ CREATE OR REPLACE package body ir_to_xml as
   is
    v_cur            INTEGER; 
    v_result         INTEGER;
-   v_colls_count    INTEGER;
+   v_colls_count    BINARY_INTEGER;
    v_row            APEX_APPLICATION_GLOBAL.VC_ARR2;
    v_prev_row       APEX_APPLICATION_GLOBAL.VC_ARR2;
    v_columns        APEX_APPLICATION_GLOBAL.VC_ARR2;
@@ -1219,6 +1232,7 @@ CREATE OR REPLACE package body ir_to_xml as
     dbms_lob.trim (v_debug,0);    
     dbms_lob.createtemporary(v_data,true);
     --APEX_DEBUG_MESSAGE.ENABLE_DEBUG_MESSAGES(p_level => 7);
+    log('version=1.5');
     log('p_app_id='||p_app_id);
     log('p_page_id='||p_page_id);
     log('p_return_type='||p_return_type);
@@ -1281,6 +1295,39 @@ CREATE OR REPLACE package body ir_to_xml as
     
     return xmltype(v_data);    
   end get_report_xml; 
+  
+  ------------------------------------------------------------------------------
+  /* 
+    function to handle cases of 'in' and 'not in' conditions for highlights
+   	used in cursor cur_highlight
+    
+    Author: Srihari Ravva
+  */ 
+  function get_highlight_in_cond_sql(p_condition_expression  in APEX_APPLICATION_PAGE_IR_COND.CONDITION_EXPRESSION%TYPE,
+                                     p_condition_sql         in APEX_APPLICATION_PAGE_IR_COND.CONDITION_SQL%TYPE,
+                                     p_condition_column_name in APEX_APPLICATION_PAGE_IR_COND.CONDITION_COLUMN_NAME%TYPE)
+  return varchar2 
+  is
+    v_condition_sql_tmp     varchar2(32767);
+	v_condition_sql			varchar2(32767);
+	v_arr_cond_expr APEX_APPLICATION_GLOBAL.VC_ARR2;
+	v_arr_cond_sql APEX_APPLICATION_GLOBAL.VC_ARR2;	
+  begin
+    v_condition_sql := REPLACE(REPLACE(p_condition_sql,'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||p_condition_column_name||'"');
+	v_condition_sql_tmp := SUBSTR(v_condition_sql,INSTR(v_condition_sql,'#'),INSTR(v_condition_sql,'#',-1)-INSTR(v_condition_sql,'#')+1);
+	
+    v_arr_cond_expr := APEX_UTIL.STRING_TO_TABLE(p_condition_expression,',');
+	v_arr_cond_sql := APEX_UTIL.STRING_TO_TABLE(v_condition_sql_tmp,',');
+	
+    for i in 1..v_arr_cond_expr.count
+	loop
+		-- consider everything as varchar2
+		-- 'in' and 'not in' highlight conditions are not possible for DATE columns from IR
+		v_condition_sql := REPLACE(v_condition_sql,v_arr_cond_sql(i),''''||TO_CHAR(v_arr_cond_expr(i))||'''');
+	end loop;
+    return v_condition_sql;
+  end get_highlight_in_cond_sql;  
+  
 begin
   dbms_lob.createtemporary(v_debug,true, DBMS_LOB.CALL);  
 END IR_TO_XML;
@@ -1797,7 +1844,7 @@ is
 end;
 /
 CREATE OR REPLACE package xml_to_xslx
--- ver 1.0.
+-- ver 1.1.
 IS
   WIDTH_COEFFICIENT constant number := 5;
   
@@ -1819,7 +1866,6 @@ IS
                          p_page_id     in number)
   return number;
 
-  
   /*
   -- format test cases
   select xml_to_xslx.convert_date_format('dd.mm.yyyy hh24:mi:ss'),to_char(sysdate,'dd.mm.yyyy hh24:mi:ss') from dual
@@ -2337,16 +2383,27 @@ is
    
   END add;
   ------------------------------------------------------------------------------
-  FUNCTION get_cell_name(p_coll IN binary_integer,
-                         p_row  IN binary_integer)
+  FUNCTION get_cell_name(p_col IN binary_integer,
+                         p_row IN binary_integer)
   RETURN varchar2
   IS   
   BEGIN
-   if p_coll > 26 then
-     return chr(64 + trunc(p_coll/26))||chr(64 + p_coll - trunc(p_coll/26)*26 +1)||p_row;
-   ELSE
-     return chr( 64 + p_coll)||p_row;
-   end if;  
+  /*
+   Author: Moritz Klein (https://github.com/commi235)
+   https://github.com/commi235/xlsx_builder/blob/master/xlsx_builder_pkg.pkb
+  */
+      RETURN CASE
+                WHEN p_col > 702
+                THEN
+                      CHR (64 + TRUNC ( (p_col - 27) / 676))
+                   || CHR (65 + MOD (TRUNC ( (p_col - 1) / 26) - 1, 26))
+                   || CHR (65 + MOD (p_col - 1, 26))
+                WHEN p_col > 26
+                THEN
+                   CHR (64 + TRUNC ( (p_col - 1) / 26)) || CHR (65 + MOD (p_col - 1, 26))
+                ELSE
+                   CHR (64 + p_col)
+             END||p_row;
   end get_cell_name;
   ------------------------------------------------------------------------------  
   function get_colls_width_xml(p_width_str    in varchar2,
