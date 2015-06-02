@@ -187,7 +187,6 @@ CREATE OR REPLACE package body ir_to_xml as
   procedure log(p_message in varchar2,p_eof IN BOOLEAN DEFAULT FALSE)
   is
   begin
-    --return;
     add(v_debug,v_debug_buffer,p_message||chr(10),p_eof);
     apex_debug_message.log_message(p_message => substr(p_message,1,32767),
                                    p_enabled => false,
@@ -436,8 +435,8 @@ CREATE OR REPLACE package body ir_to_xml as
       from APEX_APPLICATION_PAGE_IR_COL
      where application_id = p_app_id
        AND page_id = p_page_id
-       and display_text_as = 'HIDDEN' 
-       and instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') > 0;       
+       and display_text_as = 'HIDDEN';
+       --and instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') > 0;       
       
       return v_cnt;
   exception
@@ -645,6 +644,8 @@ CREATE OR REPLACE package body ir_to_xml as
   FUNCTION get_cell_date(p_query_value IN VARCHAR2,p_format_mask IN VARCHAR2)
   RETURN t_cell_data
   IS
+    format_error EXCEPTION;
+    PRAGMA EXCEPTION_INIT(format_error, -01830);
     v_data t_cell_data;
   BEGIN
      v_data.value := to_date(p_query_value) - to_date('01-03-1900','DD-MM-YYYY') + 61;
@@ -657,7 +658,7 @@ CREATE OR REPLACE package body ir_to_xml as
     
     return v_data;
   EXCEPTION
-    WHEN invalid_number THEN 
+    WHEN invalid_number or format_error THEN 
       v_data.value := NULL;          
       v_data.datatype := 'STRING';
       v_data.text := p_query_value;
@@ -680,6 +681,8 @@ CREATE OR REPLACE package body ir_to_xml as
   FUNCTION get_cell_number(p_query_value IN VARCHAR2,p_format_mask IN VARCHAR2)
   RETURN t_cell_data
   IS
+    conversion_error exception;
+    PRAGMA EXCEPTION_INIT(conversion_error,-06502);
     v_data t_cell_data;
   BEGIN
    v_data.datatype := 'NUMBER';
@@ -693,7 +696,7 @@ CREATE OR REPLACE package body ir_to_xml as
    
    return v_data;
   EXCEPTION
-    WHEN invalid_number THEN 
+    WHEN invalid_number or conversion_error THEN 
       v_data.value := NULL;          
       v_data.datatype := 'STRING';
       v_data.text := p_query_value;
@@ -1214,7 +1217,7 @@ CREATE OR REPLACE package body ir_to_xml as
     dbms_lob.trim (v_debug,0);    
     dbms_lob.createtemporary(v_data,true);
     --APEX_DEBUG_MESSAGE.ENABLE_DEBUG_MESSAGES(p_level => 7);
-    log('version=1.5');
+    log('version=1.6');
     log('p_app_id='||p_app_id);
     log('p_page_id='||p_page_id);
     log('p_return_type='||p_return_type);
