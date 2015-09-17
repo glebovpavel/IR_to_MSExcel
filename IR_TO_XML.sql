@@ -436,7 +436,6 @@ CREATE OR REPLACE package body ir_to_xml as
      where application_id = p_app_id
        AND page_id = p_page_id
        and display_text_as = 'HIDDEN';
-       --and instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') > 0;       
       
       return v_cnt;
   exception
@@ -449,11 +448,12 @@ CREATE OR REPLACE package body ir_to_xml as
   procedure init_t_report(p_app_id       in number,
                           p_page_id      in number)
   is
-    l_region_id     number;
-    l_report_id     number;
-    v_query_targets apex_application_global.vc_arr2;
-    l_new_report    ir_report;
+    l_region_id                    number;
+    l_report_id                    number;
+    v_query_targets                apex_application_global.vc_arr2;
+    l_new_report                   ir_report;
     v_apex_application_page_ir_rpt largevarchar2;
+    v_query_column_list            APEX_APPLICATION_GLOBAL.VC_ARR2;
   begin
     l_report := l_new_report;
     select region_id 
@@ -471,16 +471,18 @@ CREATE OR REPLACE package body ir_to_xml as
     
     log('l_base_report_id='||l_report_id);
     
-    
-    select listagg('session_id='||session_id||' APP_SESSION='||v('APP_SESSION')||' application_user='||application_user||' APP_USER='||
-       v('APP_USER')||' base_report_id='||base_report_id,chr(10)) within group (order by 1)
+    /*
+    -- debug info
+    select substr(listagg('session_id='||session_id||' APP_SESSION='||v('APP_SESSION')||' application_user='||application_user||' APP_USER='||
+       v('APP_USER')||' base_report_id='||base_report_id,chr(10)) within group (order by 1),1,32767) 
     into v_apex_application_page_ir_rpt
     from apex_application_page_ir_rpt r
     where application_id = p_app_id
      and page_id = p_page_id;
-     
-    log(v_apex_application_page_ir_rpt); 
     
+    log(v_apex_application_page_ir_rpt); 
+     */
+
     select r.* 
     into l_report.ir_data       
     from apex_application_page_ir_rpt r
@@ -493,14 +495,14 @@ CREATE OR REPLACE package body ir_to_xml as
     log('l_report_id='||l_report_id);
     l_report_id := l_report.ir_data.report_id;                                                                 
       
-      
     l_report.report := apex_ir.get_report (p_page_id        => p_page_id,
                                            p_region_id      => l_region_id
                                           );
-    l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list));
+    v_query_column_list := get_query_column_list;
+    l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(get_cols_as_table(l_report.ir_data.report_columns,v_query_column_list));
     
-    l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id,p_page_id);
-    
+    --l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id,p_page_id);
+
     <<displayed_columns>>                                      
     for i in (select column_alias,
                      report_label,
@@ -561,7 +563,7 @@ CREATE OR REPLACE package body ir_to_xml as
     l_report.median_columns_on_break := get_cols_as_table(l_report.ir_data.median_columns_on_break,l_report.displayed_columns); 
     l_report.count_columns_on_break := get_cols_as_table(l_report.ir_data.count_columns_on_break,l_report.displayed_columns);  
     l_report.count_distnt_col_on_break := get_cols_as_table(l_report.ir_data.count_distnt_col_on_break,l_report.displayed_columns); 
-      
+     
     -- calculate total count of columns with aggregation
     l_report.agg_cols_cnt := l_report.sum_columns_on_break.count + 
                              l_report.avg_columns_on_break.count +
@@ -570,7 +572,14 @@ CREATE OR REPLACE package body ir_to_xml as
                              l_report.median_columns_on_break.count +
                              l_report.count_columns_on_break.count +
                              l_report.count_distnt_col_on_break.count;
-    
+                             
+    l_report.hidden_cols_cnt := v_query_column_list.count -
+                                (l_report.skipped_columns + 
+                                 nvl(l_report.break_really_on.count,0) + 
+                                 l_report.displayed_columns.count +
+                                 l_report.agg_cols_cnt
+                                 );
+
     log('l_report.report_columns='||rr(l_report.ir_data.report_columns));    
     log('l_report.break_on='||rr(l_report.ir_data.break_enabled_on));
     log('l_report.sum_columns_on_break='||rr(l_report.ir_data.sum_columns_on_break));
@@ -597,7 +606,7 @@ CREATE OR REPLACE package body ir_to_xml as
         end if;  
         v_query_targets(v_query_targets.count + 1) := c.condition_sql||' as HLIGHTS_'||(v_query_targets.count + 1);
     end loop;    
-        
+    
     if v_query_targets.count  > 0 then
       l_report.report.sql_query := regexp_replace(l_report.report.sql_query,'^SELECT','SELECT '||APEX_UTIL.TABLE_TO_STRING(v_query_targets,','||chr(10))||',',1,1,'i');
     end if;

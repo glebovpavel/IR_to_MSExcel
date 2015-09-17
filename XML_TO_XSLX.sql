@@ -1,5 +1,5 @@
-CREATE OR REPLACE package xml_to_xslx
--- ver 1.1.
+create or replace package xml_to_xslx
+-- ver 1.2.
 IS
   WIDTH_COEFFICIENT constant number := 5;
   
@@ -21,6 +21,7 @@ IS
                          p_page_id     in number)
   return number;
 
+  
   /*
   -- format test cases
   select xml_to_xslx.convert_date_format('dd.mm.yyyy hh24:mi:ss'),to_char(sysdate,'dd.mm.yyyy hh24:mi:ss') from dual
@@ -42,7 +43,6 @@ IS
                     
 end;
 /
-
 
 CREATE OR REPLACE PACKAGE body XML_TO_XSLX
 is
