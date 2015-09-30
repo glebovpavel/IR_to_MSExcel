@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 06-2015
-** Version: 1.97
+** Version: 1.99
 **
 ** This all in one install script contains headrs and bodies of 4 packages
 **
@@ -17,7 +17,7 @@ set define off;
 
 
 CREATE OR REPLACE package ir_to_xml as    
-  --ver 1.5.
+  --ver #VERS_ION#
   -- download interactive report as PDF
   PROCEDURE get_report_xml(p_app_id          IN NUMBER,
                            p_page_id         in number,                                
@@ -103,7 +103,7 @@ CREATE OR REPLACE package body ir_to_xml as
     from APEX_APPLICATION_PAGE_IR_COND
     where condition_type = 'Highlight'
       and report_id = p_report_id
-      and instr(':'||p_delimetered_column_list||':',':'||CONDITION_COLUMN_NAME||':') > 0
+      --and instr(':'||p_delimetered_column_list||':',':'||CONDITION_COLUMN_NAME||':') > 0
       and condition_enabled = 'Yes'
       order by --rows highlights first 
              nvl2(HIGHLIGHT_ROW_COLOR,1,0) desc, 
@@ -1244,7 +1244,7 @@ CREATE OR REPLACE package body ir_to_xml as
     dbms_lob.trim (v_debug,0);    
     dbms_lob.createtemporary(v_data,true);
     --APEX_DEBUG_MESSAGE.ENABLE_DEBUG_MESSAGES(p_level => 7);
-    log('version=1.6');
+    log('version=1.99');
     log('p_app_id='||p_app_id);
     log('p_page_id='||p_page_id);
     log('p_return_type='||p_return_type);
@@ -1856,7 +1856,6 @@ is
 end;
 /
 create or replace package xml_to_xslx
--- ver 1.2.
 IS
   WIDTH_COEFFICIENT constant number := 5;
   
