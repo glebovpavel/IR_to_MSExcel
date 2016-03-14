@@ -1,26 +1,23 @@
-create or replace package xml_to_xslx
+CREATE OR REPLACE PACKAGE  "XML_TO_XSLX" 
 IS
-  WIDTH_COEFFICIENT constant number := 5;
+  WIDTH_COEFFICIENT CONSTANT NUMBER := 6;
   
-  procedure download_file(p_app_id in number,
-                          p_page_id      in number,
-                          p_col_length   in varchar2 default null,
-                          p_max_rows     in number 
+  procedure download_file(p_app_id       IN NUMBER,
+                          p_page_id      IN NUMBER,
+                          p_region_id    IN NUMBER,
+                          p_col_length   IN VARCHAR2 DEFAULT NULL,
+                          p_max_rows     IN NUMBER 
                          ); 
-  -- p_col_length is delimetered string COLUMN_NAME=COLUMN_WIDTH,COLUMN_NAME=COLUMN_WIDTH,  etc.
-  -- sample: BREAK_ASSIGNED_TO_1=1325,PROJECT=151,TASK_NAME=319,START_DATE=133,
-  
-  function convert_date_format(p_format in varchar2)
+ 
+  function convert_date_format(p_format IN VARCHAR2)
   return varchar2;
-
-  function convert_number_format(p_format in varchar2)
+  function convert_number_format(p_format IN VARCHAR2)
   return varchar2;
   
-  function get_max_rows (p_app_id      in number,
-                         p_page_id     in number)
+  function get_max_rows (p_app_id      IN NUMBER,
+                         p_page_id     IN NUMBER,
+                         p_region_id   IN NUMBER)
   return number;
-
-  
   /*
   -- format test cases
   select xml_to_xslx.convert_date_format('dd.mm.yyyy hh24:mi:ss'),to_char(sysdate,'dd.mm.yyyy hh24:mi:ss') from dual
@@ -43,18 +40,16 @@ IS
 end;
 /
 
-CREATE OR REPLACE PACKAGE body XML_TO_XSLX
+
+CREATE OR REPLACE PACKAGE BODY  "XML_TO_XSLX" 
 is
-
   STRING_HEIGHT      constant number default 14.4; 
-
   
   subtype t_color is varchar2(7);
   subtype t_style_string  is varchar2(300);
   subtype t_format_mask  is varchar2(100);
   subtype t_font  is varchar2(50);
   subtype t_large_varchar2  is varchar2(32767);
-
   BACK_COLOR  constant  t_color default '#C6E0B4';
   
   type t_styles is table of binary_integer index by t_style_string;
@@ -141,7 +136,6 @@ is
       <family val="2" />
       <scheme val="minor" />
     </font>';
-
   BOLD_FONT constant varchar2(200) := '
    <font>
       <b />
@@ -151,7 +145,6 @@ is
       <family val="2" />
       <scheme val="minor" />
     </font>';
-
   FONTS_CNT constant  binary_integer := 2;   
   
   
@@ -166,7 +159,6 @@ is
   
   DEFAULT_STYLE constant varchar2(200) := '
       <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>';
-
   AGGREGATE_STYLE constant varchar2(250) := '
       <xf numFmtId="#FMTID#" borderId="1" fillId="0" fontId="1" xfId="0" applyAlignment="1" applyFont="1" applyBorder="1">
          <alignment wrapText="1" horizontal="right"  vertical="top"/>
@@ -180,7 +172,6 @@ is
   
   
   DEFAULT_STYLES_CNT constant  binary_integer := 1;     
-
   FORMAT_MASK_START_WITH  constant  binary_integer := 164;  
   
   FORMAT_MASK constant varchar2(100) := '
@@ -244,6 +235,7 @@ is
     return v_str;
   end convert_number_format;  
   ------------------------------------------------------------------------------
+  
   function add_font(p_font in t_color,p_bold in varchar2 default null)
   return binary_integer 
   is  
@@ -268,6 +260,7 @@ is
      end if;
   end add_font;
   ------------------------------------------------------------------------------
+  
   function  add_back_color(p_back in t_color)
   return binary_integer 
   is
@@ -296,7 +289,6 @@ is
       a_format_mask_list(p_mask) := a_format_mask_list.count + 1;
       v_format_mask_xml := v_format_mask_xml||
         '<numFmt numFmtId="'||(FORMAT_MASK_START_WITH + a_format_mask_list.count)||'" formatCode="'||p_mask||'"/>'||chr(10);
-
         return  a_format_mask_list.count + FORMAT_MASK_CNT + FORMAT_MASK_START_WITH - 1; 
      else
        return a_format_mask_list(p_mask) + FORMAT_MASK_CNT + FORMAT_MASK_START_WITH - 1;
@@ -389,7 +381,6 @@ is
       a_styles(v_style) := a_styles.count + 1;
       
       v_style_xml := '<xf borderId="0" xfId="0" ';
-
       v_style_xml := v_style_xml||replace(' numFmtId="#FMTID#" ','#FMTID#',get_num_fmt_id(p_data_type,p_format_mask));
       
       if p_font is not null then
@@ -438,7 +429,6 @@ is
       return a_styles(v_style)  - 1 + DEFAULT_STYLES_CNT;
     else
       a_styles(v_style) := a_styles.count + 1;
-
       v_style_xml  := replace(AGGREGATE_STYLE,'#FMTID#',get_num_fmt_id(p_data_type,p_format_mask)) ||chr(10);      
       v_styles_xml := v_styles_xml||v_style_xml;      
       return a_styles.count  - 1 + DEFAULT_STYLES_CNT;
@@ -469,7 +459,6 @@ is
       else
         v_style_xml := replace(HEADER_STYLE,'#FILL#',' fillId="0" '); --default fill 
       end if;      
-
       v_style_xml  := replace(v_style_xml,'#ALIGN#',lower(p_align))||chr(10);
       v_styles_xml := v_styles_xml||v_style_xml;      
       return a_styles.count  - 1 + DEFAULT_STYLES_CNT;
@@ -565,62 +554,38 @@ is
                                p_coefficient  in number)
   return clob
   is
-    subtype t_column_alias is varchar2(255);
     v_xml                  clob;    
     a_col_name_plus_width  apex_application_global.vc_arr2;    
-    v_col_alias            t_column_alias;
     v_col_width            number;
-    type   t_width_list    is table of integer index by t_column_alias;
-    a_width_list           t_width_list;
     v_coefficient          number;
-    v_is_custom            boolean default false;
   begin      
-    a_col_name_plus_width := APEX_UTIL.STRING_TO_TABLE(p_width_str,','); 
+    a_col_name_plus_width := APEX_UTIL.STRING_TO_TABLE(rtrim(p_width_str,','),','); 
     
     v_coefficient := nvl(p_coefficient,WIDTH_COEFFICIENT);
     if v_coefficient =  0 then
       v_coefficient := WIDTH_COEFFICIENT;
     end if;     
-    
-    -- init associative array by colunn width
-    for i in 1..a_col_name_plus_width.count loop      
-      
-      if a_col_name_plus_width(i) is not null then
-        begin                    
-          v_col_alias  := regexp_replace(a_col_name_plus_width(i),'\=\d+,?$','');
-          v_col_width  := ltrim(rtrim(regexp_substr(a_col_name_plus_width(i),'\=\d+,?$'),','),'=');          
-          if v_col_width is not null and v_col_alias is not null then            
-            a_width_list(v_col_alias) := round(to_number(v_col_width) / v_coefficient);            
-          end if;
-         exception
-           when others then             
-             null;  -- this functionality is not important
-         end ;
-      end if;
-    end loop;
     --set column width
     v_xml:= v_xml||to_clob('<cols>'||chr(10));
-    for i in (select  rownum rn,
-                      extractvalue(column_value, 'CELL') as column_header,
-                      extractvalue(COLUMN_VALUE, 'CELL/@column-alias') AS column_alias,  
-                      extractvalue(COLUMN_VALUE, 'CELL/@data-type') AS data_type
+    for i in (select  rownum rn
                from table (select xmlsequence(extract(p_xml,'DOCUMENT/DATA/HEADER/CELL')) from dual))
     loop                    
-      if a_width_list.exists(i.column_alias)  then        
-        v_xml:= v_xml||to_clob('<col min="'||i.rn||'" max="'||i.rn||'" width="'||a_width_list(i.column_alias)||'" customWidth="1" />'||chr(10));        
-        v_is_custom := true;        
-      end if;  
+      begin                    
+        v_col_width  := round(to_number(a_col_name_plus_width(i.rn))/ v_coefficient);
+      exception
+         when others then             
+            v_col_width := -1;  
+      end;
+      
+      if v_col_width >= 0 then
+        v_xml:= v_xml||to_clob('<col min="'||i.rn||'" max="'||i.rn||'" width="'||v_col_width||'" customWidth="1" />'||chr(10));        
+      else
+        v_xml:= v_xml||to_clob('<col min="'||i.rn||'" max="'||i.rn||'" width="10" customWidth="0" />'||chr(10));        
+      end if;
     end loop;
     v_xml:= v_xml||to_clob('</cols>'||chr(10));       
     
-    if v_is_custom then
-      return v_xml;      
-    else
-      return to_clob('');
-    end if; 
-  exception
-    when others then 
-      raise_application_error(-20001,'get_colls_width_xml: '||SQLERRM);
+    return v_xml;      
   end get_colls_width_xml;
  
   ------------------------------------------------------------------------------  
@@ -713,11 +678,9 @@ is
            </sheetView>
           </sheetViews>
         <sheetFormatPr baseColWidth="10" defaultColWidth="10" defaultRowHeight="15"/>'||chr(10),TRUE);
-
      v_clob := v_clob||get_colls_width_xml(p_width_str,p_xml,p_coefficient);
      --!
      add(v_clob,v_buffer,'<sheetData>'||chr(10));
-
      --column header
      add(v_clob,v_buffer,'<row>'||chr(10));     
      for i in (select  extractvalue(column_value, 'CELL') as column_header,
@@ -861,7 +824,8 @@ is
   end get_excel;
   ------------------------------------------------------------------------------
   function get_max_rows (p_app_id      in number,
-                         p_page_id     in number)
+                         p_page_id     in number,
+                         p_region_id   IN NUMBER)
   return number
   is 
     v_max_row_count number;
@@ -870,13 +834,15 @@ is
     into v_max_row_count
     from APEX_APPLICATION_PAGE_IR
     where application_id = p_app_id
-      and page_id = p_page_id;
+      and page_id = p_page_id
+      and region_id = p_region_id;
        
      return v_max_row_count;
   end get_max_rows;   
   ------------------------------------------------------------------------------  
-  function get_file_name (p_app_id      in number,
-                          p_page_id     in number)
+  function get_file_name (p_app_id      IN NUMBER,
+                          p_page_id     IN NUMBER,
+                          p_region_id   IN NUMBER)
   return varchar2
   is 
     v_filename varchar2(255);
@@ -885,15 +851,17 @@ is
     into v_filename
     from APEX_APPLICATION_PAGE_IR
     where application_id = p_app_id
-      and page_id = p_page_id;
+      and page_id = p_page_id
+      and region_id = p_region_id;
        
      return apex_plugin_util.replace_substitutions(nvl(v_filename,'Excel'));
   end get_file_name;   
   ------------------------------------------------------------------------------
-  procedure download_file(p_app_id      in number,
-                          p_page_id     in number,
-                          p_col_length   in varchar2 default null,
-                          p_max_rows     in number 
+  procedure download_file(p_app_id      IN NUMBER,
+                          p_page_id     IN NUMBER,
+                          p_region_id   IN NUMBER, 
+                          p_col_length  IN VARCHAR2 DEFAULT NULL,
+                          p_max_rows    IN NUMBER 
                          )
   is
     t_template blob;
@@ -907,25 +875,27 @@ is
     dbms_lob.createtemporary(t_excel,true);    
     dbms_lob.createtemporary(v_cells,true);
     dbms_lob.createtemporary(v_strings,true);
-    
+    --!!!!!
     
     select file_content
     into t_template
     from apex_appl_plugin_files 
     where file_name = 'ExcelTemplate.zip'
-      and application_id = p_app_id;
+      and application_id = p_app_id
+      and plugin_name='AT.FRT.GPV_IR_TO_MSEXCEL';
     
     zip_files  := as_zip.get_file_list( t_template );
     for i in zip_files.first() .. zip_files.last loop
       as_zip.add1file( t_excel, zip_files( i ), as_zip.get_file( t_template, zip_files( i ) ) );
     end loop;
     
-    v_xml_data := IR_TO_XML.get_report_xml(p_app_id => p_app_id,
-                          p_page_id => p_page_id,                                
-                          p_get_page_items => 'N',
-                          p_items_list  => null,
-                          p_max_rows  => p_max_rows
-                         );
+    v_xml_data := IR_TO_XML.get_report_xml(p_app_id         => p_app_id,
+                                           p_page_id        => p_page_id,     
+                                           p_region_id      => p_region_id,
+                                           p_get_page_items => 'N',
+                                           p_items_list     => null,
+                                           p_max_rows       => p_max_rows
+                                           );
     
     
     get_excel(v_xml_data,v_cells,v_strings,p_col_length,WIDTH_COEFFICIENT);
@@ -936,14 +906,18 @@ is
     add1file( t_excel, 'xl/workbook.xml',t_workbook);    
     
     as_zip.finish_zip( t_excel );
-      
-    htp.flush;
-    htp.init();
-    owa_util.mime_header( wwv_flow_utilities.get_excel_mime_type, false );
-    htp.print( 'Content-Length: ' || dbms_lob.getlength( t_excel ) );
-    htp.print( 'Content-disposition: attachment; filename='||get_file_name (p_app_id,p_page_id)||'.xlsx;' );
+ 
+    --htp.flush;
+    --htp.init();
+    owa_util.mime_header( ccontent_type=> 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
+                          bclose_header => false );
+    htp.p( 'Content-Length: ' || dbms_lob.getlength( t_excel ) );
+    htp.p( 'Content-disposition: attachment; filename='||get_file_name (p_app_id,p_page_id,p_region_id)||'.xlsx;' );
+    htp.p('Cache-Control: must-revalidate, max-age=0');
+    htp.p('Expires: Thu, 01 Jan 1970 01:00:00 CET');
     owa_util.http_header_close;
     wpg_docload.download_file( t_excel );
+ 
     dbms_lob.freetemporary(t_excel);
     dbms_lob.freetemporary(v_cells);
     dbms_lob.freetemporary(v_strings);    

@@ -1,186 +1,184 @@
-CREATE OR REPLACE package IR_TO_MSEXCEL 
+create or replace PACKAGE  "IR_TO_MSEXCEL" 
 as
-  function get_xlsx_from_ir (p_process in apex_plugin.t_process,
-                                 p_plugin  in apex_plugin.t_plugin )
-  return apex_plugin.t_process_exec_result;
-   
-  procedure get_xlsx_from_ir_ext(p_maximum_rows    in number default null,
-                                 p_jquery_selector in varchar2 default null,
-                                 p_download_type   in char default 'E',   -- E -> Excel XLSX, X -> XML (Debug), T -> Debug TXT
-                                 p_replace_xls     in char default 'Y',   --Y/N
-                                 p_custom_width    in varchar2 default null
-                                );
+  
   -- p_custom_width is delimetered string of COLUMN_NAME,COLUMN_WIDTH=COLUMN_NAME,COLUMN_WIDTH=  etc.
-  -- sample: PROJECT,151=TASK_NAME,319=START_DATE,133=                    
+  -- sample: PROJECT,151=TASK_NAME,319=START_DATE,133=      
+  
+  
+  FUNCTION render  (p_dynamic_action in apex_plugin.t_dynamic_action,
+                    p_plugin         in apex_plugin.t_plugin )
+  return apex_plugin.t_dynamic_action_render_result; 
+  
+  function ajax (p_dynamic_action in apex_plugin.t_dynamic_action,
+                 p_plugin         in apex_plugin.t_plugin )
+  return apex_plugin.t_dynamic_action_ajax_result;
                                 
 end IR_TO_MSEXCEL;
 /
 
-
-CREATE OR REPLACE package body IR_TO_MSEXCEL 
+create or replace PACKAGE BODY  "IR_TO_MSEXCEL" 
 as
-    XLS_DOWNLOAD_SELECTOR constant varchar2(20) := ' #apexir_dl_XLS, ';
-
-    JAVASCRIPT_CODE  constant varchar2(2000) := 
-    q'[   
-    function getColWidthsDelimeteredString()
-      {
-        var colWidthsDelimeteredString = "";
-        var colWidthsArray = Array ();        
-        $( ".apexir_WORKSHEET_DATA th" ).each(function( index,elmt ) 
-        {    
-          colWidthsArray[elmt.id] = $(elmt).width();  
-        });
-        for (var i in colWidthsArray) {
-         colWidthsDelimeteredString = colWidthsDelimeteredString + i + '=' + colWidthsArray[i] + "\,";  
-        }       
-        return colWidthsDelimeteredString + '#CUSTOMWIDTH#';
-      }
-     function add_xlsx_download_button()
-     {     
-     $('td  [id^="apexir_dl_"] ').last().parent().after('<td nowrap="nowrap" id="download_xlsx_8458548"><img src="/i/ws/download_csv_64x64.gif" alt="XLSX" title="XLSX"></td>')
-     $('td  [for^="apexir_dl_"] ').last().parent().after('<td align="center" nowrap="nowrap"><label for="apexir_dl_EMAIL">XLSX</label><td>');
-     }
-    function replaceDownloadXLS()
-      {     
-        $("#apexir_CONTROL_PANEL_DROP").on('click',function(){                           
-           $("#apexir_dl_XLS").attr("href",'f?p=&APP_ID.:&APP_PAGE_ID.:&APP_SESSION.:GPV_IR_TO_MSEXCEL' + getColWidthsDelimeteredString() +':NO:::');           
-        });
-      }
-    ]';
-   ------------------------------------------------------------------------------ 
-
-    ON_SELECOR_CODE constant varchar2(220) :=  q'[
-    $("#SELECTOR#").on( "click", function() 
-    { 
-      apex.navigation.redirect("#URL#") ;
-    });]';
-
-  ------------------------------------------------------------------------------  
-    STANDARD_DOWNLOAD_CODE constant varchar2(300) := q'[
-    $("#apexir_WORKSHEET_REGION").bind("apexafterrefresh", function(){                
-        replaceDownloadXLS() ;        
-    });
-    replaceDownloadXLS();        
-    ]';
-  ------------------------------------------------------------------------------ 
   
-  function get_prepeared_url
-  return varchar2
+  function get_affected_region_id(p_dynamic_action_id IN apex_application_page_da_acts.action_id%TYPE,
+                                  p_html_region_id    IN VARCHAR2
+                                 )
+  return  apex_application_page_da_acts.affected_region_id%type
   is
-    v_page_access_protection apex_application_pages.PAGE_ACCESS_PROTECTION%TYPE;
+   v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
   begin
-    select page_access_protection 
-    into v_page_access_protection
-    from apex_application_pages 
-    where page_id = v('APP_PAGE_ID')
-     and application_id = v('APP_ID');
-    
-    if v_page_access_protection = 'Unrestricted' then
-      return 'f?p=&APP_ID.:&APP_PAGE_ID.:&APP_SESSION.:GPV_IR_TO_MSEXCEL"+getColWidthsDelimeteredString()+":NO:::';    
-    else
-      return APEX_UTIL.PREPARE_URL('f?p='||v('APP_ID')||':'||v('APP_PAGE_ID')||':'||v('APP_SESSION')||':GPV_IR_TO_MSEXCEL:NO:::');    
-    end if;
-  end get_prepeared_url;
   
-  procedure get_xlsx_from_ir_ext(p_maximum_rows    in number default null,
-                                 p_jquery_selector in varchar2 default null,
-                                 p_download_type   in char default 'E',   -- E -> Excel XLSX, X -> XML (Debug), T -> Debug TXT
-                                 p_replace_xls     in char default 'Y',   --Y/N
-                                 p_custom_width    in varchar2     
-                                )
-  is
-    v_javascript_code       varchar2(3000);
-    v_xls_download_selector varchar2(500);
-  begin
-    v_javascript_code := JAVASCRIPT_CODE;    
-   
-    if p_replace_xls = 'Y' then
-      v_javascript_code := v_javascript_code||STANDARD_DOWNLOAD_CODE;
-      v_xls_download_selector := XLS_DOWNLOAD_SELECTOR;
+      SELECT affected_region_id
+      INTO v_affected_region_id
+      FROM apex_application_page_da_acts aapda
+      WHERE aapda.action_id = p_dynamic_action_id;
       
-      --v_xls_download_selector := XLS_DOWNLOAD_SELECTOR||',#download_xlsx_8458548';
-    end if;
-
-    if p_jquery_selector is not null then
-     v_javascript_code := v_javascript_code||replace(replace(ON_SELECOR_CODE,'#URL#',get_prepeared_url),'#SELECTOR#',rtrim(v_xls_download_selector||p_jquery_selector,','));     
-    end if;
-    
-    v_javascript_code := replace(v_javascript_code,'#CUSTOMWIDTH#',replace(p_custom_width,'''',''));
-    
-    
-    APEX_JAVASCRIPT.ADD_ONLOAD_CODE(apex_plugin_util.replace_substitutions(v_javascript_code));
+      if v_affected_region_id is null then
+        begin
+          select region_id
+          into v_affected_region_id
+          from apex_application_page_regions
+          where  static_id = p_html_region_id;      
+        exception
+          when no_data_found then
+           select region_id
+           into v_affected_region_id
+           from apex_application_page_regions
+           where  region_id = ltrim(p_html_region_id,'R');
+        end;
+      end if;
+      
+      return v_affected_region_id;
+  exception
+    when others then
+      raise_application_error(-20001,'IR_TO_MSEXCEL.get_affected_region_id: No region found!');
+  end get_affected_region_id;
+  ------------------------------------------------------------------------------
   
-    if v('REQUEST') like 'GPV_IR_TO_MSEXCEL%' then
+  function get_affected_region_static_id(p_dynamic_action_id IN apex_application_page_da_acts.action_id%TYPE)
+  return  apex_application_page_regions.static_id%TYPE
+  is
+   v_affected_region_selector apex_application_page_regions.static_id%type;
+  begin
+      SELECT nvl(static_id,'R'||to_char(affected_region_id))
+      INTO v_affected_region_selector
+      FROM apex_application_page_da_acts aapda,
+           apex_application_page_regions r
+      WHERE aapda.action_id = p_dynamic_action_id
+        and aapda.affected_region_id = r.region_id
+        and r.source_type ='Interactive Report';
+      
+      return v_affected_region_selector;
+  exception
+    when no_data_found then  
+      return null;
+  end get_affected_region_static_id;
+  ------------------------------------------------------------------------------
+  FUNCTION render (p_dynamic_action in apex_plugin.t_dynamic_action,
+                   p_plugin         in apex_plugin.t_plugin )
+  return apex_plugin.t_dynamic_action_render_result
+  is
+    v_javascript_code          varchar2(1000);
+    v_result                   apex_plugin.t_dynamic_action_render_result;
+    v_plugin_id                varchar2(100);
+    v_affected_region_selector apex_application_page_regions.static_id%type;
+  BEGIN
+    v_plugin_id := apex_plugin.get_ajax_identifier;
+    v_affected_region_selector := get_affected_region_static_id(p_dynamic_action.ID);
+    if nvl(p_dynamic_action.attribute_03,'Y') = 'Y' then
+      if v_affected_region_selector is not null then 
+        -- add XLSX Icon to Affected IR Region
+        v_javascript_code :=  'addDownloadXLSXIcon('''||v_plugin_id||''','''||v_affected_region_selector||''');';
+        APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,v_affected_region_selector);
+      else
+        -- add XLSX Icon to all IR Regions on the page
+        for i in (SELECT nvl(static_id,'R'||to_char(region_id)) as affected_region_selector      
+                  FROM apex_application_page_regions r
+                  where r.page_id = v('APP_PAGE_ID')
+                    and r.application_id =v('APP_ID')
+                    and r.source_type ='Interactive Report'
+                 )
+        loop         
+           v_javascript_code :=  'addDownloadXLSXIcon('''||v_plugin_id||''','''||i.affected_region_selector||''');';
+           APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,i.affected_region_selector);     
+        end loop;
+      end if;
+    end if;
+   
+      
+    apex_javascript.add_library (p_name      => 'IR2MSEXCEL', 
+                                 p_directory => p_plugin.file_prefix); 
+    
+    if v_affected_region_selector is not null then
+      v_result.javascript_function := 'function(){get_excel_gpv('''||v_affected_region_selector||''','''||v_plugin_id||''')}';
+    else
+     v_result.javascript_function := 'function(){console.log("No Affected Region Found!");}';
+    end if;
+    v_result.ajax_identifier := v_plugin_id;
+    
+    return v_result;
+  end render;
+  ------------------------------------------------------------------------------
+  
+  function ajax (p_dynamic_action in apex_plugin.t_dynamic_action,
+                 p_plugin         in apex_plugin.t_plugin )
+  return apex_plugin.t_dynamic_action_ajax_result
+  is
+    p_download_type      varchar2(1);
+    p_custom_width       varchar2(1000);
+    v_maximum_rows       number;
+    v_dummy              apex_plugin.t_dynamic_action_ajax_result;
+    v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
+  begin      
+      p_download_type:= nvl(p_dynamic_action.attribute_02,'E');
+      v_affected_region_id := get_affected_region_id(p_dynamic_action_id => p_dynamic_action.ID
+                                                    ,p_html_region_id    => apex_application.g_x03);
+      
+      v_maximum_rows := nvl(nvl(p_dynamic_action.attribute_01,
+                                xml_to_xslx.get_max_rows (p_app_id    => apex_application.g_x01,
+                                                          p_page_id   => apex_application.g_x02,
+                                                          p_region_id => v_affected_region_id)
+                                ),1000);                                               
+      raise_application_error(-20001,'v_maximum_rows='||v_maximum_rows); 
       if p_download_type = 'E' then -- Excel XLSX
-        XML_TO_XSLX.download_file(p_app_id       => v('APP_ID'),
-                                  p_page_id      => v('APP_PAGE_ID'),
-                                  p_col_length   => regexp_replace(v('REQUEST'),'^GPV_IR_TO_MSEXCEL','')||p_custom_width,
-                                  p_max_rows     => nvl(p_maximum_rows,xml_to_xslx.get_max_rows (v('APP_ID'),v('APP_PAGE_ID')))
+        XML_TO_XSLX.download_file(p_app_id       => apex_application.g_x01,
+                                  p_page_id      => apex_application.g_x02,
+                                  p_region_id    => v_affected_region_id,
+                                  p_col_length   => apex_application.g_x04||p_custom_width,
+                                  p_max_rows     => v_maximum_rows
                                   );
       elsif p_download_type = 'X' then -- XML
-        IR_TO_XML.get_report_xml(p_app_id            => v('APP_ID'),
-                                 p_page_id           => v('APP_PAGE_ID'),       
+        IR_TO_XML.get_report_xml(p_app_id            => apex_application.g_x01,
+                                 p_page_id           => apex_application.g_x02, 
+                                 p_region_id         => v_affected_region_id,
                                  p_return_type       => 'X',                        
                                  p_get_page_items    => 'N',
                                  p_items_list        => null,
                                  p_collection_name   => null,
-                                 p_max_rows          => xml_to_xslx.get_max_rows (v('APP_ID'),v('APP_PAGE_ID'))
+                                 p_max_rows          => v_maximum_rows
                                 );
       elsif p_download_type = 'T' then -- Debug txt
-        IR_TO_XML.get_report_xml(p_app_id            => v('APP_ID'),
-                                 p_page_id           => v('APP_PAGE_ID'),       
+        IR_TO_XML.get_report_xml(p_app_id            => apex_application.g_x01,
+                                 p_page_id           => apex_application.g_x02, 
+                                 p_region_id         => v_affected_region_id,
                                  p_return_type       => 'Q',                        
                                  p_get_page_items    => 'N',
                                  p_items_list        => null,
                                  p_collection_name   => null,
-                                 p_max_rows          => xml_to_xslx.get_max_rows (v('APP_ID'),v('APP_PAGE_ID'))
+                                 p_max_rows          => v_maximum_rows
                                 );
-    
+      elsif p_download_type = 'M' then -- use Moritz Klein engine https://github.com/commi235                        
+       apexir_xlsx_pkg.download(  p_ir_region_id   => v_affected_region_id,
+                                  p_app_id         => apex_application.g_x01,
+                                  p_ir_page_id     => apex_application.g_x02
+                                );
      else
       raise_application_error(-20001,'GPV_IR_TO_MSEXCEL : unknown Return Type');
-     end if;
-   end if;
-   
-  end get_xlsx_from_ir_ext;
-  ------------------------------------------------------------------------------ 
-  procedure check_correct_use
-  is
-     v_process_name  apex_application_page_proc.process_name%TYPE;
-     v_page_id       apex_application_page_proc.page_id%TYPE;
-  begin
-    select process_name, 
-           page_id
-      into v_process_name,
-           v_page_id
-      from apex_application_page_proc 
-      where application_id = 102
-        and process_type_code = 'PLUGIN_GPV_IR_TO_MSEXCEL'
-        and process_point_code != 'BEFORE_BOX_BODY';
-  
-       raise_application_error(-20001,'Plugin "GPV Interactive Report to MSExcel" must be used in "On Load - Before Region" processes only. Please check page '||v_page_id||'.');  
+     end if;    
+     return v_dummy;
   exception
-    when no_data_found then
-       null; --check ok
-  end check_correct_use;
-  ------------------------------------------------------------------------------ 
-  FUNCTION get_xlsx_from_ir (p_process IN apex_plugin.t_process,
-                             p_plugin  IN apex_plugin.t_plugin )
-  RETURN apex_plugin.t_process_exec_result  
-  is
-    v_javascript_code varchar2(2000);
-    v_on_standard_download_code varchar2(300);
-  BEGIN
-    check_correct_use;
-    get_xlsx_from_ir_ext(p_maximum_rows    => p_process.attribute_05,
-                         p_jquery_selector => p_process.attribute_06,
-                         p_download_type   => p_process.attribute_07,
-                         p_replace_xls     => p_process.attribute_10,
-                         p_custom_width    => p_process.attribute_11
-                        );
-   
-   return null;
-  end get_xlsx_from_ir;
-
+    when others then
+      raise_application_error(-20001,SQLERRM||chr(10)||dbms_utility.format_error_backtrace);
+  end ajax;
+  
 end IR_TO_MSEXCEL;
 /

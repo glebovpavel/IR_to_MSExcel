@@ -1,29 +1,794 @@
 /**********************************************
 **
 ** Author: Pavel Glebov
-** Date: 06-2015
-** Version: 1.99
+** Date: 03-2016
+** Version: 2.00
 **
-** This all in one install script contains headrs and bodies of 4 packages
+** This all in one install script contains headrs and bodies of 5 packages
 **
 ** IR_TO_XML.sql 
 ** AS_ZIP.sql  
 ** XML_TO_XSLX.sql
 ** IR_TO_MSEXCEL.sql
+** APEXIR_XLSX_PKG.sql (mock)
 **
 **********************************************/
 
 set define off;
 
 
-CREATE OR REPLACE package ir_to_xml as    
-  --ver #VERS_ION#
-  -- download interactive report as PDF
+CREATE OR REPLACE PACKAGE "APEXIR_XLSX_PKG" 
+  AUTHID CURRENT_USER
+AS
+  /*
+   This is mock package to make other packages compilable
+   
+   to use original commi235/APEX_IR_XLSX generating engine,
+   please download it from https://github.com/commi235/APEX_IR_XLSX
+
+  */
+
+  PROCEDURE download
+    ( p_ir_region_id NUMBER := NULL
+    , p_app_id NUMBER := NV('APP_ID')
+    , p_ir_page_id NUMBER := NV('APP_PAGE_ID')
+    , p_ir_session_id NUMBER := NV('SESSION')
+    , p_ir_request VARCHAR2 := V('REQUEST')
+    , p_ir_view_mode VARCHAR2 := NULL
+    , p_column_headers BOOLEAN := TRUE
+    , p_col_hdr_help BOOLEAN := TRUE
+    , p_aggregates IN BOOLEAN := TRUE
+    , p_process_highlights IN BOOLEAN := TRUE
+    , p_show_report_title IN BOOLEAN := TRUE
+    , p_show_filters IN BOOLEAN := TRUE
+    , p_show_highlights IN BOOLEAN := TRUE
+    , p_original_line_break IN VARCHAR2 := '<br />'
+    , p_replace_line_break IN VARCHAR2 := chr(13) || chr(10)
+    , p_append_date IN BOOLEAN := TRUE
+    );
+END APEXIR_XLSX_PKG;
+/
+
+
+CREATE OR REPLACE PACKAGE BODY "APEXIR_XLSX_PKG" 
+AS
+
+  /*
+   This is mock package to make other packages compilable
+   
+   to use original commi235/APEX_IR_XLSX generating engine,
+   please download it from https://github.com/commi235/APEX_IR_XLSX
+
+  */
+
+  PROCEDURE download
+    ( p_ir_region_id NUMBER := NULL
+    , p_app_id NUMBER := NV('APP_ID')
+    , p_ir_page_id NUMBER := NV('APP_PAGE_ID')
+    , p_ir_session_id NUMBER := NV('SESSION')
+    , p_ir_request VARCHAR2 := V('REQUEST')
+    , p_ir_view_mode VARCHAR2 := NULL
+    , p_column_headers BOOLEAN := TRUE
+    , p_col_hdr_help BOOLEAN := TRUE
+    , p_aggregates IN BOOLEAN := TRUE
+    , p_process_highlights IN BOOLEAN := TRUE
+    , p_show_report_title IN BOOLEAN := TRUE
+    , p_show_filters IN BOOLEAN := TRUE
+    , p_show_highlights IN BOOLEAN := TRUE
+    , p_original_line_break IN VARCHAR2 := '<br />'
+    , p_replace_line_break IN VARCHAR2 := chr(13) || chr(10)
+    , p_append_date IN BOOLEAN := TRUE
+    )
+  AS
+  BEGIN
+   raise_application_error(-20001,'commi235 generating engine not installed! Please read documentation!');
+  END download;
+
+END APEXIR_XLSX_PKG;
+/
+CREATE OR REPLACE PACKAGE  "AS_ZIP" 
+is 
+/********************************************** 
+** 
+** Author: Anton Scheffer 
+** Date: 25-01-2012 
+** Website: http://technology.amis.nl/blog 
+** 
+** Changelog: 
+**   Date: 29-04-2012 
+**    fixed bug for large uncompressed files, thanks Morten Braten 
+**   Date: 21-03-2012 
+**     Take CRC32, compressed length and uncompressed length from  
+**     Central file header instead of Local file header 
+**   Date: 17-02-2012 
+**     Added more support for non-ascii filenames 
+**   Date: 25-01-2012 
+**     Added MIT-license 
+**     Some minor improvements 
+** 
+****************************************************************************** 
+****************************************************************************** 
+Copyright (C) 2010,2011 by Anton Scheffer 
+ 
+Permission is hereby granted, free of charge, to any person obtaining a copy 
+of this software and associated documentation files (the "Software"), to deal 
+in the Software without restriction, including without limitation the rights 
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
+copies of the Software, and to permit persons to whom the Software is 
+furnished to do so, subject to the following conditions: 
+ 
+The above copyright notice and this permission notice shall be included in 
+all copies or substantial portions of the Software. 
+ 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
+THE SOFTWARE. 
+ 
+****************************************************************************** 
+******************************************** */ 
+  type file_list is table of clob; 
+-- 
+  function file2blob 
+    ( p_dir varchar2 
+    , p_file_name varchar2 
+    ) 
+  return blob; 
+-- 
+  function get_file_list 
+    ( p_dir varchar2 
+    , p_zip_file varchar2 
+    , p_encoding varchar2 := null 
+    ) 
+  return file_list; 
+-- 
+  function get_file_list 
+    ( p_zipped_blob blob 
+    , p_encoding varchar2 := null 
+    ) 
+  return file_list; 
+-- 
+  function get_file 
+    ( p_dir varchar2 
+    , p_zip_file varchar2 
+    , p_file_name varchar2 
+    , p_encoding varchar2 := null 
+    ) 
+  return blob; 
+-- 
+  function get_file 
+    ( p_zipped_blob blob 
+    , p_file_name varchar2 
+    , p_encoding varchar2 := null 
+    ) 
+  return blob; 
+-- 
+  procedure add1file 
+    ( p_zipped_blob in out blob 
+    , p_name varchar2 
+    , p_content blob 
+    ); 
+-- 
+  procedure finish_zip( p_zipped_blob in out blob ); 
+-- 
+  procedure save_zip 
+    ( p_zipped_blob blob 
+    , p_dir varchar2 := 'MY_DIR' 
+    , p_filename varchar2 := 'my.zip' 
+    ); 
+-- 
+/* 
+declare 
+  g_zipped_blob blob; 
+begin 
+  as_zip.add1file( g_zipped_blob, 'test4.txt', null ); -- a empty file 
+  as_zip.add1file( g_zipped_blob, 'dir1/test1.txt', utl_raw.cast_to_raw( q'<A file with some more text, stored in a subfolder which isn't added>' ) ); 
+  as_zip.add1file( g_zipped_blob, 'test1234.txt', utl_raw.cast_to_raw( 'A small file' ) ); 
+  as_zip.add1file( g_zipped_blob, 'dir2/', null ); -- a folder 
+  as_zip.add1file( g_zipped_blob, 'dir3/', null ); -- a folder 
+  as_zip.add1file( g_zipped_blob, 'dir3/test2.txt', utl_raw.cast_to_raw( 'A small filein a previous created folder' ) ); 
+  as_zip.finish_zip( g_zipped_blob ); 
+  as_zip.save_zip( g_zipped_blob, 'MY_DIR', 'my.zip' ); 
+  dbms_lob.freetemporary( g_zipped_blob ); 
+end; 
+-- 
+declare 
+  zip_files as_zip.file_list; 
+begin 
+  zip_files  := as_zip.get_file_list( 'MY_DIR', 'my.zip' ); 
+  for i in zip_files.first() .. zip_files.last 
+  loop 
+    dbms_output.put_line( zip_files( i ) ); 
+    dbms_output.put_line( utl_raw.cast_to_varchar2( as_zip.get_file( 'MY_DIR', 'my.zip', zip_files( i ) ) ) ); 
+  end loop; 
+end; 
+*/ 
+end;
+/
+
+
+CREATE OR REPLACE PACKAGE BODY  "AS_ZIP" 
+is 
+-- 
+  c_LOCAL_FILE_HEADER        constant raw(4) := hextoraw( '504B0304' ); -- Local file header signature 
+  c_END_OF_CENTRAL_DIRECTORY constant raw(4) := hextoraw( '504B0506' ); -- End of central directory signature 
+-- 
+  function blob2num( p_blob blob, p_len integer, p_pos integer ) 
+  return number 
+  is 
+  begin 
+    return utl_raw.cast_to_binary_integer( dbms_lob.substr( p_blob, p_len, p_pos ), utl_raw.little_endian ); 
+  end; 
+-- 
+  function raw2varchar2( p_raw raw, p_encoding varchar2 ) 
+  return varchar2 
+  is 
+  begin 
+    return coalesce( utl_i18n.raw_to_char( p_raw, p_encoding ) 
+                   , utl_i18n.raw_to_char( p_raw, utl_i18n.map_charset( p_encoding, utl_i18n.GENERIC_CONTEXT, utl_i18n.IANA_TO_ORACLE ) ) 
+                   ); 
+  end; 
+-- 
+  function little_endian( p_big number, p_bytes pls_integer := 4 ) 
+  return raw 
+  is 
+  begin 
+    return utl_raw.substr( utl_raw.cast_from_binary_integer( p_big, utl_raw.little_endian ), 1, p_bytes ); 
+  end; 
+-- 
+  function file2blob 
+    ( p_dir varchar2 
+    , p_file_name varchar2 
+    ) 
+  return blob 
+  is 
+    file_lob bfile; 
+    file_blob blob; 
+  begin 
+    file_lob := bfilename( p_dir, p_file_name ); 
+    dbms_lob.open( file_lob, dbms_lob.file_readonly ); 
+    dbms_lob.createtemporary( file_blob, true ); 
+    dbms_lob.loadfromfile( file_blob, file_lob, dbms_lob.lobmaxsize ); 
+    dbms_lob.close( file_lob ); 
+    return file_blob; 
+  exception 
+    when others then 
+      if dbms_lob.isopen( file_lob ) = 1 
+      then 
+        dbms_lob.close( file_lob ); 
+      end if; 
+      if dbms_lob.istemporary( file_blob ) = 1 
+      then 
+        dbms_lob.freetemporary( file_blob ); 
+      end if; 
+      raise; 
+  end; 
+-- 
+  function get_file_list 
+    ( p_zipped_blob blob 
+    , p_encoding varchar2 := null 
+    ) 
+  return file_list 
+  is 
+    t_ind integer; 
+    t_hd_ind integer; 
+    t_rv file_list; 
+    t_encoding varchar2(32767); 
+  begin 
+    t_ind := dbms_lob.getlength( p_zipped_blob ) - 21; 
+    loop 
+      exit when t_ind < 1 or dbms_lob.substr( p_zipped_blob, 4, t_ind ) = c_END_OF_CENTRAL_DIRECTORY; 
+      t_ind := t_ind - 1; 
+    end loop; 
+-- 
+    if t_ind <= 0 
+    then 
+      return null; 
+    end if; 
+-- 
+    t_hd_ind := blob2num( p_zipped_blob, 4, t_ind + 16 ) + 1; 
+    t_rv := file_list(); 
+    t_rv.extend( blob2num( p_zipped_blob, 2, t_ind + 10 ) ); 
+    for i in 1 .. blob2num( p_zipped_blob, 2, t_ind + 8 ) 
+    loop 
+      if p_encoding is null 
+      then 
+        if utl_raw.bit_and( dbms_lob.substr( p_zipped_blob, 1, t_hd_ind + 9 ), hextoraw( '08' ) ) = hextoraw( '08' ) 
+        then   
+          t_encoding := 'AL32UTF8'; -- utf8 
+        else 
+          t_encoding := 'US8PC437'; -- IBM codepage 437 
+        end if; 
+      else 
+        t_encoding := p_encoding; 
+      end if; 
+      t_rv( i ) := raw2varchar2 
+                     ( dbms_lob.substr( p_zipped_blob 
+                                      , blob2num( p_zipped_blob, 2, t_hd_ind + 28 ) 
+                                      , t_hd_ind + 46 
+                                      ) 
+                     , t_encoding 
+                     ); 
+      t_hd_ind := t_hd_ind + 46 
+                + blob2num( p_zipped_blob, 2, t_hd_ind + 28 )  -- File name length 
+                + blob2num( p_zipped_blob, 2, t_hd_ind + 30 )  -- Extra field length 
+                + blob2num( p_zipped_blob, 2, t_hd_ind + 32 ); -- File comment length 
+    end loop; 
+-- 
+    return t_rv; 
+  end; 
+-- 
+  function get_file_list 
+    ( p_dir varchar2 
+    , p_zip_file varchar2 
+    , p_encoding varchar2 := null 
+    ) 
+  return file_list 
+  is 
+  begin 
+    return get_file_list( file2blob( p_dir, p_zip_file ), p_encoding ); 
+  end; 
+-- 
+  function get_file 
+    ( p_zipped_blob blob 
+    , p_file_name varchar2 
+    , p_encoding varchar2 := null 
+    ) 
+  return blob 
+  is 
+    t_tmp blob; 
+    t_ind integer; 
+    t_hd_ind integer; 
+    t_fl_ind integer; 
+    t_encoding varchar2(32767); 
+    t_len integer; 
+  begin 
+    t_ind := dbms_lob.getlength( p_zipped_blob ) - 21; 
+    loop 
+      exit when t_ind < 1 or dbms_lob.substr( p_zipped_blob, 4, t_ind ) = c_END_OF_CENTRAL_DIRECTORY; 
+      t_ind := t_ind - 1; 
+    end loop; 
+-- 
+    if t_ind <= 0 
+    then 
+      return null; 
+    end if; 
+-- 
+    t_hd_ind := blob2num( p_zipped_blob, 4, t_ind + 16 ) + 1; 
+    for i in 1 .. blob2num( p_zipped_blob, 2, t_ind + 8 ) 
+    loop 
+      if p_encoding is null 
+      then 
+        if utl_raw.bit_and( dbms_lob.substr( p_zipped_blob, 1, t_hd_ind + 9 ), hextoraw( '08' ) ) = hextoraw( '08' ) 
+        then   
+          t_encoding := 'AL32UTF8'; -- utf8 
+        else 
+          t_encoding := 'US8PC437'; -- IBM codepage 437 
+        end if; 
+      else 
+        t_encoding := p_encoding; 
+      end if; 
+      if p_file_name = raw2varchar2 
+                         ( dbms_lob.substr( p_zipped_blob 
+                                          , blob2num( p_zipped_blob, 2, t_hd_ind + 28 ) 
+                                          , t_hd_ind + 46 
+                                          ) 
+                         , t_encoding 
+                         ) 
+      then 
+        t_len := blob2num( p_zipped_blob, 4, t_hd_ind + 24 ); -- uncompressed length  
+        if t_len = 0 
+        then 
+          if substr( p_file_name, -1 ) in ( '/', '\' ) 
+          then  -- directory/folder 
+            return null; 
+          else -- empty file 
+            return empty_blob(); 
+          end if; 
+        end if; 
+-- 
+        if dbms_lob.substr( p_zipped_blob, 2, t_hd_ind + 10 ) = hextoraw( '0800' ) -- deflate 
+        then 
+          t_fl_ind := blob2num( p_zipped_blob, 4, t_hd_ind + 42 ); 
+          t_tmp := hextoraw( '1F8B0800000000000003' ); -- gzip header 
+          dbms_lob.copy( t_tmp 
+                       , p_zipped_blob 
+                       ,  blob2num( p_zipped_blob, 4, t_hd_ind + 20 ) 
+                       , 11 
+                       , t_fl_ind + 31 
+                       + blob2num( p_zipped_blob, 2, t_fl_ind + 27 ) -- File name length 
+                       + blob2num( p_zipped_blob, 2, t_fl_ind + 29 ) -- Extra field length 
+                       ); 
+          dbms_lob.append( t_tmp, utl_raw.concat( dbms_lob.substr( p_zipped_blob, 4, t_hd_ind + 16 ) -- CRC32 
+                                                , little_endian( t_len ) -- uncompressed length 
+                                                ) 
+                         ); 
+          return utl_compress.lz_uncompress( t_tmp ); 
+        end if; 
+-- 
+        if dbms_lob.substr( p_zipped_blob, 2, t_hd_ind + 10 ) = hextoraw( '0000' ) -- The file is stored (no compression) 
+        then 
+          t_fl_ind := blob2num( p_zipped_blob, 4, t_hd_ind + 42 ); 
+          dbms_lob.createtemporary( t_tmp, true ); 
+          dbms_lob.copy( t_tmp 
+                       , p_zipped_blob 
+                       , t_len 
+                       , 1 
+                       , t_fl_ind + 31 
+                       + blob2num( p_zipped_blob, 2, t_fl_ind + 27 ) -- File name length 
+                       + blob2num( p_zipped_blob, 2, t_fl_ind + 29 ) -- Extra field length 
+                       ); 
+          return t_tmp; 
+        end if; 
+      end if; 
+      t_hd_ind := t_hd_ind + 46 
+                + blob2num( p_zipped_blob, 2, t_hd_ind + 28 )  -- File name length 
+                + blob2num( p_zipped_blob, 2, t_hd_ind + 30 )  -- Extra field length 
+                + blob2num( p_zipped_blob, 2, t_hd_ind + 32 ); -- File comment length 
+    end loop; 
+-- 
+    return null; 
+  end; 
+-- 
+  function get_file 
+    ( p_dir varchar2 
+    , p_zip_file varchar2 
+    , p_file_name varchar2 
+    , p_encoding varchar2 := null 
+    ) 
+  return blob 
+  is 
+  begin 
+    return get_file( file2blob( p_dir, p_zip_file ), p_file_name, p_encoding ); 
+  end; 
+-- 
+  procedure add1file 
+    ( p_zipped_blob in out blob 
+    , p_name varchar2 
+    , p_content blob 
+    ) 
+  is 
+    t_now date; 
+    t_blob blob; 
+    t_len integer; 
+    t_clen integer; 
+    t_crc32 raw(4) := hextoraw( '00000000' ); 
+    t_compressed boolean := false; 
+    t_name raw(32767); 
+  begin 
+    t_now := sysdate; 
+    t_len := nvl( dbms_lob.getlength( p_content ), 0 ); 
+    if t_len > 0 
+    then  
+      t_blob := utl_compress.lz_compress( p_content ); 
+      t_clen := dbms_lob.getlength( t_blob ) - 18; 
+      t_compressed := t_clen < t_len; 
+      t_crc32 := dbms_lob.substr( t_blob, 4, t_clen + 11 );        
+    end if; 
+    if not t_compressed 
+    then  
+      t_clen := t_len; 
+      t_blob := p_content; 
+    end if; 
+    if p_zipped_blob is null 
+    then 
+      dbms_lob.createtemporary( p_zipped_blob, true ); 
+    end if; 
+    t_name := utl_i18n.string_to_raw( p_name, 'AL32UTF8' ); 
+    dbms_lob.append( p_zipped_blob 
+                   , utl_raw.concat( c_LOCAL_FILE_HEADER -- Local file header signature 
+                                   , hextoraw( '1400' )  -- version 2.0 
+                                   , case when t_name = utl_i18n.string_to_raw( p_name, 'US8PC437' ) 
+                                       then hextoraw( '0000' ) -- no General purpose bits 
+                                       else hextoraw( '0008' ) -- set Language encoding flag (EFS) 
+                                     end  
+                                   , case when t_compressed 
+                                        then hextoraw( '0800' ) -- deflate 
+                                        else hextoraw( '0000' ) -- stored 
+                                     end 
+                                   , little_endian( to_number( to_char( t_now, 'ss' ) ) / 2 
+                                                  + to_number( to_char( t_now, 'mi' ) ) * 32 
+                                                  + to_number( to_char( t_now, 'hh24' ) ) * 2048 
+                                                  , 2 
+                                                  ) -- File last modification time 
+                                   , little_endian( to_number( to_char( t_now, 'dd' ) ) 
+                                                  + to_number( to_char( t_now, 'mm' ) ) * 32 
+                                                  + ( to_number( to_char( t_now, 'yyyy' ) ) - 1980 ) * 512 
+                                                  , 2 
+                                                  ) -- File last modification date 
+                                   , t_crc32 -- CRC-32 
+                                   , little_endian( t_clen )                      -- compressed size 
+                                   , little_endian( t_len )                       -- uncompressed size 
+                                   , little_endian( utl_raw.length( t_name ), 2 ) -- File name length 
+                                   , hextoraw( '0000' )                           -- Extra field length 
+                                   , t_name                                       -- File name 
+                                   ) 
+                   ); 
+    if t_compressed 
+    then                    
+      dbms_lob.copy( p_zipped_blob, t_blob, t_clen, dbms_lob.getlength( p_zipped_blob ) + 1, 11 ); -- compressed content 
+    elsif t_clen > 0 
+    then                    
+      dbms_lob.copy( p_zipped_blob, t_blob, t_clen, dbms_lob.getlength( p_zipped_blob ) + 1, 1 ); --  content 
+    end if; 
+    if dbms_lob.istemporary( t_blob ) = 1 
+    then       
+      dbms_lob.freetemporary( t_blob ); 
+    end if; 
+  end; 
+-- 
+  procedure finish_zip( p_zipped_blob in out blob ) 
+  is 
+    t_cnt pls_integer := 0; 
+    t_offs integer; 
+    t_offs_dir_header integer; 
+    t_offs_end_header integer; 
+    t_comment raw(32767) := utl_raw.cast_to_raw( 'Implementation by Anton Scheffer' ); 
+  begin 
+    t_offs_dir_header := dbms_lob.getlength( p_zipped_blob ); 
+    t_offs := 1; 
+    while dbms_lob.substr( p_zipped_blob, utl_raw.length( c_LOCAL_FILE_HEADER ), t_offs ) = c_LOCAL_FILE_HEADER 
+    loop 
+      t_cnt := t_cnt + 1; 
+      dbms_lob.append( p_zipped_blob 
+                     , utl_raw.concat( hextoraw( '504B0102' )      -- Central directory file header signature 
+                                     , hextoraw( '1400' )          -- version 2.0 
+                                     , dbms_lob.substr( p_zipped_blob, 26, t_offs + 4 ) 
+                                     , hextoraw( '0000' )          -- File comment length 
+                                     , hextoraw( '0000' )          -- Disk number where file starts 
+                                     , hextoraw( '0000' )          -- Internal file attributes =>  
+                                                                   --     0000 binary file 
+                                                                   --     0100 (ascii)text file 
+                                     , case 
+                                         when dbms_lob.substr( p_zipped_blob 
+                                                             , 1 
+                                                             , t_offs + 30 + blob2num( p_zipped_blob, 2, t_offs + 26 ) - 1 
+                                                             ) in ( hextoraw( '2F' ) -- / 
+                                                                  , hextoraw( '5C' ) -- \ 
+                                                                  ) 
+                                         then hextoraw( '10000000' ) -- a directory/folder 
+                                         else hextoraw( '2000B681' ) -- a file 
+                                       end                         -- External file attributes 
+                                     , little_endian( t_offs - 1 ) -- Relative offset of local file header 
+                                     , dbms_lob.substr( p_zipped_blob 
+                                                      , blob2num( p_zipped_blob, 2, t_offs + 26 ) 
+                                                      , t_offs + 30 
+                                                      )            -- File name 
+                                     ) 
+                     ); 
+      t_offs := t_offs + 30 + blob2num( p_zipped_blob, 4, t_offs + 18 )  -- compressed size 
+                            + blob2num( p_zipped_blob, 2, t_offs + 26 )  -- File name length  
+                            + blob2num( p_zipped_blob, 2, t_offs + 28 ); -- Extra field length 
+    end loop; 
+    t_offs_end_header := dbms_lob.getlength( p_zipped_blob ); 
+    dbms_lob.append( p_zipped_blob 
+                   , utl_raw.concat( c_END_OF_CENTRAL_DIRECTORY                                -- End of central directory signature 
+                                   , hextoraw( '0000' )                                        -- Number of this disk 
+                                   , hextoraw( '0000' )                                        -- Disk where central directory starts 
+                                   , little_endian( t_cnt, 2 )                                 -- Number of central directory records on this disk 
+                                   , little_endian( t_cnt, 2 )                                 -- Total number of central directory records 
+                                   , little_endian( t_offs_end_header - t_offs_dir_header )    -- Size of central directory 
+                                   , little_endian( t_offs_dir_header )                        -- Offset of start of central directory, relative to start of archive 
+                                   , little_endian( nvl( utl_raw.length( t_comment ), 0 ), 2 ) -- ZIP file comment length 
+                                   , t_comment 
+                                   ) 
+                   ); 
+  end; 
+-- 
+  procedure save_zip 
+    ( p_zipped_blob blob 
+    , p_dir varchar2 := 'MY_DIR' 
+    , p_filename varchar2 := 'my.zip' 
+    ) 
+  is 
+    t_fh utl_file.file_type; 
+    t_len pls_integer := 32767; 
+  begin 
+    t_fh := utl_file.fopen( p_dir, p_filename, 'wb' ); 
+    for i in 0 .. trunc( ( dbms_lob.getlength( p_zipped_blob ) - 1 ) / t_len ) 
+    loop 
+      utl_file.put_raw( t_fh, dbms_lob.substr( p_zipped_blob, t_len, i * t_len + 1 ) ); 
+    end loop; 
+    utl_file.fclose( t_fh ); 
+  end; 
+-- 
+end;
+/
+create or replace PACKAGE  "IR_TO_MSEXCEL" 
+as
+  
+  -- p_custom_width is delimetered string of COLUMN_NAME,COLUMN_WIDTH=COLUMN_NAME,COLUMN_WIDTH=  etc.
+  -- sample: PROJECT,151=TASK_NAME,319=START_DATE,133=      
+  
+  
+  FUNCTION render  (p_dynamic_action in apex_plugin.t_dynamic_action,
+                    p_plugin         in apex_plugin.t_plugin )
+  return apex_plugin.t_dynamic_action_render_result; 
+  
+  function ajax (p_dynamic_action in apex_plugin.t_dynamic_action,
+                 p_plugin         in apex_plugin.t_plugin )
+  return apex_plugin.t_dynamic_action_ajax_result;
+                                
+end IR_TO_MSEXCEL;
+/
+
+create or replace PACKAGE BODY  "IR_TO_MSEXCEL" 
+as
+  
+  function get_affected_region_id(p_dynamic_action_id IN apex_application_page_da_acts.action_id%TYPE,
+                                  p_html_region_id    IN VARCHAR2
+                                 )
+  return  apex_application_page_da_acts.affected_region_id%type
+  is
+   v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
+  begin
+  
+      SELECT affected_region_id
+      INTO v_affected_region_id
+      FROM apex_application_page_da_acts aapda
+      WHERE aapda.action_id = p_dynamic_action_id;
+      
+      if v_affected_region_id is null then
+        begin
+          select region_id
+          into v_affected_region_id
+          from apex_application_page_regions
+          where  static_id = p_html_region_id;      
+        exception
+          when no_data_found then
+           select region_id
+           into v_affected_region_id
+           from apex_application_page_regions
+           where  region_id = ltrim(p_html_region_id,'R');
+        end;
+      end if;
+      
+      return v_affected_region_id;
+  exception
+    when others then
+      raise_application_error(-20001,'IR_TO_MSEXCEL.get_affected_region_id: No region found!');
+  end get_affected_region_id;
+  ------------------------------------------------------------------------------
+  
+  function get_affected_region_static_id(p_dynamic_action_id IN apex_application_page_da_acts.action_id%TYPE)
+  return  apex_application_page_regions.static_id%TYPE
+  is
+   v_affected_region_selector apex_application_page_regions.static_id%type;
+  begin
+      SELECT nvl(static_id,'R'||to_char(affected_region_id))
+      INTO v_affected_region_selector
+      FROM apex_application_page_da_acts aapda,
+           apex_application_page_regions r
+      WHERE aapda.action_id = p_dynamic_action_id
+        and aapda.affected_region_id = r.region_id
+        and r.source_type ='Interactive Report';
+      
+      return v_affected_region_selector;
+  exception
+    when no_data_found then  
+      return null;
+  end get_affected_region_static_id;
+  ------------------------------------------------------------------------------
+  FUNCTION render (p_dynamic_action in apex_plugin.t_dynamic_action,
+                   p_plugin         in apex_plugin.t_plugin )
+  return apex_plugin.t_dynamic_action_render_result
+  is
+    v_javascript_code          varchar2(1000);
+    v_result                   apex_plugin.t_dynamic_action_render_result;
+    v_plugin_id                varchar2(100);
+    v_affected_region_selector apex_application_page_regions.static_id%type;
+  BEGIN
+    v_plugin_id := apex_plugin.get_ajax_identifier;
+    v_affected_region_selector := get_affected_region_static_id(p_dynamic_action.ID);
+    if nvl(p_dynamic_action.attribute_03,'Y') = 'Y' then
+      if v_affected_region_selector is not null then 
+        -- add XLSX Icon to Affected IR Region
+        v_javascript_code :=  'addDownloadXLSXIcon('''||v_plugin_id||''','''||v_affected_region_selector||''');';
+        APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,v_affected_region_selector);
+      else
+        -- add XLSX Icon to all IR Regions on the page
+        for i in (SELECT nvl(static_id,'R'||to_char(region_id)) as affected_region_selector      
+                  FROM apex_application_page_regions r
+                  where r.page_id = v('APP_PAGE_ID')
+                    and r.application_id =v('APP_ID')
+                    and r.source_type ='Interactive Report'
+                 )
+        loop         
+           v_javascript_code :=  'addDownloadXLSXIcon('''||v_plugin_id||''','''||i.affected_region_selector||''');';
+           APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,i.affected_region_selector);     
+        end loop;
+      end if;
+    end if;
+   
+      
+    apex_javascript.add_library (p_name      => 'IR2MSEXCEL', 
+                                 p_directory => p_plugin.file_prefix); 
+    
+    if v_affected_region_selector is not null then
+      v_result.javascript_function := 'function(){get_excel_gpv('''||v_affected_region_selector||''','''||v_plugin_id||''')}';
+    else
+     v_result.javascript_function := 'function(){console.log("No Affected Region Found!");}';
+    end if;
+    v_result.ajax_identifier := v_plugin_id;
+    
+    return v_result;
+  end render;
+  ------------------------------------------------------------------------------
+  
+  function ajax (p_dynamic_action in apex_plugin.t_dynamic_action,
+                 p_plugin         in apex_plugin.t_plugin )
+  return apex_plugin.t_dynamic_action_ajax_result
+  is
+    p_download_type      varchar2(1);
+    p_custom_width       varchar2(1000);
+    v_maximum_rows       number;
+    v_dummy              apex_plugin.t_dynamic_action_ajax_result;
+    v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
+  begin      
+      p_download_type:= nvl(p_dynamic_action.attribute_02,'E');
+      v_affected_region_id := get_affected_region_id(p_dynamic_action_id => p_dynamic_action.ID
+                                                    ,p_html_region_id    => apex_application.g_x03);
+      
+      v_maximum_rows := nvl(nvl(p_dynamic_action.attribute_01,
+                                xml_to_xslx.get_max_rows (p_app_id    => apex_application.g_x01,
+                                                          p_page_id   => apex_application.g_x02,
+                                                          p_region_id => v_affected_region_id)
+                                ),1000);                                               
+       
+      if p_download_type = 'E' then -- Excel XLSX
+        XML_TO_XSLX.download_file(p_app_id       => apex_application.g_x01,
+                                  p_page_id      => apex_application.g_x02,
+                                  p_region_id    => v_affected_region_id,
+                                  p_col_length   => apex_application.g_x04||p_custom_width,
+                                  p_max_rows     => v_maximum_rows
+                                  );
+      elsif p_download_type = 'X' then -- XML
+        IR_TO_XML.get_report_xml(p_app_id            => apex_application.g_x01,
+                                 p_page_id           => apex_application.g_x02, 
+                                 p_region_id         => v_affected_region_id,
+                                 p_return_type       => 'X',                        
+                                 p_get_page_items    => 'N',
+                                 p_items_list        => null,
+                                 p_collection_name   => null,
+                                 p_max_rows          => v_maximum_rows
+                                );
+      elsif p_download_type = 'T' then -- Debug txt
+        IR_TO_XML.get_report_xml(p_app_id            => apex_application.g_x01,
+                                 p_page_id           => apex_application.g_x02, 
+                                 p_region_id         => v_affected_region_id,
+                                 p_return_type       => 'Q',                        
+                                 p_get_page_items    => 'N',
+                                 p_items_list        => null,
+                                 p_collection_name   => null,
+                                 p_max_rows          => v_maximum_rows
+                                );
+      elsif p_download_type = 'M' then -- use Moritz Klein engine https://github.com/commi235                        
+       apexir_xlsx_pkg.download(  p_ir_region_id   => v_affected_region_id,
+                                  p_app_id         => apex_application.g_x01,
+                                  p_ir_page_id     => apex_application.g_x02
+                                );
+     else
+      raise_application_error(-20001,'GPV_IR_TO_MSEXCEL : unknown Return Type');
+     end if;    
+     return v_dummy;
+  exception
+    when others then
+      raise_application_error(-20001,SQLERRM||chr(10)||dbms_utility.format_error_backtrace);
+  end ajax;
+  
+end IR_TO_MSEXCEL;
+/
+CREATE OR REPLACE PACKAGE  "IR_TO_XML" as    
+
   PROCEDURE get_report_xml(p_app_id          IN NUMBER,
-                           p_page_id         in number,                                
+                           p_page_id         IN NUMBER,     
+                           p_region_id       IN NUMBER,
                            p_return_type     IN CHAR DEFAULT 'X', -- "Q" for debug information "X" for XML-Data
                            p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
-                           p_items_list      in varchar2,         -- "," delimetered list of items that for including in XML
+                           p_items_list      IN VARCHAR2,         -- "," delimetered list of items that for including in XML
                            p_collection_name IN VARCHAR2,         -- name of APEX COLLECTION to save XML, when null - download as file
                            p_max_rows        IN NUMBER            -- maximum rows for export                            
                           );
@@ -33,13 +798,13 @@ CREATE OR REPLACE package ir_to_xml as
   
   -- get XML 
   function get_report_xml(p_app_id          IN NUMBER,
-                          p_page_id         in number,                                
+                          p_page_id         IN NUMBER,  
+                          p_region_id       IN NUMBER,
                           p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
-                          p_items_list      in varchar2,         -- "," delimetered list of items that for including in XML
+                          p_items_list      IN VARCHAR2,         -- "," delimetered list of items that for including in XML
                           p_max_rows        IN NUMBER            -- maximum rows for export                            
                          )
   return xmltype;     
-
   /* 
     function to handle cases of 'in' and 'not in' conditions for highlights
    	used in cursor cur_highlight
@@ -50,7 +815,6 @@ CREATE OR REPLACE package ir_to_xml as
                                      p_condition_sql         in APEX_APPLICATION_PAGE_IR_COND.CONDITION_SQL%TYPE,
                                      p_condition_column_name in APEX_APPLICATION_PAGE_IR_COND.CONDITION_COLUMN_NAME%TYPE)
   return varchar2; 
-
   -- string to test get_variables_array
   -- todo: make unit test
   --  v_test_str varchar2(400) :=
@@ -77,7 +841,7 @@ END IR_TO_XML;
 /
 
 
-CREATE OR REPLACE package body ir_to_xml as   
+CREATE OR REPLACE PACKAGE BODY  "IR_TO_XML" as   
   
   subtype largevarchar2 is varchar2(32767); 
  
@@ -103,7 +867,7 @@ CREATE OR REPLACE package body ir_to_xml as
     from APEX_APPLICATION_PAGE_IR_COND
     where condition_type = 'Highlight'
       and report_id = p_report_id
-      --and instr(':'||p_delimetered_column_list||':',':'||CONDITION_COLUMN_NAME||':') > 0
+      and instr(':'||p_delimetered_column_list||':',':'||CONDITION_COLUMN_NAME||':') > 0
       and condition_enabled = 'Yes'
       order by --rows highlights first 
              nvl2(HIGHLIGHT_ROW_COLOR,1,0) desc, 
@@ -415,7 +1179,6 @@ CREATE OR REPLACE package body ir_to_xml as
     log(v_sql);
     dbms_sql.parse(v_cur,v_sql,dbms_sql.native);     
     dbms_sql.describe_columns2(v_cur,v_colls_count,v_desc_tab);    
-
     for i in 1..v_colls_count loop
          if upper(v_desc_tab(i).col_name) != 'APXWS_ROW_PK' then --skip internal primary key if need
            v_columns(v_columns.count + 1) := v_desc_tab(i).col_name;
@@ -423,7 +1186,6 @@ CREATE OR REPLACE package body ir_to_xml as
          end if;
     end loop;                 
    dbms_sql.close_cursor(v_cur);   
-
    return v_columns;
   exception
     when others then
@@ -454,6 +1216,7 @@ CREATE OR REPLACE package body ir_to_xml as
      where application_id = p_app_id
        AND page_id = p_page_id
        and display_text_as = 'HIDDEN';
+       --and instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') > 0;       
       
       return v_cnt;
   exception
@@ -463,44 +1226,23 @@ CREATE OR REPLACE package body ir_to_xml as
   
   ------------------------------------------------------------------------------ 
   
-  procedure init_t_report(p_app_id       in number,
-                          p_page_id      in number)
+  procedure init_t_report(p_app_id       IN NUMBER,
+                          p_page_id      IN NUMBER,
+                          p_region_id    IN NUMBER)
   is
-    l_region_id                    number;
-    l_report_id                    number;
-    v_query_targets                apex_application_global.vc_arr2;
-    l_new_report                   ir_report;
-    v_apex_application_page_ir_rpt largevarchar2;
-    v_query_column_list            APEX_APPLICATION_GLOBAL.VC_ARR2;
+    l_report_id     number;
+    v_query_targets apex_application_global.vc_arr2;
+    l_new_report    ir_report; 
   begin
     l_report := l_new_report;
-    select region_id 
-    into l_region_id 
-    from APEX_APPLICATION_PAGE_REGIONS 
-    where application_id = p_app_id 
-      and page_id = p_page_id 
-      and source_type = 'Interactive Report';    
-    
     --get base report id    
-    log('l_region_id='||l_region_id);
+    log('l_region_id='||p_region_id);
     
     l_report_id := apex_ir.get_last_viewed_report_id (p_page_id   => p_page_id,
-                                                      p_region_id => l_region_id);
+                                                      p_region_id => p_region_id);
     
-    log('l_base_report_id='||l_report_id);
+    log('l_base_report_id='||l_report_id);    
     
-    /*
-    -- debug info
-    select substr(listagg('session_id='||session_id||' APP_SESSION='||v('APP_SESSION')||' application_user='||application_user||' APP_USER='||
-       v('APP_USER')||' base_report_id='||base_report_id,chr(10)) within group (order by 1),1,32767) 
-    into v_apex_application_page_ir_rpt
-    from apex_application_page_ir_rpt r
-    where application_id = p_app_id
-     and page_id = p_page_id;
-    
-    log(v_apex_application_page_ir_rpt); 
-     */
-
     select r.* 
     into l_report.ir_data       
     from apex_application_page_ir_rpt r
@@ -513,14 +1255,14 @@ CREATE OR REPLACE package body ir_to_xml as
     log('l_report_id='||l_report_id);
     l_report_id := l_report.ir_data.report_id;                                                                 
       
+      
     l_report.report := apex_ir.get_report (p_page_id        => p_page_id,
-                                           p_region_id      => l_region_id
+                                           p_region_id      => p_region_id
                                           );
-    v_query_column_list := get_query_column_list;
-    l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(get_cols_as_table(l_report.ir_data.report_columns,v_query_column_list));
+    l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list));
     
-    --l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id,p_page_id);
-
+    l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id,p_page_id);
+    
     <<displayed_columns>>                                      
     for i in (select column_alias,
                      report_label,
@@ -581,7 +1323,7 @@ CREATE OR REPLACE package body ir_to_xml as
     l_report.median_columns_on_break := get_cols_as_table(l_report.ir_data.median_columns_on_break,l_report.displayed_columns); 
     l_report.count_columns_on_break := get_cols_as_table(l_report.ir_data.count_columns_on_break,l_report.displayed_columns);  
     l_report.count_distnt_col_on_break := get_cols_as_table(l_report.ir_data.count_distnt_col_on_break,l_report.displayed_columns); 
-     
+      
     -- calculate total count of columns with aggregation
     l_report.agg_cols_cnt := l_report.sum_columns_on_break.count + 
                              l_report.avg_columns_on_break.count +
@@ -590,14 +1332,7 @@ CREATE OR REPLACE package body ir_to_xml as
                              l_report.median_columns_on_break.count +
                              l_report.count_columns_on_break.count +
                              l_report.count_distnt_col_on_break.count;
-                             
-    l_report.hidden_cols_cnt := v_query_column_list.count -
-                                (l_report.skipped_columns + 
-                                 nvl(l_report.break_really_on.count,0) + 
-                                 l_report.displayed_columns.count +
-                                 l_report.agg_cols_cnt
-                                 );
-
+    
     log('l_report.report_columns='||rr(l_report.ir_data.report_columns));    
     log('l_report.break_on='||rr(l_report.ir_data.break_enabled_on));
     log('l_report.sum_columns_on_break='||rr(l_report.ir_data.sum_columns_on_break));
@@ -624,7 +1359,7 @@ CREATE OR REPLACE package body ir_to_xml as
         end if;  
         v_query_targets(v_query_targets.count + 1) := c.condition_sql||' as HLIGHTS_'||(v_query_targets.count + 1);
     end loop;    
-    
+        
     if v_query_targets.count  > 0 then
       l_report.report.sql_query := regexp_replace(l_report.report.sql_query,'^SELECT','SELECT '||APEX_UTIL.TABLE_TO_STRING(v_query_targets,','||chr(10))||',',1,1,'i');
     end if;
@@ -659,7 +1394,6 @@ CREATE OR REPLACE package body ir_to_xml as
                     l_report.row_highlight.count + 
                     l_report.col_highlight.count +
                     nvl(l_report.break_really_on.count,0);
-
     for i in v_start_with..v_end_with loop
       if p_curr_row(i) != p_prev_row(i) then
         return true;
@@ -714,7 +1448,6 @@ CREATE OR REPLACE package body ir_to_xml as
   BEGIN
    v_data.datatype := 'NUMBER';
    v_data.value := get_formatted_number(p_query_value,'9999999999999990D0000000000','NLS_NUMERIC_CHARACTERS = ''.,''');
-
    if p_format_mask is not null then
      v_data.text := get_formatted_number(p_query_value,p_format_mask);
    ELSE
@@ -930,7 +1663,6 @@ CREATE OR REPLACE package body ir_to_xml as
     <<visible_columns>>
     for i in l_report.start_with..l_report.end_with loop
       v_position := l_report.end_with; --aggregate are placed after displayed columns and computations
-
       v_aggregate_xml := v_aggregate_xml || bcoll(p_column_alias=>get_column_alias_sql(i),
                                                   --p_value => v_sum_value,
                                                   p_format_mask => get_col_format_mask(get_column_alias_sql(i))
@@ -991,42 +1723,6 @@ CREATE OR REPLACE package body ir_to_xml as
     end loop visible_columns;
     return  v_aggregate_xml || '</AGGREGATE>'||chr(10);
   end print_aggregate;    
-  ------------------------------------------------------------------------------
-  function get_page_items(p_app_id         in number,
-                          p_page_id        in number,
-                          p_items_list     in varchar2,
-                          p_get_page_items in char)
-  return clob
-  is
-    v_clob  clob;    
-    v_item_names  APEX_APPLICATION_GLOBAL.VC_ARR2;
-  begin
-    v_clob := to_clob( '<ITEMS>'||chr(10));
-    
-    select item_name
-    bulk collect into v_item_names  
-    from apex_application_page_items
-    where application_id = p_app_id
-      and ((page_id = p_page_id and p_get_page_items = 'Y')
-          or
-          (P_ITEMS_LIST is not null and INSTR(','||P_ITEMS_LIST||',',','||ITEM_NAME||',') >  0))
-    union 
-    select item_name
-    from APEX_APPLICATION_ITEMS
-    where application_id = p_app_id  
-      and P_ITEMS_LIST is not null 
-      and instr(','||p_items_list||',',','||item_name||',') >  0;    
-    
-    <<items>>
-    for i in 1..v_item_names.count loop
-     v_clob := v_clob||to_clob('<'||upper(v_item_names(i))||'>'
-                                ||get_xmlval(v(v_item_names(i)))
-                                ||'</'||upper(v_item_names(i))||'>'||chr(10));
-    end loop items;
-    
-    return v_clob||to_clob('</ITEMS>'||chr(10)); 
-  end get_page_items;  
- 
   ------------------------------------------------------------------------------    
   procedure get_xml_from_ir(v_data in out nocopy clob,p_max_rows in integer)
   is
@@ -1044,7 +1740,8 @@ CREATE OR REPLACE package body ir_to_xml as
    v_buffer         largevarchar2;
   begin
     v_cur := dbms_sql.open_cursor(2); 
-    v_sql := apex_plugin_util.replace_substitutions(p_value => l_report.report.sql_query,p_escape => false);    
+    v_sql := apex_plugin_util.replace_substitutions(p_value  => l_report.report.sql_query,
+                                                    p_escape => false);    
     dbms_sql.parse(v_cur,v_sql,dbms_sql.native);     
     dbms_sql.describe_columns2(v_cur,v_colls_count,v_desc_tab);    
     --skip internal primary key if need
@@ -1054,7 +1751,8 @@ CREATE OR REPLACE package body ir_to_xml as
       end if;
     end loop;
     
-    l_report.start_with := 1 + l_report.skipped_columns +
+    l_report.start_with := 1 + 
+                           l_report.skipped_columns +
                            nvl(l_report.break_really_on.count,0) + 
                            l_report.row_highlight.count + 
                            l_report.col_highlight.count;
@@ -1147,9 +1845,8 @@ CREATE OR REPLACE package body ir_to_xml as
             for i in 1..v_colls_count loop
               v_prev_row(i) := v_row(i);                           
             end loop;                 
-            --v_xml := v_xml||to_clob(print_row(v_row));
             add(v_data,v_buffer,print_row(v_row));
-         ELSE --DBMS_SQL.FETCH_ROWS(v_cur)>0
+         ELSE
            EXIT; 
          END IF; 
     END LOOP main_cycle;        
@@ -1161,21 +1858,20 @@ CREATE OR REPLACE package body ir_to_xml as
    dbms_sql.close_cursor(v_cur);   
   end get_xml_from_ir;
   ------------------------------------------------------------------------------
-  procedure get_final_xml(p_clob           in out nocopy clob,
-                          p_app_id         in number,
-                          p_page_id        in number,
-                          p_items_list     in varchar2,
-                          p_get_page_items in char,
-                          p_max_rows       in number)
+  procedure get_final_xml(p_clob           IN OUT NOCOPY CLOB,
+                          p_app_id         IN NUMBER,
+                          p_region_id      IN NUMBER,
+                          p_page_id        IN NUMBER,
+                          p_items_list     IN VARCHAR2,
+                          p_get_page_items IN CHAR,
+                          p_max_rows       IN NUMBER)
   is
    v_rows    apex_application_global.vc_arr2;
    v_buffer  largevarchar2;
   begin
     add(p_clob,v_buffer,'<?xml version="1.0" encoding="UTF-8"?>'||chr(10)||'<DOCUMENT>'||chr(10));    
-    add(p_clob,v_buffer,get_page_items(p_app_id,p_page_id,p_items_list,p_get_page_items));
     add(p_clob,v_buffer,'<DATA>'||chr(10),TRUE);   
-    get_xml_from_ir(p_clob,p_max_rows);    
-   
+    get_xml_from_ir(p_clob,p_max_rows);
     add(p_clob,v_buffer,'</DATA>'||chr(10));
     add(p_clob,v_buffer,'</DOCUMENT>'||chr(10),TRUE);  
   end get_final_xml;
@@ -1231,10 +1927,11 @@ CREATE OR REPLACE package body ir_to_xml as
   end set_collection;
   ------------------------------------------------------------------------------
   procedure get_report_xml(p_app_id          IN NUMBER,
-                           p_page_id         in number,                                
+                           p_page_id         IN NUMBER,     
+                           p_region_id       IN NUMBER,
                            p_return_type     IN CHAR DEFAULT 'X', -- "Q" for debug information, "X" for XML-Data
                            p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
-                           p_items_list      in varchar2,         -- "," delimetered list of items that for including in XML
+                           p_items_list      IN VARCHAR2,         -- "," delimetered list of items that for including in XML
                            p_collection_name IN VARCHAR2,         -- name of APEX COLLECTION to save XML, when null - download as file
                            p_max_rows        IN NUMBER            -- maximum rows for export                            
                           )
@@ -1244,9 +1941,10 @@ CREATE OR REPLACE package body ir_to_xml as
     dbms_lob.trim (v_debug,0);    
     dbms_lob.createtemporary(v_data,true);
     --APEX_DEBUG_MESSAGE.ENABLE_DEBUG_MESSAGES(p_level => 7);
-    log('version=1.99');
+    log('version=1.6');
     log('p_app_id='||p_app_id);
     log('p_page_id='||p_page_id);
+    log('p_region_id='||p_region_id);
     log('p_return_type='||p_return_type);
     log('p_get_page_items='||p_get_page_items);
     log('p_items_list='||p_items_list);
@@ -1254,8 +1952,8 @@ CREATE OR REPLACE package body ir_to_xml as
     log('p_max_rows='||p_max_rows);        
     if p_return_type = 'Q' then  -- debug information                    
         begin        
-          init_t_report(p_app_id,p_page_id);              
-          get_final_xml(v_data,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);          
+          init_t_report(p_app_id,p_page_id,p_region_id);              
+          get_final_xml(v_data,p_app_id,p_page_id,p_region_id,p_items_list,p_get_page_items,p_max_rows);          
           if p_collection_name is not null then              
             set_collection(upper(p_collection_name),v_data);
           end if;
@@ -1266,8 +1964,8 @@ CREATE OR REPLACE package body ir_to_xml as
         log(' ',TRUE);
         download_file(v_debug,'text/txt','log.txt');        
     elsif p_return_type = 'X' then --XML-Data
-        init_t_report(p_app_id,p_page_id);    
-        get_final_xml(v_data,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);
+        init_t_report(p_app_id,p_page_id,p_region_id);    
+        get_final_xml(v_data,p_app_id,p_page_id,p_region_id,p_items_list,p_get_page_items,p_max_rows);
         if p_collection_name is not null then  
           set_collection(upper(p_collection_name),v_data);
         else
@@ -1285,9 +1983,10 @@ CREATE OR REPLACE package body ir_to_xml as
   end get_report_xml; 
   ------------------------------------------------------------------------------
   function get_report_xml(p_app_id          IN NUMBER,
-                          p_page_id         in number,                                
+                          p_page_id         IN NUMBER,  
+                          p_region_id       IN NUMBER,
                           p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
-                          p_items_list      in varchar2,         -- "," delimetered list of items that for including in XML
+                          p_items_list      IN VARCHAR2,         -- "," delimetered list of items that for including in XML
                           p_max_rows        IN NUMBER            -- maximum rows for export                            
                          )
   return xmltype                           
@@ -1302,8 +2001,8 @@ CREATE OR REPLACE package body ir_to_xml as
     log('p_items_list='||p_items_list);
     log('p_max_rows='||p_max_rows);
     
-    init_t_report(p_app_id,p_page_id);
-    get_final_xml(v_data,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);    
+    init_t_report(p_app_id,p_page_id,p_region_id);
+    get_final_xml(v_data,p_app_id,p_page_id,p_region_id,p_items_list,p_get_page_items,p_max_rows);    
     
     return xmltype(v_data);    
   end get_report_xml; 
@@ -1344,540 +2043,26 @@ begin
   dbms_lob.createtemporary(v_debug,true, DBMS_LOB.CALL);  
 END IR_TO_XML;
 /
-CREATE OR REPLACE package as_zip
-is
-/**********************************************
-**
-** Author: Anton Scheffer
-** Date: 25-01-2012
-** Website: http://technology.amis.nl/blog
-**
-** Changelog:
-**   Date: 29-04-2012
-**    fixed bug for large uncompressed files, thanks Morten Braten
-**   Date: 21-03-2012
-**     Take CRC32, compressed length and uncompressed length from 
-**     Central file header instead of Local file header
-**   Date: 17-02-2012
-**     Added more support for non-ascii filenames
-**   Date: 25-01-2012
-**     Added MIT-license
-**     Some minor improvements
-**
-******************************************************************************
-******************************************************************************
-Copyright (C) 2010,2011 by Anton Scheffer
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-******************************************************************************
-******************************************** */
-  type file_list is table of clob;
---
-  function file2blob
-    ( p_dir varchar2
-    , p_file_name varchar2
-    )
-  return blob;
---
-  function get_file_list
-    ( p_dir varchar2
-    , p_zip_file varchar2
-    , p_encoding varchar2 := null
-    )
-  return file_list;
---
-  function get_file_list
-    ( p_zipped_blob blob
-    , p_encoding varchar2 := null
-    )
-  return file_list;
---
-  function get_file
-    ( p_dir varchar2
-    , p_zip_file varchar2
-    , p_file_name varchar2
-    , p_encoding varchar2 := null
-    )
-  return blob;
---
-  function get_file
-    ( p_zipped_blob blob
-    , p_file_name varchar2
-    , p_encoding varchar2 := null
-    )
-  return blob;
---
-  procedure add1file
-    ( p_zipped_blob in out blob
-    , p_name varchar2
-    , p_content blob
-    );
---
-  procedure finish_zip( p_zipped_blob in out blob );
---
-  procedure save_zip
-    ( p_zipped_blob blob
-    , p_dir varchar2 := 'MY_DIR'
-    , p_filename varchar2 := 'my.zip'
-    );
---
-/*
-declare
-  g_zipped_blob blob;
-begin
-  as_zip.add1file( g_zipped_blob, 'test4.txt', null ); -- a empty file
-  as_zip.add1file( g_zipped_blob, 'dir1/test1.txt', utl_raw.cast_to_raw( q'<A file with some more text, stored in a subfolder which isn't added>' ) );
-  as_zip.add1file( g_zipped_blob, 'test1234.txt', utl_raw.cast_to_raw( 'A small file' ) );
-  as_zip.add1file( g_zipped_blob, 'dir2/', null ); -- a folder
-  as_zip.add1file( g_zipped_blob, 'dir3/', null ); -- a folder
-  as_zip.add1file( g_zipped_blob, 'dir3/test2.txt', utl_raw.cast_to_raw( 'A small filein a previous created folder' ) );
-  as_zip.finish_zip( g_zipped_blob );
-  as_zip.save_zip( g_zipped_blob, 'MY_DIR', 'my.zip' );
-  dbms_lob.freetemporary( g_zipped_blob );
-end;
---
-declare
-  zip_files as_zip.file_list;
-begin
-  zip_files  := as_zip.get_file_list( 'MY_DIR', 'my.zip' );
-  for i in zip_files.first() .. zip_files.last
-  loop
-    dbms_output.put_line( zip_files( i ) );
-    dbms_output.put_line( utl_raw.cast_to_varchar2( as_zip.get_file( 'MY_DIR', 'my.zip', zip_files( i ) ) ) );
-  end loop;
-end;
-*/
-end;
-/
-
-
-CREATE OR REPLACE package body as_zip
-is
---
-  c_LOCAL_FILE_HEADER        constant raw(4) := hextoraw( '504B0304' ); -- Local file header signature
-  c_END_OF_CENTRAL_DIRECTORY constant raw(4) := hextoraw( '504B0506' ); -- End of central directory signature
---
-  function blob2num( p_blob blob, p_len integer, p_pos integer )
-  return number
-  is
-  begin
-    return utl_raw.cast_to_binary_integer( dbms_lob.substr( p_blob, p_len, p_pos ), utl_raw.little_endian );
-  end;
---
-  function raw2varchar2( p_raw raw, p_encoding varchar2 )
-  return varchar2
-  is
-  begin
-    return coalesce( utl_i18n.raw_to_char( p_raw, p_encoding )
-                   , utl_i18n.raw_to_char( p_raw, utl_i18n.map_charset( p_encoding, utl_i18n.GENERIC_CONTEXT, utl_i18n.IANA_TO_ORACLE ) )
-                   );
-  end;
---
-  function little_endian( p_big number, p_bytes pls_integer := 4 )
-  return raw
-  is
-  begin
-    return utl_raw.substr( utl_raw.cast_from_binary_integer( p_big, utl_raw.little_endian ), 1, p_bytes );
-  end;
---
-  function file2blob
-    ( p_dir varchar2
-    , p_file_name varchar2
-    )
-  return blob
-  is
-    file_lob bfile;
-    file_blob blob;
-  begin
-    file_lob := bfilename( p_dir, p_file_name );
-    dbms_lob.open( file_lob, dbms_lob.file_readonly );
-    dbms_lob.createtemporary( file_blob, true );
-    dbms_lob.loadfromfile( file_blob, file_lob, dbms_lob.lobmaxsize );
-    dbms_lob.close( file_lob );
-    return file_blob;
-  exception
-    when others then
-      if dbms_lob.isopen( file_lob ) = 1
-      then
-        dbms_lob.close( file_lob );
-      end if;
-      if dbms_lob.istemporary( file_blob ) = 1
-      then
-        dbms_lob.freetemporary( file_blob );
-      end if;
-      raise;
-  end;
---
-  function get_file_list
-    ( p_zipped_blob blob
-    , p_encoding varchar2 := null
-    )
-  return file_list
-  is
-    t_ind integer;
-    t_hd_ind integer;
-    t_rv file_list;
-    t_encoding varchar2(32767);
-  begin
-    t_ind := dbms_lob.getlength( p_zipped_blob ) - 21;
-    loop
-      exit when t_ind < 1 or dbms_lob.substr( p_zipped_blob, 4, t_ind ) = c_END_OF_CENTRAL_DIRECTORY;
-      t_ind := t_ind - 1;
-    end loop;
---
-    if t_ind <= 0
-    then
-      return null;
-    end if;
---
-    t_hd_ind := blob2num( p_zipped_blob, 4, t_ind + 16 ) + 1;
-    t_rv := file_list();
-    t_rv.extend( blob2num( p_zipped_blob, 2, t_ind + 10 ) );
-    for i in 1 .. blob2num( p_zipped_blob, 2, t_ind + 8 )
-    loop
-      if p_encoding is null
-      then
-        if utl_raw.bit_and( dbms_lob.substr( p_zipped_blob, 1, t_hd_ind + 9 ), hextoraw( '08' ) ) = hextoraw( '08' )
-        then  
-          t_encoding := 'AL32UTF8'; -- utf8
-        else
-          t_encoding := 'US8PC437'; -- IBM codepage 437
-        end if;
-      else
-        t_encoding := p_encoding;
-      end if;
-      t_rv( i ) := raw2varchar2
-                     ( dbms_lob.substr( p_zipped_blob
-                                      , blob2num( p_zipped_blob, 2, t_hd_ind + 28 )
-                                      , t_hd_ind + 46
-                                      )
-                     , t_encoding
-                     );
-      t_hd_ind := t_hd_ind + 46
-                + blob2num( p_zipped_blob, 2, t_hd_ind + 28 )  -- File name length
-                + blob2num( p_zipped_blob, 2, t_hd_ind + 30 )  -- Extra field length
-                + blob2num( p_zipped_blob, 2, t_hd_ind + 32 ); -- File comment length
-    end loop;
---
-    return t_rv;
-  end;
---
-  function get_file_list
-    ( p_dir varchar2
-    , p_zip_file varchar2
-    , p_encoding varchar2 := null
-    )
-  return file_list
-  is
-  begin
-    return get_file_list( file2blob( p_dir, p_zip_file ), p_encoding );
-  end;
---
-  function get_file
-    ( p_zipped_blob blob
-    , p_file_name varchar2
-    , p_encoding varchar2 := null
-    )
-  return blob
-  is
-    t_tmp blob;
-    t_ind integer;
-    t_hd_ind integer;
-    t_fl_ind integer;
-    t_encoding varchar2(32767);
-    t_len integer;
-  begin
-    t_ind := dbms_lob.getlength( p_zipped_blob ) - 21;
-    loop
-      exit when t_ind < 1 or dbms_lob.substr( p_zipped_blob, 4, t_ind ) = c_END_OF_CENTRAL_DIRECTORY;
-      t_ind := t_ind - 1;
-    end loop;
---
-    if t_ind <= 0
-    then
-      return null;
-    end if;
---
-    t_hd_ind := blob2num( p_zipped_blob, 4, t_ind + 16 ) + 1;
-    for i in 1 .. blob2num( p_zipped_blob, 2, t_ind + 8 )
-    loop
-      if p_encoding is null
-      then
-        if utl_raw.bit_and( dbms_lob.substr( p_zipped_blob, 1, t_hd_ind + 9 ), hextoraw( '08' ) ) = hextoraw( '08' )
-        then  
-          t_encoding := 'AL32UTF8'; -- utf8
-        else
-          t_encoding := 'US8PC437'; -- IBM codepage 437
-        end if;
-      else
-        t_encoding := p_encoding;
-      end if;
-      if p_file_name = raw2varchar2
-                         ( dbms_lob.substr( p_zipped_blob
-                                          , blob2num( p_zipped_blob, 2, t_hd_ind + 28 )
-                                          , t_hd_ind + 46
-                                          )
-                         , t_encoding
-                         )
-      then
-        t_len := blob2num( p_zipped_blob, 4, t_hd_ind + 24 ); -- uncompressed length 
-        if t_len = 0
-        then
-          if substr( p_file_name, -1 ) in ( '/', '\' )
-          then  -- directory/folder
-            return null;
-          else -- empty file
-            return empty_blob();
-          end if;
-        end if;
---
-        if dbms_lob.substr( p_zipped_blob, 2, t_hd_ind + 10 ) = hextoraw( '0800' ) -- deflate
-        then
-          t_fl_ind := blob2num( p_zipped_blob, 4, t_hd_ind + 42 );
-          t_tmp := hextoraw( '1F8B0800000000000003' ); -- gzip header
-          dbms_lob.copy( t_tmp
-                       , p_zipped_blob
-                       ,  blob2num( p_zipped_blob, 4, t_hd_ind + 20 )
-                       , 11
-                       , t_fl_ind + 31
-                       + blob2num( p_zipped_blob, 2, t_fl_ind + 27 ) -- File name length
-                       + blob2num( p_zipped_blob, 2, t_fl_ind + 29 ) -- Extra field length
-                       );
-          dbms_lob.append( t_tmp, utl_raw.concat( dbms_lob.substr( p_zipped_blob, 4, t_hd_ind + 16 ) -- CRC32
-                                                , little_endian( t_len ) -- uncompressed length
-                                                )
-                         );
-          return utl_compress.lz_uncompress( t_tmp );
-        end if;
---
-        if dbms_lob.substr( p_zipped_blob, 2, t_hd_ind + 10 ) = hextoraw( '0000' ) -- The file is stored (no compression)
-        then
-          t_fl_ind := blob2num( p_zipped_blob, 4, t_hd_ind + 42 );
-          dbms_lob.createtemporary( t_tmp, true );
-          dbms_lob.copy( t_tmp
-                       , p_zipped_blob
-                       , t_len
-                       , 1
-                       , t_fl_ind + 31
-                       + blob2num( p_zipped_blob, 2, t_fl_ind + 27 ) -- File name length
-                       + blob2num( p_zipped_blob, 2, t_fl_ind + 29 ) -- Extra field length
-                       );
-          return t_tmp;
-        end if;
-      end if;
-      t_hd_ind := t_hd_ind + 46
-                + blob2num( p_zipped_blob, 2, t_hd_ind + 28 )  -- File name length
-                + blob2num( p_zipped_blob, 2, t_hd_ind + 30 )  -- Extra field length
-                + blob2num( p_zipped_blob, 2, t_hd_ind + 32 ); -- File comment length
-    end loop;
---
-    return null;
-  end;
---
-  function get_file
-    ( p_dir varchar2
-    , p_zip_file varchar2
-    , p_file_name varchar2
-    , p_encoding varchar2 := null
-    )
-  return blob
-  is
-  begin
-    return get_file( file2blob( p_dir, p_zip_file ), p_file_name, p_encoding );
-  end;
---
-  procedure add1file
-    ( p_zipped_blob in out blob
-    , p_name varchar2
-    , p_content blob
-    )
-  is
-    t_now date;
-    t_blob blob;
-    t_len integer;
-    t_clen integer;
-    t_crc32 raw(4) := hextoraw( '00000000' );
-    t_compressed boolean := false;
-    t_name raw(32767);
-  begin
-    t_now := sysdate;
-    t_len := nvl( dbms_lob.getlength( p_content ), 0 );
-    if t_len > 0
-    then 
-      t_blob := utl_compress.lz_compress( p_content );
-      t_clen := dbms_lob.getlength( t_blob ) - 18;
-      t_compressed := t_clen < t_len;
-      t_crc32 := dbms_lob.substr( t_blob, 4, t_clen + 11 );       
-    end if;
-    if not t_compressed
-    then 
-      t_clen := t_len;
-      t_blob := p_content;
-    end if;
-    if p_zipped_blob is null
-    then
-      dbms_lob.createtemporary( p_zipped_blob, true );
-    end if;
-    t_name := utl_i18n.string_to_raw( p_name, 'AL32UTF8' );
-    dbms_lob.append( p_zipped_blob
-                   , utl_raw.concat( c_LOCAL_FILE_HEADER -- Local file header signature
-                                   , hextoraw( '1400' )  -- version 2.0
-                                   , case when t_name = utl_i18n.string_to_raw( p_name, 'US8PC437' )
-                                       then hextoraw( '0000' ) -- no General purpose bits
-                                       else hextoraw( '0008' ) -- set Language encoding flag (EFS)
-                                     end 
-                                   , case when t_compressed
-                                        then hextoraw( '0800' ) -- deflate
-                                        else hextoraw( '0000' ) -- stored
-                                     end
-                                   , little_endian( to_number( to_char( t_now, 'ss' ) ) / 2
-                                                  + to_number( to_char( t_now, 'mi' ) ) * 32
-                                                  + to_number( to_char( t_now, 'hh24' ) ) * 2048
-                                                  , 2
-                                                  ) -- File last modification time
-                                   , little_endian( to_number( to_char( t_now, 'dd' ) )
-                                                  + to_number( to_char( t_now, 'mm' ) ) * 32
-                                                  + ( to_number( to_char( t_now, 'yyyy' ) ) - 1980 ) * 512
-                                                  , 2
-                                                  ) -- File last modification date
-                                   , t_crc32 -- CRC-32
-                                   , little_endian( t_clen )                      -- compressed size
-                                   , little_endian( t_len )                       -- uncompressed size
-                                   , little_endian( utl_raw.length( t_name ), 2 ) -- File name length
-                                   , hextoraw( '0000' )                           -- Extra field length
-                                   , t_name                                       -- File name
-                                   )
-                   );
-    if t_compressed
-    then                   
-      dbms_lob.copy( p_zipped_blob, t_blob, t_clen, dbms_lob.getlength( p_zipped_blob ) + 1, 11 ); -- compressed content
-    elsif t_clen > 0
-    then                   
-      dbms_lob.copy( p_zipped_blob, t_blob, t_clen, dbms_lob.getlength( p_zipped_blob ) + 1, 1 ); --  content
-    end if;
-    if dbms_lob.istemporary( t_blob ) = 1
-    then      
-      dbms_lob.freetemporary( t_blob );
-    end if;
-  end;
---
-  procedure finish_zip( p_zipped_blob in out blob )
-  is
-    t_cnt pls_integer := 0;
-    t_offs integer;
-    t_offs_dir_header integer;
-    t_offs_end_header integer;
-    t_comment raw(32767) := utl_raw.cast_to_raw( 'Implementation by Anton Scheffer' );
-  begin
-    t_offs_dir_header := dbms_lob.getlength( p_zipped_blob );
-    t_offs := 1;
-    while dbms_lob.substr( p_zipped_blob, utl_raw.length( c_LOCAL_FILE_HEADER ), t_offs ) = c_LOCAL_FILE_HEADER
-    loop
-      t_cnt := t_cnt + 1;
-      dbms_lob.append( p_zipped_blob
-                     , utl_raw.concat( hextoraw( '504B0102' )      -- Central directory file header signature
-                                     , hextoraw( '1400' )          -- version 2.0
-                                     , dbms_lob.substr( p_zipped_blob, 26, t_offs + 4 )
-                                     , hextoraw( '0000' )          -- File comment length
-                                     , hextoraw( '0000' )          -- Disk number where file starts
-                                     , hextoraw( '0000' )          -- Internal file attributes => 
-                                                                   --     0000 binary file
-                                                                   --     0100 (ascii)text file
-                                     , case
-                                         when dbms_lob.substr( p_zipped_blob
-                                                             , 1
-                                                             , t_offs + 30 + blob2num( p_zipped_blob, 2, t_offs + 26 ) - 1
-                                                             ) in ( hextoraw( '2F' ) -- /
-                                                                  , hextoraw( '5C' ) -- \
-                                                                  )
-                                         then hextoraw( '10000000' ) -- a directory/folder
-                                         else hextoraw( '2000B681' ) -- a file
-                                       end                         -- External file attributes
-                                     , little_endian( t_offs - 1 ) -- Relative offset of local file header
-                                     , dbms_lob.substr( p_zipped_blob
-                                                      , blob2num( p_zipped_blob, 2, t_offs + 26 )
-                                                      , t_offs + 30
-                                                      )            -- File name
-                                     )
-                     );
-      t_offs := t_offs + 30 + blob2num( p_zipped_blob, 4, t_offs + 18 )  -- compressed size
-                            + blob2num( p_zipped_blob, 2, t_offs + 26 )  -- File name length 
-                            + blob2num( p_zipped_blob, 2, t_offs + 28 ); -- Extra field length
-    end loop;
-    t_offs_end_header := dbms_lob.getlength( p_zipped_blob );
-    dbms_lob.append( p_zipped_blob
-                   , utl_raw.concat( c_END_OF_CENTRAL_DIRECTORY                                -- End of central directory signature
-                                   , hextoraw( '0000' )                                        -- Number of this disk
-                                   , hextoraw( '0000' )                                        -- Disk where central directory starts
-                                   , little_endian( t_cnt, 2 )                                 -- Number of central directory records on this disk
-                                   , little_endian( t_cnt, 2 )                                 -- Total number of central directory records
-                                   , little_endian( t_offs_end_header - t_offs_dir_header )    -- Size of central directory
-                                   , little_endian( t_offs_dir_header )                        -- Offset of start of central directory, relative to start of archive
-                                   , little_endian( nvl( utl_raw.length( t_comment ), 0 ), 2 ) -- ZIP file comment length
-                                   , t_comment
-                                   )
-                   );
-  end;
---
-  procedure save_zip
-    ( p_zipped_blob blob
-    , p_dir varchar2 := 'MY_DIR'
-    , p_filename varchar2 := 'my.zip'
-    )
-  is
-    t_fh utl_file.file_type;
-    t_len pls_integer := 32767;
-  begin
-    t_fh := utl_file.fopen( p_dir, p_filename, 'wb' );
-    for i in 0 .. trunc( ( dbms_lob.getlength( p_zipped_blob ) - 1 ) / t_len )
-    loop
-      utl_file.put_raw( t_fh, dbms_lob.substr( p_zipped_blob, t_len, i * t_len + 1 ) );
-    end loop;
-    utl_file.fclose( t_fh );
-  end;
---
-end;
-/
-create or replace package xml_to_xslx
+CREATE OR REPLACE PACKAGE  "XML_TO_XSLX" 
 IS
-  WIDTH_COEFFICIENT constant number := 5;
+  WIDTH_COEFFICIENT CONSTANT NUMBER := 6;
   
-  procedure download_file(p_app_id in number,
-                          p_page_id      in number,
-                          p_col_length   in varchar2 default null,
-                          p_max_rows     in number 
+  procedure download_file(p_app_id       IN NUMBER,
+                          p_page_id      IN NUMBER,
+                          p_region_id    IN NUMBER,
+                          p_col_length   IN VARCHAR2 DEFAULT NULL,
+                          p_max_rows     IN NUMBER 
                          ); 
-  -- p_col_length is delimetered string COLUMN_NAME=COLUMN_WIDTH,COLUMN_NAME=COLUMN_WIDTH,  etc.
-  -- sample: BREAK_ASSIGNED_TO_1=1325,PROJECT=151,TASK_NAME=319,START_DATE=133,
-  
-  function convert_date_format(p_format in varchar2)
+ 
+  function convert_date_format(p_format IN VARCHAR2)
   return varchar2;
-
-  function convert_number_format(p_format in varchar2)
+  function convert_number_format(p_format IN VARCHAR2)
   return varchar2;
   
-  function get_max_rows (p_app_id      in number,
-                         p_page_id     in number)
+  function get_max_rows (p_app_id      IN NUMBER,
+                         p_page_id     IN NUMBER,
+                         p_region_id   IN NUMBER)
   return number;
-
-  
   /*
   -- format test cases
   select xml_to_xslx.convert_date_format('dd.mm.yyyy hh24:mi:ss'),to_char(sysdate,'dd.mm.yyyy hh24:mi:ss') from dual
@@ -1900,18 +2085,16 @@ IS
 end;
 /
 
-CREATE OR REPLACE PACKAGE body XML_TO_XSLX
+
+CREATE OR REPLACE PACKAGE BODY  "XML_TO_XSLX" 
 is
-
   STRING_HEIGHT      constant number default 14.4; 
-
   
   subtype t_color is varchar2(7);
   subtype t_style_string  is varchar2(300);
   subtype t_format_mask  is varchar2(100);
   subtype t_font  is varchar2(50);
   subtype t_large_varchar2  is varchar2(32767);
-
   BACK_COLOR  constant  t_color default '#C6E0B4';
   
   type t_styles is table of binary_integer index by t_style_string;
@@ -1998,7 +2181,6 @@ is
       <family val="2" />
       <scheme val="minor" />
     </font>';
-
   BOLD_FONT constant varchar2(200) := '
    <font>
       <b />
@@ -2008,7 +2190,6 @@ is
       <family val="2" />
       <scheme val="minor" />
     </font>';
-
   FONTS_CNT constant  binary_integer := 2;   
   
   
@@ -2023,7 +2204,6 @@ is
   
   DEFAULT_STYLE constant varchar2(200) := '
       <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>';
-
   AGGREGATE_STYLE constant varchar2(250) := '
       <xf numFmtId="#FMTID#" borderId="1" fillId="0" fontId="1" xfId="0" applyAlignment="1" applyFont="1" applyBorder="1">
          <alignment wrapText="1" horizontal="right"  vertical="top"/>
@@ -2037,7 +2217,6 @@ is
   
   
   DEFAULT_STYLES_CNT constant  binary_integer := 1;     
-
   FORMAT_MASK_START_WITH  constant  binary_integer := 164;  
   
   FORMAT_MASK constant varchar2(100) := '
@@ -2101,6 +2280,7 @@ is
     return v_str;
   end convert_number_format;  
   ------------------------------------------------------------------------------
+  
   function add_font(p_font in t_color,p_bold in varchar2 default null)
   return binary_integer 
   is  
@@ -2125,6 +2305,7 @@ is
      end if;
   end add_font;
   ------------------------------------------------------------------------------
+  
   function  add_back_color(p_back in t_color)
   return binary_integer 
   is
@@ -2153,7 +2334,6 @@ is
       a_format_mask_list(p_mask) := a_format_mask_list.count + 1;
       v_format_mask_xml := v_format_mask_xml||
         '<numFmt numFmtId="'||(FORMAT_MASK_START_WITH + a_format_mask_list.count)||'" formatCode="'||p_mask||'"/>'||chr(10);
-
         return  a_format_mask_list.count + FORMAT_MASK_CNT + FORMAT_MASK_START_WITH - 1; 
      else
        return a_format_mask_list(p_mask) + FORMAT_MASK_CNT + FORMAT_MASK_START_WITH - 1;
@@ -2246,7 +2426,6 @@ is
       a_styles(v_style) := a_styles.count + 1;
       
       v_style_xml := '<xf borderId="0" xfId="0" ';
-
       v_style_xml := v_style_xml||replace(' numFmtId="#FMTID#" ','#FMTID#',get_num_fmt_id(p_data_type,p_format_mask));
       
       if p_font is not null then
@@ -2295,7 +2474,6 @@ is
       return a_styles(v_style)  - 1 + DEFAULT_STYLES_CNT;
     else
       a_styles(v_style) := a_styles.count + 1;
-
       v_style_xml  := replace(AGGREGATE_STYLE,'#FMTID#',get_num_fmt_id(p_data_type,p_format_mask)) ||chr(10);      
       v_styles_xml := v_styles_xml||v_style_xml;      
       return a_styles.count  - 1 + DEFAULT_STYLES_CNT;
@@ -2326,7 +2504,6 @@ is
       else
         v_style_xml := replace(HEADER_STYLE,'#FILL#',' fillId="0" '); --default fill 
       end if;      
-
       v_style_xml  := replace(v_style_xml,'#ALIGN#',lower(p_align))||chr(10);
       v_styles_xml := v_styles_xml||v_style_xml;      
       return a_styles.count  - 1 + DEFAULT_STYLES_CNT;
@@ -2422,62 +2599,38 @@ is
                                p_coefficient  in number)
   return clob
   is
-    subtype t_column_alias is varchar2(255);
     v_xml                  clob;    
     a_col_name_plus_width  apex_application_global.vc_arr2;    
-    v_col_alias            t_column_alias;
     v_col_width            number;
-    type   t_width_list    is table of integer index by t_column_alias;
-    a_width_list           t_width_list;
     v_coefficient          number;
-    v_is_custom            boolean default false;
   begin      
-    a_col_name_plus_width := APEX_UTIL.STRING_TO_TABLE(p_width_str,','); 
+    a_col_name_plus_width := APEX_UTIL.STRING_TO_TABLE(rtrim(p_width_str,','),','); 
     
     v_coefficient := nvl(p_coefficient,WIDTH_COEFFICIENT);
     if v_coefficient =  0 then
       v_coefficient := WIDTH_COEFFICIENT;
     end if;     
-    
-    -- init associative array by colunn width
-    for i in 1..a_col_name_plus_width.count loop      
-      
-      if a_col_name_plus_width(i) is not null then
-        begin                    
-          v_col_alias  := regexp_replace(a_col_name_plus_width(i),'\=\d+,?$','');
-          v_col_width  := ltrim(rtrim(regexp_substr(a_col_name_plus_width(i),'\=\d+,?$'),','),'=');          
-          if v_col_width is not null and v_col_alias is not null then            
-            a_width_list(v_col_alias) := round(to_number(v_col_width) / v_coefficient);            
-          end if;
-         exception
-           when others then             
-             null;  -- this functionality is not important
-         end ;
-      end if;
-    end loop;
     --set column width
     v_xml:= v_xml||to_clob('<cols>'||chr(10));
-    for i in (select  rownum rn,
-                      extractvalue(column_value, 'CELL') as column_header,
-                      extractvalue(COLUMN_VALUE, 'CELL/@column-alias') AS column_alias,  
-                      extractvalue(COLUMN_VALUE, 'CELL/@data-type') AS data_type
+    for i in (select  rownum rn
                from table (select xmlsequence(extract(p_xml,'DOCUMENT/DATA/HEADER/CELL')) from dual))
     loop                    
-      if a_width_list.exists(i.column_alias)  then        
-        v_xml:= v_xml||to_clob('<col min="'||i.rn||'" max="'||i.rn||'" width="'||a_width_list(i.column_alias)||'" customWidth="1" />'||chr(10));        
-        v_is_custom := true;        
-      end if;  
+      begin                    
+        v_col_width  := round(to_number(a_col_name_plus_width(i.rn))/ v_coefficient);
+      exception
+         when others then             
+            v_col_width := -1;  
+      end;
+      
+      if v_col_width >= 0 then
+        v_xml:= v_xml||to_clob('<col min="'||i.rn||'" max="'||i.rn||'" width="'||v_col_width||'" customWidth="1" />'||chr(10));        
+      else
+        v_xml:= v_xml||to_clob('<col min="'||i.rn||'" max="'||i.rn||'" width="10" customWidth="0" />'||chr(10));        
+      end if;
     end loop;
     v_xml:= v_xml||to_clob('</cols>'||chr(10));       
     
-    if v_is_custom then
-      return v_xml;      
-    else
-      return to_clob('');
-    end if; 
-  exception
-    when others then 
-      raise_application_error(-20001,'get_colls_width_xml: '||SQLERRM);
+    return v_xml;      
   end get_colls_width_xml;
  
   ------------------------------------------------------------------------------  
@@ -2570,11 +2723,9 @@ is
            </sheetView>
           </sheetViews>
         <sheetFormatPr baseColWidth="10" defaultColWidth="10" defaultRowHeight="15"/>'||chr(10),TRUE);
-
      v_clob := v_clob||get_colls_width_xml(p_width_str,p_xml,p_coefficient);
      --!
      add(v_clob,v_buffer,'<sheetData>'||chr(10));
-
      --column header
      add(v_clob,v_buffer,'<row>'||chr(10));     
      for i in (select  extractvalue(column_value, 'CELL') as column_header,
@@ -2718,7 +2869,8 @@ is
   end get_excel;
   ------------------------------------------------------------------------------
   function get_max_rows (p_app_id      in number,
-                         p_page_id     in number)
+                         p_page_id     in number,
+                         p_region_id   IN NUMBER)
   return number
   is 
     v_max_row_count number;
@@ -2727,13 +2879,15 @@ is
     into v_max_row_count
     from APEX_APPLICATION_PAGE_IR
     where application_id = p_app_id
-      and page_id = p_page_id;
+      and page_id = p_page_id
+      and region_id = p_region_id;
        
      return v_max_row_count;
   end get_max_rows;   
   ------------------------------------------------------------------------------  
-  function get_file_name (p_app_id      in number,
-                          p_page_id     in number)
+  function get_file_name (p_app_id      IN NUMBER,
+                          p_page_id     IN NUMBER,
+                          p_region_id   IN NUMBER)
   return varchar2
   is 
     v_filename varchar2(255);
@@ -2742,15 +2896,17 @@ is
     into v_filename
     from APEX_APPLICATION_PAGE_IR
     where application_id = p_app_id
-      and page_id = p_page_id;
+      and page_id = p_page_id
+      and region_id = p_region_id;
        
      return apex_plugin_util.replace_substitutions(nvl(v_filename,'Excel'));
   end get_file_name;   
   ------------------------------------------------------------------------------
-  procedure download_file(p_app_id      in number,
-                          p_page_id     in number,
-                          p_col_length   in varchar2 default null,
-                          p_max_rows     in number 
+  procedure download_file(p_app_id      IN NUMBER,
+                          p_page_id     IN NUMBER,
+                          p_region_id   IN NUMBER, 
+                          p_col_length  IN VARCHAR2 DEFAULT NULL,
+                          p_max_rows    IN NUMBER 
                          )
   is
     t_template blob;
@@ -2764,25 +2920,27 @@ is
     dbms_lob.createtemporary(t_excel,true);    
     dbms_lob.createtemporary(v_cells,true);
     dbms_lob.createtemporary(v_strings,true);
-    
+    --!!!!!
     
     select file_content
     into t_template
     from apex_appl_plugin_files 
     where file_name = 'ExcelTemplate.zip'
-      and application_id = p_app_id;
+      and application_id = p_app_id
+      and plugin_name='AT.FRT.GPV_IR_TO_MSEXCEL';
     
     zip_files  := as_zip.get_file_list( t_template );
     for i in zip_files.first() .. zip_files.last loop
       as_zip.add1file( t_excel, zip_files( i ), as_zip.get_file( t_template, zip_files( i ) ) );
     end loop;
     
-    v_xml_data := IR_TO_XML.get_report_xml(p_app_id => p_app_id,
-                          p_page_id => p_page_id,                                
-                          p_get_page_items => 'N',
-                          p_items_list  => null,
-                          p_max_rows  => p_max_rows
-                         );
+    v_xml_data := IR_TO_XML.get_report_xml(p_app_id         => p_app_id,
+                                           p_page_id        => p_page_id,     
+                                           p_region_id      => p_region_id,
+                                           p_get_page_items => 'N',
+                                           p_items_list     => null,
+                                           p_max_rows       => p_max_rows
+                                           );
     
     
     get_excel(v_xml_data,v_cells,v_strings,p_col_length,WIDTH_COEFFICIENT);
@@ -2793,204 +2951,22 @@ is
     add1file( t_excel, 'xl/workbook.xml',t_workbook);    
     
     as_zip.finish_zip( t_excel );
-      
-    htp.flush;
-    htp.init();
-    owa_util.mime_header( wwv_flow_utilities.get_excel_mime_type, false );
-    htp.print( 'Content-Length: ' || dbms_lob.getlength( t_excel ) );
-    htp.print( 'Content-disposition: attachment; filename='||get_file_name (p_app_id,p_page_id)||'.xlsx;' );
+ 
+    --htp.flush;
+    --htp.init();
+    owa_util.mime_header( ccontent_type=> 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
+                          bclose_header => false );
+    htp.p( 'Content-Length: ' || dbms_lob.getlength( t_excel ) );
+    htp.p( 'Content-disposition: attachment; filename='||get_file_name (p_app_id,p_page_id,p_region_id)||'.xlsx;' );
+    htp.p('Cache-Control: must-revalidate, max-age=0');
+    htp.p('Expires: Thu, 01 Jan 1970 01:00:00 CET');
     owa_util.http_header_close;
     wpg_docload.download_file( t_excel );
+ 
     dbms_lob.freetemporary(t_excel);
     dbms_lob.freetemporary(v_cells);
     dbms_lob.freetemporary(v_strings);    
   end download_file;
   
 end;
-/
-CREATE OR REPLACE package IR_TO_MSEXCEL 
-as
-  function get_xlsx_from_ir (p_process in apex_plugin.t_process,
-                                 p_plugin  in apex_plugin.t_plugin )
-  return apex_plugin.t_process_exec_result;
-   
-  procedure get_xlsx_from_ir_ext(p_maximum_rows    in number default null,
-                                 p_jquery_selector in varchar2 default null,
-                                 p_download_type   in char default 'E',   -- E -> Excel XLSX, X -> XML (Debug), T -> Debug TXT
-                                 p_replace_xls     in char default 'Y',   --Y/N
-                                 p_custom_width    in varchar2 default null
-                                );
-  -- p_custom_width is delimetered string of COLUMN_NAME,COLUMN_WIDTH=COLUMN_NAME,COLUMN_WIDTH=  etc.
-  -- sample: PROJECT,151=TASK_NAME,319=START_DATE,133=                    
-                                
-end IR_TO_MSEXCEL;
-/
-
-
-CREATE OR REPLACE package body IR_TO_MSEXCEL 
-as
-    XLS_DOWNLOAD_SELECTOR constant varchar2(20) := ' #apexir_dl_XLS, ';
-
-    JAVASCRIPT_CODE  constant varchar2(2000) := 
-    q'[   
-    function getColWidthsDelimeteredString()
-      {
-        var colWidthsDelimeteredString = "";
-        var colWidthsArray = Array ();        
-        $( ".apexir_WORKSHEET_DATA th" ).each(function( index,elmt ) 
-        {    
-          colWidthsArray[elmt.id] = $(elmt).width();  
-        });
-        for (var i in colWidthsArray) {
-         colWidthsDelimeteredString = colWidthsDelimeteredString + i + '=' + colWidthsArray[i] + "\,";  
-        }       
-        return colWidthsDelimeteredString + '#CUSTOMWIDTH#';
-      }
-     function add_xlsx_download_button()
-     {     
-     $('td  [id^="apexir_dl_"] ').last().parent().after('<td nowrap="nowrap" id="download_xlsx_8458548"><img src="/i/ws/download_csv_64x64.gif" alt="XLSX" title="XLSX"></td>')
-     $('td  [for^="apexir_dl_"] ').last().parent().after('<td align="center" nowrap="nowrap"><label for="apexir_dl_EMAIL">XLSX</label><td>');
-     }
-    function replaceDownloadXLS()
-      {     
-        $("#apexir_CONTROL_PANEL_DROP").on('click',function(){                           
-           $("#apexir_dl_XLS").attr("href",'f?p=&APP_ID.:&APP_PAGE_ID.:&APP_SESSION.:GPV_IR_TO_MSEXCEL' + getColWidthsDelimeteredString() +':NO:::');           
-        });
-      }
-    ]';
-   ------------------------------------------------------------------------------ 
-
-    ON_SELECOR_CODE constant varchar2(220) :=  q'[
-    $("#SELECTOR#").on( "click", function() 
-    { 
-      apex.navigation.redirect("#URL#") ;
-    });]';
-
-  ------------------------------------------------------------------------------  
-    STANDARD_DOWNLOAD_CODE constant varchar2(300) := q'[
-    $("#apexir_WORKSHEET_REGION").bind("apexafterrefresh", function(){                
-        replaceDownloadXLS() ;        
-    });
-    replaceDownloadXLS();        
-    ]';
-  ------------------------------------------------------------------------------ 
-  
-  function get_prepeared_url
-  return varchar2
-  is
-    v_page_access_protection apex_application_pages.PAGE_ACCESS_PROTECTION%TYPE;
-  begin
-    select page_access_protection 
-    into v_page_access_protection
-    from apex_application_pages 
-    where page_id = v('APP_PAGE_ID')
-     and application_id = v('APP_ID');
-    
-    if v_page_access_protection = 'Unrestricted' then
-      return 'f?p=&APP_ID.:&APP_PAGE_ID.:&APP_SESSION.:GPV_IR_TO_MSEXCEL"+getColWidthsDelimeteredString()+":NO:::';    
-    else
-      return APEX_UTIL.PREPARE_URL('f?p='||v('APP_ID')||':'||v('APP_PAGE_ID')||':'||v('APP_SESSION')||':GPV_IR_TO_MSEXCEL:NO:::');    
-    end if;
-  end get_prepeared_url;
-  
-  procedure get_xlsx_from_ir_ext(p_maximum_rows    in number default null,
-                                 p_jquery_selector in varchar2 default null,
-                                 p_download_type   in char default 'E',   -- E -> Excel XLSX, X -> XML (Debug), T -> Debug TXT
-                                 p_replace_xls     in char default 'Y',   --Y/N
-                                 p_custom_width    in varchar2     
-                                )
-  is
-    v_javascript_code       varchar2(3000);
-    v_xls_download_selector varchar2(500);
-  begin
-    v_javascript_code := JAVASCRIPT_CODE;    
-   
-    if p_replace_xls = 'Y' then
-      v_javascript_code := v_javascript_code||STANDARD_DOWNLOAD_CODE;
-      v_xls_download_selector := XLS_DOWNLOAD_SELECTOR;
-      
-      --v_xls_download_selector := XLS_DOWNLOAD_SELECTOR||',#download_xlsx_8458548';
-    end if;
-
-    if p_jquery_selector is not null then
-     v_javascript_code := v_javascript_code||replace(replace(ON_SELECOR_CODE,'#URL#',get_prepeared_url),'#SELECTOR#',rtrim(v_xls_download_selector||p_jquery_selector,','));     
-    end if;
-    
-    v_javascript_code := replace(v_javascript_code,'#CUSTOMWIDTH#',replace(p_custom_width,'''',''));
-    
-    
-    APEX_JAVASCRIPT.ADD_ONLOAD_CODE(apex_plugin_util.replace_substitutions(v_javascript_code));
-  
-    if v('REQUEST') like 'GPV_IR_TO_MSEXCEL%' then
-      if p_download_type = 'E' then -- Excel XLSX
-        XML_TO_XSLX.download_file(p_app_id       => v('APP_ID'),
-                                  p_page_id      => v('APP_PAGE_ID'),
-                                  p_col_length   => regexp_replace(v('REQUEST'),'^GPV_IR_TO_MSEXCEL','')||p_custom_width,
-                                  p_max_rows     => nvl(p_maximum_rows,xml_to_xslx.get_max_rows (v('APP_ID'),v('APP_PAGE_ID')))
-                                  );
-      elsif p_download_type = 'X' then -- XML
-        IR_TO_XML.get_report_xml(p_app_id            => v('APP_ID'),
-                                 p_page_id           => v('APP_PAGE_ID'),       
-                                 p_return_type       => 'X',                        
-                                 p_get_page_items    => 'N',
-                                 p_items_list        => null,
-                                 p_collection_name   => null,
-                                 p_max_rows          => xml_to_xslx.get_max_rows (v('APP_ID'),v('APP_PAGE_ID'))
-                                );
-      elsif p_download_type = 'T' then -- Debug txt
-        IR_TO_XML.get_report_xml(p_app_id            => v('APP_ID'),
-                                 p_page_id           => v('APP_PAGE_ID'),       
-                                 p_return_type       => 'Q',                        
-                                 p_get_page_items    => 'N',
-                                 p_items_list        => null,
-                                 p_collection_name   => null,
-                                 p_max_rows          => xml_to_xslx.get_max_rows (v('APP_ID'),v('APP_PAGE_ID'))
-                                );
-    
-     else
-      raise_application_error(-20001,'GPV_IR_TO_MSEXCEL : unknown Return Type');
-     end if;
-   end if;
-   
-  end get_xlsx_from_ir_ext;
-  ------------------------------------------------------------------------------ 
-  procedure check_correct_use
-  is
-     v_process_name  apex_application_page_proc.process_name%TYPE;
-     v_page_id       apex_application_page_proc.page_id%TYPE;
-  begin
-    select process_name, 
-           page_id
-      into v_process_name,
-           v_page_id
-      from apex_application_page_proc 
-      where application_id = 102
-        and process_type_code = 'PLUGIN_GPV_IR_TO_MSEXCEL'
-        and process_point_code != 'BEFORE_BOX_BODY';
-  
-       raise_application_error(-20001,'Plugin "GPV Interactive Report to MSExcel" must be used in "On Load - Before Region" processes only. Please check page '||v_page_id||'.');  
-  exception
-    when no_data_found then
-       null; --check ok
-  end check_correct_use;
-  ------------------------------------------------------------------------------ 
-  FUNCTION get_xlsx_from_ir (p_process IN apex_plugin.t_process,
-                             p_plugin  IN apex_plugin.t_plugin )
-  RETURN apex_plugin.t_process_exec_result  
-  is
-    v_javascript_code varchar2(2000);
-    v_on_standard_download_code varchar2(300);
-  BEGIN
-    check_correct_use;
-    get_xlsx_from_ir_ext(p_maximum_rows    => p_process.attribute_05,
-                         p_jquery_selector => p_process.attribute_06,
-                         p_download_type   => p_process.attribute_07,
-                         p_replace_xls     => p_process.attribute_10,
-                         p_custom_width    => p_process.attribute_11
-                        );
-   
-   return null;
-  end get_xlsx_from_ir;
-
-end IR_TO_MSEXCEL;
 /

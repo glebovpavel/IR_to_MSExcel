@@ -1,11 +1,11 @@
-CREATE OR REPLACE package ir_to_xml as    
-  --ver #VERS_ION#
-  -- download interactive report as PDF
+CREATE OR REPLACE PACKAGE  "IR_TO_XML" as    
+
   PROCEDURE get_report_xml(p_app_id          IN NUMBER,
-                           p_page_id         in number,                                
+                           p_page_id         IN NUMBER,     
+                           p_region_id       IN NUMBER,
                            p_return_type     IN CHAR DEFAULT 'X', -- "Q" for debug information "X" for XML-Data
                            p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
-                           p_items_list      in varchar2,         -- "," delimetered list of items that for including in XML
+                           p_items_list      IN VARCHAR2,         -- "," delimetered list of items that for including in XML
                            p_collection_name IN VARCHAR2,         -- name of APEX COLLECTION to save XML, when null - download as file
                            p_max_rows        IN NUMBER            -- maximum rows for export                            
                           );
@@ -15,13 +15,13 @@ CREATE OR REPLACE package ir_to_xml as
   
   -- get XML 
   function get_report_xml(p_app_id          IN NUMBER,
-                          p_page_id         in number,                                
+                          p_page_id         IN NUMBER,  
+                          p_region_id       IN NUMBER,
                           p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
-                          p_items_list      in varchar2,         -- "," delimetered list of items that for including in XML
+                          p_items_list      IN VARCHAR2,         -- "," delimetered list of items that for including in XML
                           p_max_rows        IN NUMBER            -- maximum rows for export                            
                          )
   return xmltype;     
-
   /* 
     function to handle cases of 'in' and 'not in' conditions for highlights
    	used in cursor cur_highlight
@@ -32,7 +32,6 @@ CREATE OR REPLACE package ir_to_xml as
                                      p_condition_sql         in APEX_APPLICATION_PAGE_IR_COND.CONDITION_SQL%TYPE,
                                      p_condition_column_name in APEX_APPLICATION_PAGE_IR_COND.CONDITION_COLUMN_NAME%TYPE)
   return varchar2; 
-
   -- string to test get_variables_array
   -- todo: make unit test
   --  v_test_str varchar2(400) :=
@@ -59,7 +58,7 @@ END IR_TO_XML;
 /
 
 
-CREATE OR REPLACE package body ir_to_xml as   
+CREATE OR REPLACE PACKAGE BODY  "IR_TO_XML" as   
   
   subtype largevarchar2 is varchar2(32767); 
  
@@ -85,7 +84,7 @@ CREATE OR REPLACE package body ir_to_xml as
     from APEX_APPLICATION_PAGE_IR_COND
     where condition_type = 'Highlight'
       and report_id = p_report_id
-      --and instr(':'||p_delimetered_column_list||':',':'||CONDITION_COLUMN_NAME||':') > 0
+      and instr(':'||p_delimetered_column_list||':',':'||CONDITION_COLUMN_NAME||':') > 0
       and condition_enabled = 'Yes'
       order by --rows highlights first 
              nvl2(HIGHLIGHT_ROW_COLOR,1,0) desc, 
@@ -397,7 +396,6 @@ CREATE OR REPLACE package body ir_to_xml as
     log(v_sql);
     dbms_sql.parse(v_cur,v_sql,dbms_sql.native);     
     dbms_sql.describe_columns2(v_cur,v_colls_count,v_desc_tab);    
-
     for i in 1..v_colls_count loop
          if upper(v_desc_tab(i).col_name) != 'APXWS_ROW_PK' then --skip internal primary key if need
            v_columns(v_columns.count + 1) := v_desc_tab(i).col_name;
@@ -405,7 +403,6 @@ CREATE OR REPLACE package body ir_to_xml as
          end if;
     end loop;                 
    dbms_sql.close_cursor(v_cur);   
-
    return v_columns;
   exception
     when others then
@@ -436,6 +433,7 @@ CREATE OR REPLACE package body ir_to_xml as
      where application_id = p_app_id
        AND page_id = p_page_id
        and display_text_as = 'HIDDEN';
+       --and instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') > 0;       
       
       return v_cnt;
   exception
@@ -445,44 +443,23 @@ CREATE OR REPLACE package body ir_to_xml as
   
   ------------------------------------------------------------------------------ 
   
-  procedure init_t_report(p_app_id       in number,
-                          p_page_id      in number)
+  procedure init_t_report(p_app_id       IN NUMBER,
+                          p_page_id      IN NUMBER,
+                          p_region_id    IN NUMBER)
   is
-    l_region_id                    number;
-    l_report_id                    number;
-    v_query_targets                apex_application_global.vc_arr2;
-    l_new_report                   ir_report;
-    v_apex_application_page_ir_rpt largevarchar2;
-    v_query_column_list            APEX_APPLICATION_GLOBAL.VC_ARR2;
+    l_report_id     number;
+    v_query_targets apex_application_global.vc_arr2;
+    l_new_report    ir_report; 
   begin
     l_report := l_new_report;
-    select region_id 
-    into l_region_id 
-    from APEX_APPLICATION_PAGE_REGIONS 
-    where application_id = p_app_id 
-      and page_id = p_page_id 
-      and source_type = 'Interactive Report';    
-    
     --get base report id    
-    log('l_region_id='||l_region_id);
+    log('l_region_id='||p_region_id);
     
     l_report_id := apex_ir.get_last_viewed_report_id (p_page_id   => p_page_id,
-                                                      p_region_id => l_region_id);
+                                                      p_region_id => p_region_id);
     
-    log('l_base_report_id='||l_report_id);
+    log('l_base_report_id='||l_report_id);    
     
-    /*
-    -- debug info
-    select substr(listagg('session_id='||session_id||' APP_SESSION='||v('APP_SESSION')||' application_user='||application_user||' APP_USER='||
-       v('APP_USER')||' base_report_id='||base_report_id,chr(10)) within group (order by 1),1,32767) 
-    into v_apex_application_page_ir_rpt
-    from apex_application_page_ir_rpt r
-    where application_id = p_app_id
-     and page_id = p_page_id;
-    
-    log(v_apex_application_page_ir_rpt); 
-     */
-
     select r.* 
     into l_report.ir_data       
     from apex_application_page_ir_rpt r
@@ -495,14 +472,14 @@ CREATE OR REPLACE package body ir_to_xml as
     log('l_report_id='||l_report_id);
     l_report_id := l_report.ir_data.report_id;                                                                 
       
+      
     l_report.report := apex_ir.get_report (p_page_id        => p_page_id,
-                                           p_region_id      => l_region_id
+                                           p_region_id      => p_region_id
                                           );
-    v_query_column_list := get_query_column_list;
-    l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(get_cols_as_table(l_report.ir_data.report_columns,v_query_column_list));
+    l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list));
     
-    --l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id,p_page_id);
-
+    l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id,p_page_id);
+    
     <<displayed_columns>>                                      
     for i in (select column_alias,
                      report_label,
@@ -563,7 +540,7 @@ CREATE OR REPLACE package body ir_to_xml as
     l_report.median_columns_on_break := get_cols_as_table(l_report.ir_data.median_columns_on_break,l_report.displayed_columns); 
     l_report.count_columns_on_break := get_cols_as_table(l_report.ir_data.count_columns_on_break,l_report.displayed_columns);  
     l_report.count_distnt_col_on_break := get_cols_as_table(l_report.ir_data.count_distnt_col_on_break,l_report.displayed_columns); 
-     
+      
     -- calculate total count of columns with aggregation
     l_report.agg_cols_cnt := l_report.sum_columns_on_break.count + 
                              l_report.avg_columns_on_break.count +
@@ -572,14 +549,7 @@ CREATE OR REPLACE package body ir_to_xml as
                              l_report.median_columns_on_break.count +
                              l_report.count_columns_on_break.count +
                              l_report.count_distnt_col_on_break.count;
-                             
-    l_report.hidden_cols_cnt := v_query_column_list.count -
-                                (l_report.skipped_columns + 
-                                 nvl(l_report.break_really_on.count,0) + 
-                                 l_report.displayed_columns.count +
-                                 l_report.agg_cols_cnt
-                                 );
-
+    
     log('l_report.report_columns='||rr(l_report.ir_data.report_columns));    
     log('l_report.break_on='||rr(l_report.ir_data.break_enabled_on));
     log('l_report.sum_columns_on_break='||rr(l_report.ir_data.sum_columns_on_break));
@@ -606,7 +576,7 @@ CREATE OR REPLACE package body ir_to_xml as
         end if;  
         v_query_targets(v_query_targets.count + 1) := c.condition_sql||' as HLIGHTS_'||(v_query_targets.count + 1);
     end loop;    
-    
+        
     if v_query_targets.count  > 0 then
       l_report.report.sql_query := regexp_replace(l_report.report.sql_query,'^SELECT','SELECT '||APEX_UTIL.TABLE_TO_STRING(v_query_targets,','||chr(10))||',',1,1,'i');
     end if;
@@ -641,7 +611,6 @@ CREATE OR REPLACE package body ir_to_xml as
                     l_report.row_highlight.count + 
                     l_report.col_highlight.count +
                     nvl(l_report.break_really_on.count,0);
-
     for i in v_start_with..v_end_with loop
       if p_curr_row(i) != p_prev_row(i) then
         return true;
@@ -696,7 +665,6 @@ CREATE OR REPLACE package body ir_to_xml as
   BEGIN
    v_data.datatype := 'NUMBER';
    v_data.value := get_formatted_number(p_query_value,'9999999999999990D0000000000','NLS_NUMERIC_CHARACTERS = ''.,''');
-
    if p_format_mask is not null then
      v_data.text := get_formatted_number(p_query_value,p_format_mask);
    ELSE
@@ -912,7 +880,6 @@ CREATE OR REPLACE package body ir_to_xml as
     <<visible_columns>>
     for i in l_report.start_with..l_report.end_with loop
       v_position := l_report.end_with; --aggregate are placed after displayed columns and computations
-
       v_aggregate_xml := v_aggregate_xml || bcoll(p_column_alias=>get_column_alias_sql(i),
                                                   --p_value => v_sum_value,
                                                   p_format_mask => get_col_format_mask(get_column_alias_sql(i))
@@ -973,42 +940,6 @@ CREATE OR REPLACE package body ir_to_xml as
     end loop visible_columns;
     return  v_aggregate_xml || '</AGGREGATE>'||chr(10);
   end print_aggregate;    
-  ------------------------------------------------------------------------------
-  function get_page_items(p_app_id         in number,
-                          p_page_id        in number,
-                          p_items_list     in varchar2,
-                          p_get_page_items in char)
-  return clob
-  is
-    v_clob  clob;    
-    v_item_names  APEX_APPLICATION_GLOBAL.VC_ARR2;
-  begin
-    v_clob := to_clob( '<ITEMS>'||chr(10));
-    
-    select item_name
-    bulk collect into v_item_names  
-    from apex_application_page_items
-    where application_id = p_app_id
-      and ((page_id = p_page_id and p_get_page_items = 'Y')
-          or
-          (P_ITEMS_LIST is not null and INSTR(','||P_ITEMS_LIST||',',','||ITEM_NAME||',') >  0))
-    union 
-    select item_name
-    from APEX_APPLICATION_ITEMS
-    where application_id = p_app_id  
-      and P_ITEMS_LIST is not null 
-      and instr(','||p_items_list||',',','||item_name||',') >  0;    
-    
-    <<items>>
-    for i in 1..v_item_names.count loop
-     v_clob := v_clob||to_clob('<'||upper(v_item_names(i))||'>'
-                                ||get_xmlval(v(v_item_names(i)))
-                                ||'</'||upper(v_item_names(i))||'>'||chr(10));
-    end loop items;
-    
-    return v_clob||to_clob('</ITEMS>'||chr(10)); 
-  end get_page_items;  
- 
   ------------------------------------------------------------------------------    
   procedure get_xml_from_ir(v_data in out nocopy clob,p_max_rows in integer)
   is
@@ -1026,7 +957,8 @@ CREATE OR REPLACE package body ir_to_xml as
    v_buffer         largevarchar2;
   begin
     v_cur := dbms_sql.open_cursor(2); 
-    v_sql := apex_plugin_util.replace_substitutions(p_value => l_report.report.sql_query,p_escape => false);    
+    v_sql := apex_plugin_util.replace_substitutions(p_value  => l_report.report.sql_query,
+                                                    p_escape => false);    
     dbms_sql.parse(v_cur,v_sql,dbms_sql.native);     
     dbms_sql.describe_columns2(v_cur,v_colls_count,v_desc_tab);    
     --skip internal primary key if need
@@ -1036,7 +968,8 @@ CREATE OR REPLACE package body ir_to_xml as
       end if;
     end loop;
     
-    l_report.start_with := 1 + l_report.skipped_columns +
+    l_report.start_with := 1 + 
+                           l_report.skipped_columns +
                            nvl(l_report.break_really_on.count,0) + 
                            l_report.row_highlight.count + 
                            l_report.col_highlight.count;
@@ -1129,9 +1062,8 @@ CREATE OR REPLACE package body ir_to_xml as
             for i in 1..v_colls_count loop
               v_prev_row(i) := v_row(i);                           
             end loop;                 
-            --v_xml := v_xml||to_clob(print_row(v_row));
             add(v_data,v_buffer,print_row(v_row));
-         ELSE --DBMS_SQL.FETCH_ROWS(v_cur)>0
+         ELSE
            EXIT; 
          END IF; 
     END LOOP main_cycle;        
@@ -1143,21 +1075,20 @@ CREATE OR REPLACE package body ir_to_xml as
    dbms_sql.close_cursor(v_cur);   
   end get_xml_from_ir;
   ------------------------------------------------------------------------------
-  procedure get_final_xml(p_clob           in out nocopy clob,
-                          p_app_id         in number,
-                          p_page_id        in number,
-                          p_items_list     in varchar2,
-                          p_get_page_items in char,
-                          p_max_rows       in number)
+  procedure get_final_xml(p_clob           IN OUT NOCOPY CLOB,
+                          p_app_id         IN NUMBER,
+                          p_region_id      IN NUMBER,
+                          p_page_id        IN NUMBER,
+                          p_items_list     IN VARCHAR2,
+                          p_get_page_items IN CHAR,
+                          p_max_rows       IN NUMBER)
   is
    v_rows    apex_application_global.vc_arr2;
    v_buffer  largevarchar2;
   begin
     add(p_clob,v_buffer,'<?xml version="1.0" encoding="UTF-8"?>'||chr(10)||'<DOCUMENT>'||chr(10));    
-    add(p_clob,v_buffer,get_page_items(p_app_id,p_page_id,p_items_list,p_get_page_items));
     add(p_clob,v_buffer,'<DATA>'||chr(10),TRUE);   
-    get_xml_from_ir(p_clob,p_max_rows);    
-   
+    get_xml_from_ir(p_clob,p_max_rows);
     add(p_clob,v_buffer,'</DATA>'||chr(10));
     add(p_clob,v_buffer,'</DOCUMENT>'||chr(10),TRUE);  
   end get_final_xml;
@@ -1213,10 +1144,11 @@ CREATE OR REPLACE package body ir_to_xml as
   end set_collection;
   ------------------------------------------------------------------------------
   procedure get_report_xml(p_app_id          IN NUMBER,
-                           p_page_id         in number,                                
+                           p_page_id         IN NUMBER,     
+                           p_region_id       IN NUMBER,
                            p_return_type     IN CHAR DEFAULT 'X', -- "Q" for debug information, "X" for XML-Data
                            p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
-                           p_items_list      in varchar2,         -- "," delimetered list of items that for including in XML
+                           p_items_list      IN VARCHAR2,         -- "," delimetered list of items that for including in XML
                            p_collection_name IN VARCHAR2,         -- name of APEX COLLECTION to save XML, when null - download as file
                            p_max_rows        IN NUMBER            -- maximum rows for export                            
                           )
@@ -1226,9 +1158,10 @@ CREATE OR REPLACE package body ir_to_xml as
     dbms_lob.trim (v_debug,0);    
     dbms_lob.createtemporary(v_data,true);
     --APEX_DEBUG_MESSAGE.ENABLE_DEBUG_MESSAGES(p_level => 7);
-    log('version=1.99');
+    log('version=1.6');
     log('p_app_id='||p_app_id);
     log('p_page_id='||p_page_id);
+    log('p_region_id='||p_region_id);
     log('p_return_type='||p_return_type);
     log('p_get_page_items='||p_get_page_items);
     log('p_items_list='||p_items_list);
@@ -1236,8 +1169,8 @@ CREATE OR REPLACE package body ir_to_xml as
     log('p_max_rows='||p_max_rows);        
     if p_return_type = 'Q' then  -- debug information                    
         begin        
-          init_t_report(p_app_id,p_page_id);              
-          get_final_xml(v_data,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);          
+          init_t_report(p_app_id,p_page_id,p_region_id);              
+          get_final_xml(v_data,p_app_id,p_page_id,p_region_id,p_items_list,p_get_page_items,p_max_rows);          
           if p_collection_name is not null then              
             set_collection(upper(p_collection_name),v_data);
           end if;
@@ -1248,8 +1181,8 @@ CREATE OR REPLACE package body ir_to_xml as
         log(' ',TRUE);
         download_file(v_debug,'text/txt','log.txt');        
     elsif p_return_type = 'X' then --XML-Data
-        init_t_report(p_app_id,p_page_id);    
-        get_final_xml(v_data,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);
+        init_t_report(p_app_id,p_page_id,p_region_id);    
+        get_final_xml(v_data,p_app_id,p_page_id,p_region_id,p_items_list,p_get_page_items,p_max_rows);
         if p_collection_name is not null then  
           set_collection(upper(p_collection_name),v_data);
         else
@@ -1267,9 +1200,10 @@ CREATE OR REPLACE package body ir_to_xml as
   end get_report_xml; 
   ------------------------------------------------------------------------------
   function get_report_xml(p_app_id          IN NUMBER,
-                          p_page_id         in number,                                
+                          p_page_id         IN NUMBER,  
+                          p_region_id       IN NUMBER,
                           p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
-                          p_items_list      in varchar2,         -- "," delimetered list of items that for including in XML
+                          p_items_list      IN VARCHAR2,         -- "," delimetered list of items that for including in XML
                           p_max_rows        IN NUMBER            -- maximum rows for export                            
                          )
   return xmltype                           
@@ -1284,8 +1218,8 @@ CREATE OR REPLACE package body ir_to_xml as
     log('p_items_list='||p_items_list);
     log('p_max_rows='||p_max_rows);
     
-    init_t_report(p_app_id,p_page_id);
-    get_final_xml(v_data,p_app_id,p_page_id,p_items_list,p_get_page_items,p_max_rows);    
+    init_t_report(p_app_id,p_page_id,p_region_id);
+    get_final_xml(v_data,p_app_id,p_page_id,p_region_id,p_items_list,p_get_page_items,p_max_rows);    
     
     return xmltype(v_data);    
   end get_report_xml; 
