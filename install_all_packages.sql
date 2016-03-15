@@ -599,11 +599,6 @@ end;
 /
 create or replace PACKAGE  "IR_TO_MSEXCEL" 
 as
-  
-  -- p_custom_width is delimetered string of COLUMN_NAME,COLUMN_WIDTH=COLUMN_NAME,COLUMN_WIDTH=  etc.
-  -- sample: PROJECT,151=TASK_NAME,319=START_DATE,133=      
-  
-  
   FUNCTION render  (p_dynamic_action in apex_plugin.t_dynamic_action,
                     p_plugin         in apex_plugin.t_plugin )
   return apex_plugin.t_dynamic_action_render_result; 
@@ -737,7 +732,6 @@ as
                                                           p_page_id   => apex_application.g_x02,
                                                           p_region_id => v_affected_region_id)
                                 ),1000);                                               
-       
       if p_download_type = 'E' then -- Excel XLSX
         XML_TO_XSLX.download_file(p_app_id       => apex_application.g_x01,
                                   p_page_id      => apex_application.g_x02,
