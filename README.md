@@ -16,8 +16,8 @@ Many features of Interactive Reports are supported:
  $  No BI Publishe Required
 
 The minimum required APEX-version is 4.1.
-Documentation, downloads, and other useful information can be found [here](http://glebovpavel.github.io/page_IR_TO_XSLX/).
-Here's a link to a [demo](https://apex.oracle.com/pls/apex/f?p=56154:1) page.
+Documentation, downloads, and other useful information can be found [here](http://glebovpavel.github.io/Description_IR_TO_XSLX/).
+Here's a link to a [demo](https://apex.oracle.com/pls/apex/f?p=35446) page.
 
 ##Current Stable Version
 
