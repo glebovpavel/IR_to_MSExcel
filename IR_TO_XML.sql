@@ -1,4 +1,6 @@
-CREATE OR REPLACE PACKAGE  "IR_TO_XML" as    
+CREATE OR REPLACE PACKAGE  IR_TO_XML 
+  AUTHID CURRENT_USER
+as    
 
   PROCEDURE get_report_xml(p_app_id          IN NUMBER,
                            p_page_id         IN NUMBER,     
@@ -32,33 +34,12 @@ CREATE OR REPLACE PACKAGE  "IR_TO_XML" as
                                      p_condition_sql         in APEX_APPLICATION_PAGE_IR_COND.CONDITION_SQL%TYPE,
                                      p_condition_column_name in APEX_APPLICATION_PAGE_IR_COND.CONDITION_COLUMN_NAME%TYPE)
   return varchar2; 
-  -- string to test get_variables_array
-  -- todo: make unit test
-  --  v_test_str varchar2(400) :=
-  --      q'[
-  --    select *,
-  --          '/* --test :var */'as a
-  --    /****
-  --     * Common multi-line comment style.
-  --     ****/
-  --    /****
-  --     * Another common multi-line comment :style.
-  --     */
-  --     from table
-  --    /*  
-  --      --comment
-  --    */ 
-  --     where b='O'':Relly' 
-  --      --and :c is not null
-  --      and :f>sysdate
-  --      and :forward_2 >= 4 
-  --      ]';
                               
 END IR_TO_XML;
 /
 
 
-CREATE OR REPLACE PACKAGE BODY  "IR_TO_XML" as   
+CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as   
   
   subtype largevarchar2 is varchar2(32767); 
  
@@ -199,38 +180,7 @@ CREATE OR REPLACE PACKAGE BODY  "IR_TO_XML" as
     log('LogFinish',TRUE);
     return v_debug;
   end  get_log;
-    ------------------------------------------------------------------------------
-  function get_variables_array(p_sql in varchar2)
-  return APEX_APPLICATION_GLOBAL.VC_ARR2
-  is
-    v_str         varchar2(32767);
-    v_var         varchar2(255);
-    v_var_pattern varchar(21);
-    v_var_array   APEX_APPLICATION_GLOBAL.VC_ARR2; 
-  begin
-   v_str         := p_sql;
-   --pattern to match bind variable
-   v_var_pattern := ':(([[:alnum:]])|[_])+';  
-   --eliminate strings
-    --http://stackoverflow.com/questions/12646963/get-and-replace-quoted-strings-with-regex
-    v_str := regexp_replace(v_str,q'[\'.*?(?:\\\\.[^\\\\\']*)*\']','');
-    --eliminate single-line comments
-    v_str := regexp_replace(v_str,'--.*','');
-    --eliminate multy-line comments
-    --http://ostermiller.org/findcomment.html
-    v_str := regexp_replace(v_str,'(/\*([^*]|[\r\n]|(\*+([^*/]|[\r\n])))*\*+/)|(//.*)','');
-    
-    v_var := regexp_substr(v_str,v_var_pattern);
-    while length(v_var) > 0 loop
-      v_var := ltrim(v_var,':');
-      v_var_array(v_var_array.count + 1) := v_var;
-      log('Variable found ('||v_var_array.count||'):'||v_var);
-      v_str := regexp_replace(v_str,'[:]'||v_var,'',1,1);      
-      v_var := regexp_substr(v_str,v_var_pattern);
-    end loop;    
-    
-    return v_var_array;
-  end get_variables_array;    
+ 
   ------------------------------------------------------------------------------
   function bcoll(p_font_color    in varchar2 default null,
                  p_back_color    in varchar2 default null,
@@ -492,6 +442,7 @@ CREATE OR REPLACE PACKAGE BODY  "IR_TO_XML" as
                 from APEX_APPLICATION_PAGE_IR_COL
                where application_id = p_app_id
                  AND page_id = p_page_id
+                 and region_id = p_region_id
                  and display_text_as != 'HIDDEN' --l_report.ir_data.report_columns can include HIDDEN columns
                  and instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') > 0
               UNION
@@ -953,8 +904,10 @@ CREATE OR REPLACE PACKAGE BODY  "IR_TO_XML" as
    v_desc_tab       DBMS_SQL.DESC_TAB2;
    v_inside         boolean default false;
    v_sql            largevarchar2;
-   v_bind_variables APEX_APPLICATION_GLOBAL.VC_ARR2;
+   v_bind_variables DBMS_SQL.VARCHAR2_TABLE;
    v_buffer         largevarchar2;
+   v_bind_var_name  varchar2(255);
+   v_binded         BOOLEAN; 
   begin
     v_cur := dbms_sql.open_cursor(2); 
     v_sql := apex_plugin_util.replace_substitutions(p_value  => l_report.report.sql_query,
@@ -983,43 +936,39 @@ CREATE OR REPLACE PACKAGE BODY  "IR_TO_XML" as
     log('l_report.end_with='||l_report.end_with);
     log('l_report.skipped_columns='||l_report.skipped_columns);
     
-    v_bind_variables := get_variables_array(v_sql);
+    v_bind_variables := wwv_flow_utilities.get_binds(v_sql);
        
     add(v_data,v_buffer,print_header); 
     log('<<bind variables>>');
+    
     <<bind_variables>>
-    for i in 1..l_report.report.binds.count loop
-      log('Bind variable '||l_report.report.binds(i).name);
-      --remove MAX_ROWS
-      if l_report.report.binds(i).name = 'APXWS_MAX_ROW_CNT' then      
-        DBMS_SQL.BIND_VARIABLE (v_cur,l_report.report.binds(i).name,p_max_rows);      
-        null;
+    for i in 1..v_bind_variables.count loop      
+      v_bind_var_name := ltrim(v_bind_variables(i),':');
+      if v_bind_var_name = 'APXWS_MAX_ROW_CNT' then      
+         -- remove max_rows
+         DBMS_SQL.BIND_VARIABLE (v_cur,'APXWS_MAX_ROW_CNT',p_max_rows);    
+         log('Bind variable ('||i||')'||v_bind_var_name);         
       else
-        DBMS_SQL.BIND_VARIABLE (v_cur,l_report.report.binds(i).name,l_report.report.binds(i).value);      
-      end if;
-      --mark variable as binded
-      for a in 1..v_bind_variables.count loop
-        if v_bind_variables(a) = l_report.report.binds(i).name then
-          v_bind_variables(a) := '';
-        end if;
-      end loop;
-    end loop bind_variables;  
-    
-    log('<<bind variables from substantive strings>>');
-    for i in 1..v_bind_variables.count loop
-      if v_bind_variables(i) is not null then
-        log('Bind variable ('||i||')'||v_bind_variables(i));
-        DBMS_SQL.BIND_VARIABLE (v_cur,v_bind_variables(i),v(v_bind_variables(i)));      
-        --delete bided variable from array
-        for a in (i+1)..v_bind_variables.count loop
-          if v_bind_variables(a) = v_bind_variables(i) then
-           log('Delete bind variable ('||a||')'||v_bind_variables(i));
-           v_bind_variables(a) := '';
-         end if;
-        end loop;        
-      end if; 
-    end loop bind_variables;      
-    
+        v_binded := false; 
+        --first look report bind variables (filtering, search etc)
+        <<bind_report_variables>>
+        for a in 1..l_report.report.binds.count loop
+          if v_bind_var_name = l_report.report.binds(a).name then
+             DBMS_SQL.BIND_VARIABLE (v_cur,v_bind_var_name,l_report.report.binds(a).value);
+             log('Bind variable as report variable ('||i||')'||v_bind_var_name);
+             v_binded := true;
+             exit;
+          end if;
+        end loop bind_report_variables;
+        -- substantive strings in sql-queries can have bind variables too
+        -- these variables are not in v_report.binds
+        -- and need to be binded separately
+        if not v_binded then
+          DBMS_SQL.BIND_VARIABLE (v_cur,v_bind_var_name,v(v_bind_var_name));
+          log('Bind variable ('||i||')'||v_bind_var_name);          
+        end if;        
+       end if; 
+    end loop;          
   
     for i in 1..v_colls_count loop
        v_row(i) := ' ';
@@ -1237,12 +1186,12 @@ CREATE OR REPLACE PACKAGE BODY  "IR_TO_XML" as
   return varchar2 
   is
     v_condition_sql_tmp     varchar2(32767);
-	v_condition_sql			varchar2(32767);
-	v_arr_cond_expr APEX_APPLICATION_GLOBAL.VC_ARR2;
-	v_arr_cond_sql APEX_APPLICATION_GLOBAL.VC_ARR2;	
+	  v_condition_sql			varchar2(32767);
+	  v_arr_cond_expr APEX_APPLICATION_GLOBAL.VC_ARR2;
+	  v_arr_cond_sql APEX_APPLICATION_GLOBAL.VC_ARR2;	
   begin
     v_condition_sql := REPLACE(REPLACE(p_condition_sql,'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||p_condition_column_name||'"');
-	v_condition_sql_tmp := SUBSTR(v_condition_sql,INSTR(v_condition_sql,'#'),INSTR(v_condition_sql,'#',-1)-INSTR(v_condition_sql,'#')+1);
+	  v_condition_sql_tmp := SUBSTR(v_condition_sql,INSTR(v_condition_sql,'#'),INSTR(v_condition_sql,'#',-1)-INSTR(v_condition_sql,'#')+1);
 	
     v_arr_cond_expr := APEX_UTIL.STRING_TO_TABLE(p_condition_expression,',');
 	v_arr_cond_sql := APEX_UTIL.STRING_TO_TABLE(v_condition_sql_tmp,',');
