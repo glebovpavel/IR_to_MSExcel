@@ -26,23 +26,29 @@ as
       SELECT affected_region_id
       INTO v_affected_region_id
       FROM apex_application_page_da_acts aapda
-      WHERE aapda.action_id = p_dynamic_action_id;
+      WHERE aapda.action_id = p_dynamic_action_id
+        and page_id = v('APP_PAGE_ID')
+        and application_id = v('APP_ID')
+        and rownum <2; 
       
-      if v_affected_region_id is null then
-        begin
-          select region_id
-          into v_affected_region_id
-          from apex_application_page_regions
-          where  static_id = p_html_region_id;      
-        exception
-          when no_data_found then
-           select region_id
-           into v_affected_region_id
-           from apex_application_page_regions
-           where  region_id = ltrim(p_html_region_id,'R');
-        end;
-      end if;
-      
+      if v_affected_region_id is null then 
+        begin 
+          select region_id 
+          into v_affected_region_id 
+          from apex_application_page_regions 
+          where  static_id = p_html_region_id
+            and page_id = v('APP_PAGE_ID')
+            and application_id = v('APP_ID');
+        exception 
+          when no_data_found then 
+           select region_id 
+           into v_affected_region_id 
+           from apex_application_page_regions 
+           where  region_id = ltrim(p_html_region_id,'R')
+             and page_id = v('APP_PAGE_ID')
+             and application_id = v('APP_ID'); 
+        end; 
+      end if;       
       return v_affected_region_id;
   exception
     when others then
@@ -55,13 +61,17 @@ as
   is
    v_affected_region_selector apex_application_page_regions.static_id%type;
   begin
-      SELECT nvl(static_id,'R'||to_char(affected_region_id))
-      INTO v_affected_region_selector
-      FROM apex_application_page_da_acts aapda,
-           apex_application_page_regions r
-      WHERE aapda.action_id = p_dynamic_action_id
-        and aapda.affected_region_id = r.region_id
-        and r.source_type ='Interactive Report';
+      SELECT nvl(static_id,'R'||to_char(affected_region_id)) 
+      INTO v_affected_region_selector 
+      FROM apex_application_page_da_acts aapda, 
+           apex_application_page_regions r 
+      WHERE aapda.action_id = p_dynamic_action_id 
+        and aapda.affected_region_id = r.region_id 
+        and r.source_type ='Interactive Report' 
+        and aapda.page_id = v('APP_PAGE_ID') 
+        and aapda.application_id = v('APP_ID')
+        and r.page_id = v('APP_PAGE_ID') 
+        and r.application_id = v('APP_ID'); 
       
       return v_affected_region_selector;
   exception

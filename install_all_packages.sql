@@ -1,8 +1,8 @@
 /**********************************************
 **
 ** Author: Pavel Glebov
-** Date: 03-2016
-** Version: 2.00
+** Date: 05-2016
+** Version: 2.02
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -637,8 +637,7 @@ as
 END IR_TO_XML;
 /
 
-
-CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as   
+create or replace PACKAGE BODY  IR_TO_XML as   
   
   subtype largevarchar2 is varchar2(32767); 
  
@@ -713,9 +712,10 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
      text            largevarchar2,
      datatype        VARCHAR2(50)
    );  
-  l_report          ir_report;   
-  v_debug           clob;  
-  v_debug_buffer    largevarchar2; 
+  l_report              ir_report;   
+  v_debug               clob;  
+  v_debug_buffer        largevarchar2; 
+  v_default_date_nls    varchar2(50); 
   ------------------------------------------------------------------------------
   /**
   * http://mk-commi.blogspot.co.at/2014/11/concatenating-varchar2-values-into-clob.html  
@@ -778,9 +778,9 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
   begin
     log('LogFinish',TRUE);
     return v_debug;
-  end  get_log;
- 
+  end  get_log; 
   ------------------------------------------------------------------------------
+  
   function bcoll(p_font_color    in varchar2 default null,
                  p_back_color    in varchar2 default null,
                  p_align         in varchar2 default null,
@@ -906,13 +906,24 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
     return ltrim(rtrim(regexp_replace(p_str,'[:]+',':'),':'),':');
   end;
   ------------------------------------------------------------------------------   
+ 
   function get_xmlval(p_str in varchar2)
   return varchar2
-  is   
+  is
+    v_tmp largevarchar2;
   begin
-    return dbms_xmlgen.convert(convert(p_str,'UTF8'));
+    -- p_str can be encoded html-string 
+    -- wee need forst convert to text
+    v_tmp := REGEXP_REPLACE(p_str,'<(BR)\s*/*>',chr(13)||chr(10),1,0,'i');
+    v_tmp := REGEXP_REPLACE(v_tmp,'<[^<>]+>',' ',1,0,'i');
+    v_tmp := UTL_I18N.UNESCAPE_REFERENCE(v_tmp); 
+    -- and finally encode them
+    v_tmp := substr(v_tmp,1,2000);    
+    v_tmp := UTL_I18N.ESCAPE_REFERENCE(v_tmp,'UTF8');
+    return v_tmp;
   end get_xmlval;  
-  ------------------------------------------------------------------------------  
+  ------------------------------------------------------------------------------
+  
   function intersect_arrays(p_one IN APEX_APPLICATION_GLOBAL.VC_ARR2,
                             p_two IN APEX_APPLICATION_GLOBAL.VC_ARR2)
   return APEX_APPLICATION_GLOBAL.VC_ARR2
@@ -1181,7 +1192,7 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
      if p_format_mask is not null then
        v_data.text := to_char(to_date(p_query_value),p_format_mask);
      ELSE
-       v_data.text := p_query_value;
+       v_data.text := to_char(to_date(p_query_value),v_default_date_nls);
      end if;
     
     return v_data;
@@ -1214,7 +1225,7 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
     v_data t_cell_data;
   BEGIN
    v_data.datatype := 'NUMBER';
-   v_data.value := get_formatted_number(p_query_value,'9999999999999990D0000000000','NLS_NUMERIC_CHARACTERS = ''.,''');
+   v_data.value := get_formatted_number(p_query_value,'9999999999999990D00000000','NLS_NUMERIC_CHARACTERS = ''.,''');
    if p_format_mask is not null then
      v_data.text := get_formatted_number(p_query_value,p_format_mask);
    ELSE
@@ -1491,6 +1502,21 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
     return  v_aggregate_xml || '</AGGREGATE>'||chr(10);
   end print_aggregate;    
   ------------------------------------------------------------------------------    
+  
+  function get_default_date_nls
+  return varchar2
+  is
+    v_format varchar2(50);
+  begin
+    SELECT value 
+    into v_format
+    FROM V$NLS_Parameters 
+    WHERE parameter ='NLS_DATE_FORMAT';
+    
+    return v_format;
+  end get_default_date_nls;
+  ------------------------------------------------------------------------------
+  
   procedure get_xml_from_ir(v_data in out nocopy clob,p_max_rows in integer)
   is
    v_cur            INTEGER; 
@@ -1508,6 +1534,10 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
    v_bind_var_name  varchar2(255);
    v_binded         BOOLEAN; 
   begin
+    v_default_date_nls := get_default_date_nls;
+    
+    EXECUTE IMMEDIATE 'alter session set nls_date_format="dd.mm.yyyy hh24:mi:ss"';
+    
     v_cur := dbms_sql.open_cursor(2); 
     v_sql := apex_plugin_util.replace_substitutions(p_value  => l_report.report.sql_query,
                                                     p_escape => false);    
@@ -1580,7 +1610,7 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
     end loop define_columns;
     
     v_result := dbms_sql.execute(v_cur);         
-    
+   
     log('<<main_cycle>>');
     <<main_cycle>>
     LOOP 
@@ -1808,6 +1838,7 @@ begin
   dbms_lob.createtemporary(v_debug,true, DBMS_LOB.CALL);  
 END IR_TO_XML;
 /
+
 CREATE OR REPLACE PACKAGE  "XML_TO_XSLX" 
 IS
   WIDTH_COEFFICIENT CONSTANT NUMBER := 6;
@@ -2017,8 +2048,8 @@ is
     v_str := replace(v_str,'MI','mm');
     v_str := replace(v_str,'SS','ss');
     
-    v_str := replace(v_str,'HH24','h');
-    v_str := regexp_replace(v_str,'(\W)','\\\1');
+    v_str := replace(v_str,'HH24','hh');
+    --v_str := regexp_replace(v_str,'(\W)','\\\1');
     v_str := regexp_replace(v_str,'HH12([^ ]+)','h\1 AM/PM');    
     v_str := replace(v_str,'AM\/PM',' AM/PM');
     
@@ -2763,23 +2794,29 @@ as
       SELECT affected_region_id
       INTO v_affected_region_id
       FROM apex_application_page_da_acts aapda
-      WHERE aapda.action_id = p_dynamic_action_id;
+      WHERE aapda.action_id = p_dynamic_action_id
+        and page_id = v('APP_PAGE_ID')
+        and application_id = v('APP_ID')
+        and rownum <2; 
       
-      if v_affected_region_id is null then
-        begin
-          select region_id
-          into v_affected_region_id
-          from apex_application_page_regions
-          where  static_id = p_html_region_id;      
-        exception
-          when no_data_found then
-           select region_id
-           into v_affected_region_id
-           from apex_application_page_regions
-           where  region_id = ltrim(p_html_region_id,'R');
-        end;
-      end if;
-      
+      if v_affected_region_id is null then 
+        begin 
+          select region_id 
+          into v_affected_region_id 
+          from apex_application_page_regions 
+          where  static_id = p_html_region_id
+            and page_id = v('APP_PAGE_ID')
+            and application_id = v('APP_ID');
+        exception 
+          when no_data_found then 
+           select region_id 
+           into v_affected_region_id 
+           from apex_application_page_regions 
+           where  region_id = ltrim(p_html_region_id,'R')
+             and page_id = v('APP_PAGE_ID')
+             and application_id = v('APP_ID'); 
+        end; 
+      end if;       
       return v_affected_region_id;
   exception
     when others then
@@ -2792,13 +2829,17 @@ as
   is
    v_affected_region_selector apex_application_page_regions.static_id%type;
   begin
-      SELECT nvl(static_id,'R'||to_char(affected_region_id))
-      INTO v_affected_region_selector
-      FROM apex_application_page_da_acts aapda,
-           apex_application_page_regions r
-      WHERE aapda.action_id = p_dynamic_action_id
-        and aapda.affected_region_id = r.region_id
-        and r.source_type ='Interactive Report';
+      SELECT nvl(static_id,'R'||to_char(affected_region_id)) 
+      INTO v_affected_region_selector 
+      FROM apex_application_page_da_acts aapda, 
+           apex_application_page_regions r 
+      WHERE aapda.action_id = p_dynamic_action_id 
+        and aapda.affected_region_id = r.region_id 
+        and r.source_type ='Interactive Report' 
+        and aapda.page_id = v('APP_PAGE_ID') 
+        and aapda.application_id = v('APP_ID')
+        and r.page_id = v('APP_PAGE_ID') 
+        and r.application_id = v('APP_ID'); 
       
       return v_affected_region_selector;
   exception

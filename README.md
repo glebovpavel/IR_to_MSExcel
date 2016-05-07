@@ -23,7 +23,7 @@ Here's a link to a [demo](https://apex.oracle.com/pls/apex/f?p=35446) page.
 
 ##Current Stable Version
 
-Version 2.01
+Version 2.02
 
 ##License
 

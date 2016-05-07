@@ -38,8 +38,7 @@ as
 END IR_TO_XML;
 /
 
-
-CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as   
+create or replace PACKAGE BODY  IR_TO_XML as   
   
   subtype largevarchar2 is varchar2(32767); 
  
@@ -114,9 +113,10 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
      text            largevarchar2,
      datatype        VARCHAR2(50)
    );  
-  l_report          ir_report;   
-  v_debug           clob;  
-  v_debug_buffer    largevarchar2; 
+  l_report              ir_report;   
+  v_debug               clob;  
+  v_debug_buffer        largevarchar2; 
+  v_default_date_nls    varchar2(50); 
   ------------------------------------------------------------------------------
   /**
   * http://mk-commi.blogspot.co.at/2014/11/concatenating-varchar2-values-into-clob.html  
@@ -179,9 +179,9 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
   begin
     log('LogFinish',TRUE);
     return v_debug;
-  end  get_log;
- 
+  end  get_log; 
   ------------------------------------------------------------------------------
+  
   function bcoll(p_font_color    in varchar2 default null,
                  p_back_color    in varchar2 default null,
                  p_align         in varchar2 default null,
@@ -307,13 +307,24 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
     return ltrim(rtrim(regexp_replace(p_str,'[:]+',':'),':'),':');
   end;
   ------------------------------------------------------------------------------   
+ 
   function get_xmlval(p_str in varchar2)
   return varchar2
-  is   
+  is
+    v_tmp largevarchar2;
   begin
-    return dbms_xmlgen.convert(convert(p_str,'UTF8'));
+    -- p_str can be encoded html-string 
+    -- wee need forst convert to text
+    v_tmp := REGEXP_REPLACE(p_str,'<(BR)\s*/*>',chr(13)||chr(10),1,0,'i');
+    v_tmp := REGEXP_REPLACE(v_tmp,'<[^<>]+>',' ',1,0,'i');
+    v_tmp := UTL_I18N.UNESCAPE_REFERENCE(v_tmp); 
+    -- and finally encode them
+    v_tmp := substr(v_tmp,1,2000);    
+    v_tmp := UTL_I18N.ESCAPE_REFERENCE(v_tmp,'UTF8');
+    return v_tmp;
   end get_xmlval;  
-  ------------------------------------------------------------------------------  
+  ------------------------------------------------------------------------------
+  
   function intersect_arrays(p_one IN APEX_APPLICATION_GLOBAL.VC_ARR2,
                             p_two IN APEX_APPLICATION_GLOBAL.VC_ARR2)
   return APEX_APPLICATION_GLOBAL.VC_ARR2
@@ -582,7 +593,7 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
      if p_format_mask is not null then
        v_data.text := to_char(to_date(p_query_value),p_format_mask);
      ELSE
-       v_data.text := p_query_value;
+       v_data.text := to_char(to_date(p_query_value),v_default_date_nls);
      end if;
     
     return v_data;
@@ -615,7 +626,7 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
     v_data t_cell_data;
   BEGIN
    v_data.datatype := 'NUMBER';
-   v_data.value := get_formatted_number(p_query_value,'9999999999999990D0000000000','NLS_NUMERIC_CHARACTERS = ''.,''');
+   v_data.value := get_formatted_number(p_query_value,'9999999999999990D00000000','NLS_NUMERIC_CHARACTERS = ''.,''');
    if p_format_mask is not null then
      v_data.text := get_formatted_number(p_query_value,p_format_mask);
    ELSE
@@ -892,6 +903,21 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
     return  v_aggregate_xml || '</AGGREGATE>'||chr(10);
   end print_aggregate;    
   ------------------------------------------------------------------------------    
+  
+  function get_default_date_nls
+  return varchar2
+  is
+    v_format varchar2(50);
+  begin
+    SELECT value 
+    into v_format
+    FROM V$NLS_Parameters 
+    WHERE parameter ='NLS_DATE_FORMAT';
+    
+    return v_format;
+  end get_default_date_nls;
+  ------------------------------------------------------------------------------
+  
   procedure get_xml_from_ir(v_data in out nocopy clob,p_max_rows in integer)
   is
    v_cur            INTEGER; 
@@ -909,6 +935,10 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
    v_bind_var_name  varchar2(255);
    v_binded         BOOLEAN; 
   begin
+    v_default_date_nls := get_default_date_nls;
+    
+    EXECUTE IMMEDIATE 'alter session set nls_date_format="dd.mm.yyyy hh24:mi:ss"';
+    
     v_cur := dbms_sql.open_cursor(2); 
     v_sql := apex_plugin_util.replace_substitutions(p_value  => l_report.report.sql_query,
                                                     p_escape => false);    
@@ -981,7 +1011,7 @@ CREATE OR REPLACE PACKAGE BODY  IR_TO_XML as
     end loop define_columns;
     
     v_result := dbms_sql.execute(v_cur);         
-    
+   
     log('<<main_cycle>>');
     <<main_cycle>>
     LOOP 
@@ -1209,3 +1239,4 @@ begin
   dbms_lob.createtemporary(v_debug,true, DBMS_LOB.CALL);  
 END IR_TO_XML;
 /
+

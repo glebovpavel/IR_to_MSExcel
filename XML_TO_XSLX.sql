@@ -207,8 +207,8 @@ is
     v_str := replace(v_str,'MI','mm');
     v_str := replace(v_str,'SS','ss');
     
-    v_str := replace(v_str,'HH24','h');
-    v_str := regexp_replace(v_str,'(\W)','\\\1');
+    v_str := replace(v_str,'HH24','hh');
+    --v_str := regexp_replace(v_str,'(\W)','\\\1');
     v_str := regexp_replace(v_str,'HH12([^ ]+)','h\1 AM/PM');    
     v_str := replace(v_str,'AM\/PM',' AM/PM');
     
