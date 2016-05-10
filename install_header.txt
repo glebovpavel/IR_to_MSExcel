@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 05-2016
-** Version: 2.02
+** Version: 2.03
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **

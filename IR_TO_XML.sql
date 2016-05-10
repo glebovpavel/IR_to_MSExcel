@@ -540,7 +540,8 @@ create or replace PACKAGE BODY  IR_TO_XML as
     end loop;    
         
     if v_query_targets.count  > 0 then
-      l_report.report.sql_query := regexp_replace(l_report.report.sql_query,'^SELECT','SELECT '||APEX_UTIL.TABLE_TO_STRING(v_query_targets,','||chr(10))||',',1,1,'i');
+      -- uwr485kv is random name 
+      l_report.report.sql_query := 'SELECT '||APEX_UTIL.TABLE_TO_STRING(v_query_targets,','||chr(10))||', uwr485kv.* from ('||l_report.report.sql_query||') uwr485kv';
     end if;
     l_report.report.sql_query := l_report.report.sql_query;
     log('l_report.report.sql_query='||chr(10)||l_report.report.sql_query||chr(10));
