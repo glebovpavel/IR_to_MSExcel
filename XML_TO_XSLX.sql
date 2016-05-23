@@ -504,8 +504,9 @@ is
   BEGIN
      
     -- Standard Flow
-    IF NVL(LENGTHB(p_vc_buffer), 0) + NVL(LENGTHB(p_vc_addition), 0) < 32767 THEN
-      p_vc_buffer := p_vc_buffer || p_vc_addition;
+    IF NVL(LENGTHB(p_vc_buffer), 0) + NVL(LENGTHB(p_vc_addition), 0) < (32767/2) THEN
+      -- Danke für Frank Menne wegen utf-8
+      p_vc_buffer := p_vc_buffer || convert(p_vc_addition,'utf8');
     ELSE
       IF p_clob IS NULL THEN
         dbms_lob.createtemporary(p_clob, TRUE);
