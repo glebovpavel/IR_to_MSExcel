@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 05-2016
-** Version: 2.03
+** Version: 2.04
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -1577,7 +1577,7 @@ create or replace PACKAGE BODY  IR_TO_XML as
       if v_bind_var_name = 'APXWS_MAX_ROW_CNT' then      
          -- remove max_rows
          DBMS_SQL.BIND_VARIABLE (v_cur,'APXWS_MAX_ROW_CNT',p_max_rows);    
-         log('Bind variable ('||i||')'||v_bind_var_name);         
+         log('Bind variable ('||i||')'||v_bind_var_name||'<'||p_max_rows||'>');
       else
         v_binded := false; 
         --first look report bind variables (filtering, search etc)
@@ -1585,7 +1585,7 @@ create or replace PACKAGE BODY  IR_TO_XML as
         for a in 1..l_report.report.binds.count loop
           if v_bind_var_name = l_report.report.binds(a).name then
              DBMS_SQL.BIND_VARIABLE (v_cur,v_bind_var_name,l_report.report.binds(a).value);
-             log('Bind variable as report variable ('||i||')'||v_bind_var_name);
+             log('Bind variable as report variable ('||i||')'||v_bind_var_name||'<'||l_report.report.binds(a).value||'>');
              v_binded := true;
              exit;
           end if;
@@ -1595,7 +1595,7 @@ create or replace PACKAGE BODY  IR_TO_XML as
         -- and need to be binded separately
         if not v_binded then
           DBMS_SQL.BIND_VARIABLE (v_cur,v_bind_var_name,v(v_bind_var_name));
-          log('Bind variable ('||i||')'||v_bind_var_name);          
+          log('Bind variable ('||i||')'||v_bind_var_name||'<'||v(v_bind_var_name)||'>');          
         end if;        
        end if; 
     end loop;          
