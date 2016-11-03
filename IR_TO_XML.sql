@@ -1,45 +1,7 @@
-CREATE OR REPLACE PACKAGE  IR_TO_XML 
-  AUTHID CURRENT_USER
-as    
-
-  PROCEDURE get_report_xml(p_app_id          IN NUMBER,
-                           p_page_id         IN NUMBER,     
-                           p_region_id       IN NUMBER,
-                           p_return_type     IN CHAR DEFAULT 'X', -- "Q" for debug information "X" for XML-Data
-                           p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
-                           p_items_list      IN VARCHAR2,         -- "," delimetered list of items that for including in XML
-                           p_collection_name IN VARCHAR2,         -- name of APEX COLLECTION to save XML, when null - download as file
-                           p_max_rows        IN NUMBER            -- maximum rows for export                            
-                          );
-  
-  --return debug information
-  function get_log return clob;
-  
-  -- get XML 
-  function get_report_xml(p_app_id          IN NUMBER,
-                          p_page_id         IN NUMBER,  
-                          p_region_id       IN NUMBER,
-                          p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
-                          p_items_list      IN VARCHAR2,         -- "," delimetered list of items that for including in XML
-                          p_max_rows        IN NUMBER            -- maximum rows for export                            
-                         )
-  return xmltype;     
-  /* 
-    function to handle cases of 'in' and 'not in' conditions for highlights
-   	used in cursor cur_highlight
-    
-    Author: Srihari Ravva
-  */ 
-  function get_highlight_in_cond_sql(p_condition_expression  in APEX_APPLICATION_PAGE_IR_COND.CONDITION_EXPRESSION%TYPE,
-                                     p_condition_sql         in APEX_APPLICATION_PAGE_IR_COND.CONDITION_SQL%TYPE,
-                                     p_condition_column_name in APEX_APPLICATION_PAGE_IR_COND.CONDITION_COLUMN_NAME%TYPE)
-  return varchar2; 
-                              
-END IR_TO_XML;
-/
-
 create or replace PACKAGE BODY  IR_TO_XML as   
-  
+/*
+** Minor bugfixes by J.P.Lourens  9-Oct-2016
+*/  
   subtype largevarchar2 is varchar2(32767); 
  
   cursor cur_highlight(p_report_id in APEX_APPLICATION_PAGE_IR_RPT.REPORT_ID%TYPE,
@@ -383,17 +345,31 @@ create or replace PACKAGE BODY  IR_TO_XML as
   
   ------------------------------------------------------------------------------
   function get_hidden_columns_cnt(p_app_id       in number,
-                                  p_page_id      in number)
+                                  p_page_id      in number,
+                                  p_region_id    in number)
   return number
+  -- J.P.Lourens 9-Oct-16 added p_region_id as input variable, and added v_get_query_column_list
   is 
    v_cnt  number;
+   v_get_query_column_list varchar2(32676);
   begin
+  
+      v_get_query_column_list := apex_util.table_to_string(get_query_column_list);
+      
       select count(*)
       into v_cnt
       from APEX_APPLICATION_PAGE_IR_COL
      where application_id = p_app_id
        AND page_id = p_page_id
-       and display_text_as = 'HIDDEN';
+       -- J.P.Lourens 9-Oct-16 added p_region_id to ensure correct results when having multiple IR on a page
+       and region_id = p_region_id
+       and (display_text_as = 'HIDDEN'
+       -- J.P.Lourens 9-Oct-2016 modified get_hidden_columns_cnt to INCLUDE columns which are
+       --                        - selected in the IR query, and thus included in v_get_query_column_list
+       --                        - not included in the report, thus missing from l_report.ir_data.report_columns
+          or instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') = 0)
+       and instr(':'||v_get_query_column_list||':',':'||column_alias||':') > 0;
+       
        --and instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') > 0;       
       
       return v_cnt;
@@ -439,7 +415,8 @@ create or replace PACKAGE BODY  IR_TO_XML as
                                           );
     l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list));
     
-    l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id,p_page_id);
+    -- J.P.Lourens 9-Oct-16 added p_region_id as input variable
+    l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id,p_page_id,p_region_id);
     
     <<displayed_columns>>                                      
     for i in (select column_alias,
@@ -659,7 +636,10 @@ create or replace PACKAGE BODY  IR_TO_XML as
     <<row_highlights>>
     for h in 1..l_report.row_highlight.count loop
      BEGIN 
-      IF get_current_row(p_current_row,l_report.skipped_columns + l_report.row_highlight(h).COND_NUMBER) IS NOT NULL THEN
+      -- J.P.Lourens 9-Oct-16 
+      -- current_row is based on report_sql which starts with the highlight columns, then the skipped columns and then the rest
+      -- So to capture the highlight values the value for l_report.skipped_columns should NOT be taken into account
+      IF get_current_row(p_current_row,/*l_report.skipped_columns + */l_report.row_highlight(h).COND_NUMBER) IS NOT NULL THEN
          v_row_color       := l_report.row_highlight(h).HIGHLIGHT_ROW_FONT_COLOR;
          v_row_back_color  := l_report.row_highlight(h).HIGHLIGHT_ROW_COLOR;
       END IF;
@@ -694,8 +674,10 @@ create or replace PACKAGE BODY  IR_TO_XML as
       <<cell_highlights>>
       for h in 1..l_report.col_highlight.count loop
         begin
-          --debug
-          if get_current_row(p_current_row,l_report.skipped_columns + l_report.col_highlight(h).COND_NUMBER) is not null 
+          -- J.P.Lourens 9-Oct-16 
+          -- current_row is based on report_sql which starts with the highlight columns, then the skipped columns and then the rest
+          -- So to capture the highlight values the value for l_report.skipped_columns should NOT be taken into account
+          if get_current_row(p_current_row,/*l_report.skipped_columns + */l_report.col_highlight(h).COND_NUMBER) is not null 
              and v_column_alias = l_report.col_highlight(h).CONDITION_COLUMN_NAME 
           then
             v_cell_color       := l_report.col_highlight(h).HIGHLIGHT_CELL_FONT_COLOR;
@@ -822,7 +804,9 @@ create or replace PACKAGE BODY  IR_TO_XML as
         log('v_g_format_mask='||v_g_format_mask);
         log('p_default_format_mask='||p_default_format_mask);
         log('v_tmp_pos='||v_tmp_pos);
-        log('p_position='||p_position);        
+        log('p_position='||p_position);
+        -- J.P.Lourens 9-Oct-16 added to log     
+        log('l_report.hidden_cols_cnt='||l_report.hidden_cols_cnt);    
         log('v_row_value='||v_row_value);
         log('v_format_mask='||v_format_mask);
         raise;
@@ -1240,4 +1224,3 @@ begin
   dbms_lob.createtemporary(v_debug,true, DBMS_LOB.CALL);  
 END IR_TO_XML;
 /
-
