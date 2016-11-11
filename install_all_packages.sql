@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 11-2016
-** Version: 2.05
+** Version: 2.06
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -2781,7 +2781,7 @@ as
       INTO v_affected_region_id
       FROM apex_application_page_da_acts aapda
       WHERE aapda.action_id = p_dynamic_action_id
-        and page_id = v('APP_PAGE_ID')
+        and page_id in(v('APP_PAGE_ID'),0)
         and application_id = v('APP_ID')
         and rownum <2; 
       
@@ -2791,7 +2791,7 @@ as
           into v_affected_region_id 
           from apex_application_page_regions 
           where  static_id = p_html_region_id
-            and page_id = v('APP_PAGE_ID')
+            and page_id in (v('APP_PAGE_ID'),0)
             and application_id = v('APP_ID');
         exception 
           when no_data_found then 
@@ -2799,7 +2799,7 @@ as
            into v_affected_region_id 
            from apex_application_page_regions 
            where  region_id = ltrim(p_html_region_id,'R')
-             and page_id = v('APP_PAGE_ID')
+             and page_id in (v('APP_PAGE_ID'),0)
              and application_id = v('APP_ID'); 
         end; 
       end if;       
