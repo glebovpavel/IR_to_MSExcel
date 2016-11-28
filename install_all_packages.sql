@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 11-2016
-** Version: 2.06
+** Version: 2.07
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -2980,4 +2980,3 @@ as
   
 end IR_TO_MSEXCEL;
 /
-
