@@ -2908,7 +2908,7 @@ as
                                  p_directory => p_plugin.file_prefix); 
     
     if v_affected_region_selector is not null then
-      v_result.javascript_function := 'function(){excel_gpv.get_excel_gpv('''||v_affected_region_selector||''','''||v_plugin_id||''')}';
+      v_result.javascript_function := 'function(){excel_gpv.getExcel('''||v_affected_region_selector||''','''||v_plugin_id||''')}';
     else
      v_result.javascript_function := 'function(){console.log("No Affected Region Found!");}';
     end if;
