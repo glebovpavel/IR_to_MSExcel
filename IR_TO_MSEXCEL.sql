@@ -93,7 +93,7 @@ as
     if nvl(p_dynamic_action.attribute_03,'Y') = 'Y' then
       if v_affected_region_selector is not null then 
         -- add XLSX Icon to Affected IR Region
-        v_javascript_code :=  'addDownloadXLSXIcon('''||v_plugin_id||''','''||v_affected_region_selector||''');';
+        v_javascript_code :=  'excel_gpv.addDownloadXLSXIcon('''||v_plugin_id||''','''||v_affected_region_selector||''');';
         APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,v_affected_region_selector);
       else
         -- add XLSX Icon to all IR Regions on the page
@@ -104,7 +104,7 @@ as
                     and r.source_type ='Interactive Report'
                  )
         loop         
-           v_javascript_code :=  'addDownloadXLSXIcon('''||v_plugin_id||''','''||i.affected_region_selector||''');';
+           v_javascript_code :=  'excel_gpv.addDownloadXLSXIcon('''||v_plugin_id||''','''||i.affected_region_selector||''');';
            APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,i.affected_region_selector);     
         end loop;
       end if;
@@ -115,7 +115,7 @@ as
                                  p_directory => p_plugin.file_prefix); 
     
     if v_affected_region_selector is not null then
-      v_result.javascript_function := 'function(){get_excel_gpv('''||v_affected_region_selector||''','''||v_plugin_id||''')}';
+      v_result.javascript_function := 'function(){excel_gpv.get_excel_gpv('''||v_affected_region_selector||''','''||v_plugin_id||''')}';
     else
      v_result.javascript_function := 'function(){console.log("No Affected Region Found!");}';
     end if;

@@ -597,6 +597,45 @@ is
 -- 
 end;
 /
+create or replace PACKAGE  IR_TO_XML 
+  AUTHID CURRENT_USER
+as    
+
+  PROCEDURE get_report_xml(p_app_id          IN NUMBER,
+                           p_page_id         IN NUMBER,     
+                           p_region_id       IN NUMBER,
+                           p_return_type     IN CHAR DEFAULT 'X', -- "Q" for debug information "X" for XML-Data
+                           p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
+                           p_items_list      IN VARCHAR2,         -- "," delimetered list of items that for including in XML
+                           p_collection_name IN VARCHAR2,         -- name of APEX COLLECTION to save XML, when null - download as file
+                           p_max_rows        IN NUMBER            -- maximum rows for export                            
+                          );
+  
+  --return debug information
+  function get_log return clob;
+  
+  -- get XML 
+  function get_report_xml(p_app_id          IN NUMBER,
+                          p_page_id         IN NUMBER,  
+                          p_region_id       IN NUMBER,
+                          p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
+                          p_items_list      IN VARCHAR2,         -- "," delimetered list of items that for including in XML
+                          p_max_rows        IN NUMBER            -- maximum rows for export                            
+                         )
+  return xmltype;     
+  /* 
+    function to handle cases of 'in' and 'not in' conditions for highlights
+   	used in cursor cur_highlight
+    
+    Author: Srihari Ravva
+  */ 
+  function get_highlight_in_cond_sql(p_condition_expression  in APEX_APPLICATION_PAGE_IR_COND.CONDITION_EXPRESSION%TYPE,
+                                     p_condition_sql         in APEX_APPLICATION_PAGE_IR_COND.CONDITION_SQL%TYPE,
+                                     p_condition_column_name in APEX_APPLICATION_PAGE_IR_COND.CONDITION_COLUMN_NAME%TYPE)
+  return varchar2; 
+                              
+END IR_TO_XML;
+/
 create or replace PACKAGE BODY  IR_TO_XML as   
 /*
 ** Minor bugfixes by J.P.Lourens  9-Oct-2016
@@ -2847,7 +2886,7 @@ as
     if nvl(p_dynamic_action.attribute_03,'Y') = 'Y' then
       if v_affected_region_selector is not null then 
         -- add XLSX Icon to Affected IR Region
-        v_javascript_code :=  'addDownloadXLSXIcon('''||v_plugin_id||''','''||v_affected_region_selector||''');';
+        v_javascript_code :=  'excel_gpv.addDownloadXLSXIcon('''||v_plugin_id||''','''||v_affected_region_selector||''');';
         APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,v_affected_region_selector);
       else
         -- add XLSX Icon to all IR Regions on the page
@@ -2858,7 +2897,7 @@ as
                     and r.source_type ='Interactive Report'
                  )
         loop         
-           v_javascript_code :=  'addDownloadXLSXIcon('''||v_plugin_id||''','''||i.affected_region_selector||''');';
+           v_javascript_code :=  'excel_gpv.addDownloadXLSXIcon('''||v_plugin_id||''','''||i.affected_region_selector||''');';
            APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,i.affected_region_selector);     
         end loop;
       end if;
@@ -2869,7 +2908,7 @@ as
                                  p_directory => p_plugin.file_prefix); 
     
     if v_affected_region_selector is not null then
-      v_result.javascript_function := 'function(){get_excel_gpv('''||v_affected_region_selector||''','''||v_plugin_id||''')}';
+      v_result.javascript_function := 'function(){excel_gpv.get_excel_gpv('''||v_affected_region_selector||''','''||v_plugin_id||''')}';
     else
      v_result.javascript_function := 'function(){console.log("No Affected Region Found!");}';
     end if;
@@ -2941,3 +2980,4 @@ as
   
 end IR_TO_MSEXCEL;
 /
+
