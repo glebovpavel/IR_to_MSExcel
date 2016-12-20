@@ -1,6 +1,6 @@
 {
   "name" : "GPV Interactive Report to MSExcel",
-  "version" : "2.07",
+  "version" : "2.08",
   "description" : "Getting result of your Interactive Report in Microsoft Excel.",
   "keywords" : ["Intearctive Report", "export", "excel", "Report"],
   "homepage" : "http://glebovpavel.github.io/Description_IR_TO_XSLX/",
@@ -21,7 +21,7 @@
   "oracle" : {
     "versions" : ["11.2.0.1", "12.1.0.1"],
     "apex" : {
-      "versions" : ["5.0.1"],
+      "versions" : ["5.0.1","5.1.0"],
       "plugin" : {
         "internalName" : "GPV_IR_TO_MSEXCEL",
         "type" : "process",

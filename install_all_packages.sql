@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 11-2016
-** Version: 2.07
+** Version: 2.08
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -796,7 +796,7 @@ create or replace PACKAGE BODY  IR_TO_XML as
     v_str varchar2(500);
   begin
     v_str := v_str||'<CELL ';
-    if p_column_alias is not null then v_str := v_str||'column-alias="'||p_column_alias||'" '; end if;
+    if p_column_alias is not null then v_str := v_str||'column-alias="'||APEX_ESCAPE.HTML_ATTRIBUTE(p_column_alias)||'" '; end if; 
     if p_font_color is not null then v_str := v_str||'color="'||p_font_color||'" '; end if;
     if p_colmn_type is not null then V_STR := V_STR||'data-type="'||p_colmn_type||'" '; end if;
     if p_back_color is not null then v_str := v_str||'background-color="'||p_back_color||'" '; end if;
@@ -2872,6 +2872,20 @@ as
       return null;
   end get_affected_region_static_id;
   ------------------------------------------------------------------------------
+  FUNCTION get_version
+  return varchar2
+  is
+   v_version varchar2(3);
+  begin
+     SELECT substr(version_no,1,3) 
+     into v_version
+     FROM apex_release
+     where rownum <2;
+
+     return v_version;
+  end get_version;
+
+  ------------------------------------------------------------------------------
   FUNCTION render (p_dynamic_action in apex_plugin.t_dynamic_action,
                    p_plugin         in apex_plugin.t_plugin )
   return apex_plugin.t_dynamic_action_render_result
@@ -2886,7 +2900,7 @@ as
     if nvl(p_dynamic_action.attribute_03,'Y') = 'Y' then
       if v_affected_region_selector is not null then 
         -- add XLSX Icon to Affected IR Region
-        v_javascript_code :=  'excel_gpv.addDownloadXLSXIcon('''||v_plugin_id||''','''||v_affected_region_selector||''');';
+        v_javascript_code :=  'excel_gpv.addDownloadXLSXIcon('''||v_plugin_id||''','''||v_affected_region_selector||''','''||get_version||''');';
         APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,v_affected_region_selector);
       else
         -- add XLSX Icon to all IR Regions on the page
@@ -2897,7 +2911,7 @@ as
                     and r.source_type ='Interactive Report'
                  )
         loop         
-           v_javascript_code :=  'excel_gpv.addDownloadXLSXIcon('''||v_plugin_id||''','''||i.affected_region_selector||''');';
+           v_javascript_code :=  'excel_gpv.addDownloadXLSXIcon('''||v_plugin_id||''','''||i.affected_region_selector||''','''||get_version||''');';
            APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,i.affected_region_selector);     
         end loop;
       end if;

@@ -33,38 +33,70 @@
          );
       }
       
-      function addDownloadXLSXIcon ( plugin_id_in, p_region_static_id ) {
+      function addDownloadXLSXIcon ( plugin_id_in, p_region_static_id,p_version) {
         $('body').on( "dialogopen", function( event, ui ) {
           if($('span.ui-dialog-title').text() === apex.lang.getMessage( "APEXIR_DOWNLOAD")) {
             var $dialog_window = $(event.target);
             var current_region_id = $dialog_window.attr('id').match(/(.+)_dialog_js/)[1];
             var re = new RegExp(p_region_static_id, 'g');
-            
-            var html = apex.util.htmlBuilder();
-            html.markup('<tr>')
-                .markup('<td')
-                  .attr('nowrap', 'nowrap')
-                .markup('>')
-                .markup('<a')
-                  .attr('href','javascript:excel_gpv.getExcel(' + "'" + current_region_id + "','" + plugin_id_in +  "'" +');')
-                .markup('>')
-                .markup('<img')
-                  .attr('src', apex_img_dir+'ws/download_xls_64x64.gif')
-                  .attr('alt', 'XLSX')
-                  .attr('title', 'XLSX')
-                .markup(' />')
-                .markup('</a>')
-                .markup('</td>')
-                .markup('</tr>');
-            
-            if(!p_region_static_id || current_region_id.match(re) != null){            
-              $dialog_window.find('table.a-IRR-dialogTable tbody td a')
-                .closest('tr')
-                .append( html.toString() );
+
+            if (p_version ==="5.1") 
+             {
+                var html = apex.util.htmlBuilder();
+                html.markup('<li')
+                    .attr('class', 'a-IRR-iconList-item')
+                    .markup('>')                    
+                    .markup('<a')
+                    .attr('class', 'a-IRR-iconList-link')
+                    .attr('href','javascript:excel_gpv.getExcel(' + "'" + current_region_id + "','" + plugin_id_in +  "'" +');')
+                    .attr('id', 'download_excel_gpv')
+                    .markup('>')
+                    .markup('<span')
+                    .attr('class','a-IRR-iconList-icon a-Icon icon-irr-dl-xls')
+                    .markup('>')
+                    .markup('</span>')
+                    .markup('<span')
+                    .attr('class','a-IRR-iconList-label')
+                    .markup('>')
+                    .markup('XLSX')
+                    .markup('</span>')
+                    .markup('</a>')
+                    .markup('</li>');
                 
-              $dialog_window.find('table.a-IRR-dialogTable tbody td span')
-                .closest('tr')
-                .append( '<tr><td align="center" nowrap="nowrap"><span>XLSX</span></td></tr>');
+                if(!p_region_static_id || current_region_id.match(re) != null)
+                 {            
+                  $('.a-IRR-iconList').append(html.toString());
+                 };
+             };  //5.1 
+            if (p_version !=="5.1") 
+             {
+                var html = apex.util.htmlBuilder();
+                html.markup('<tr>')
+                    .markup('<td')
+                    .attr('nowrap', 'nowrap')
+                    .markup('>')
+                    .markup('<a')
+                    .attr('href','javascript:excel_gpv.getExcel(' + "'" + current_region_id + "','" + plugin_id_in +  "'" +');')
+                    .markup('>')
+                    .markup('<img')
+                    .attr('src', apex_img_dir+'ws/download_xls_64x64.gif')
+                    .attr('alt', 'XLSX')
+                    .attr('title', 'XLSX')
+                    .markup(' />')
+                    .markup('</a>')
+                    .markup('</td>')
+                    .markup('</tr>');
+                
+                if(!p_region_static_id || current_region_id.match(re) != null){            
+                $dialog_window.find('table.a-IRR-dialogTable tbody td a')
+                    .closest('tr')
+                    .append( html.toString() );
+                    
+                $dialog_window.find('table.a-IRR-dialogTable tbody td span')
+                    .closest('tr')
+                    .append( '<tr><td align="center" nowrap="nowrap"><span>XLSX</span></td></tr>');
+             }     //5.0  
+
             };
           }
         });

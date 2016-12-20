@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 11-2016
-** Version: 2.07
+** Version: 2.08
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **

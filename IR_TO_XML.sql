@@ -197,7 +197,7 @@ create or replace PACKAGE BODY  IR_TO_XML as
     v_str varchar2(500);
   begin
     v_str := v_str||'<CELL ';
-    if p_column_alias is not null then v_str := v_str||'column-alias="'||p_column_alias||'" '; end if;
+    if p_column_alias is not null then v_str := v_str||'column-alias="'||APEX_ESCAPE.HTML_ATTRIBUTE(p_column_alias)||'" '; end if; 
     if p_font_color is not null then v_str := v_str||'color="'||p_font_color||'" '; end if;
     if p_colmn_type is not null then V_STR := V_STR||'data-type="'||p_colmn_type||'" '; end if;
     if p_back_color is not null then v_str := v_str||'background-color="'||p_back_color||'" '; end if;
