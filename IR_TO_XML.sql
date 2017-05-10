@@ -168,6 +168,7 @@ create or replace PACKAGE BODY  IR_TO_XML as
   procedure log(p_message in varchar2,p_eof IN BOOLEAN DEFAULT FALSE)
   is
   begin
+  /* logigging  ffrffe */
     add(v_debug,v_debug_buffer,p_message||chr(10),p_eof);
     apex_debug_message.log_message(p_message => substr(p_message,1,32767),
                                    p_enabled => false,
