@@ -767,6 +767,7 @@ create or replace PACKAGE BODY  IR_TO_XML as
   procedure log(p_message in varchar2,p_eof IN BOOLEAN DEFAULT FALSE)
   is
   begin
+  /* logigging  ffrffe */
     add(v_debug,v_debug_buffer,p_message||chr(10),p_eof);
     apex_debug_message.log_message(p_message => substr(p_message,1,32767),
                                    p_enabled => false,
@@ -2370,14 +2371,14 @@ is
      
     -- Standard Flow
     IF NVL(LENGTHB(p_vc_buffer), 0) + NVL(LENGTHB(p_vc_addition), 0) < (32767/2) THEN
-      -- Danke für Frank Menne wegen utf-8
+      -- Danke fÃ¼r Frank Menne wegen utf-8
       p_vc_buffer := p_vc_buffer || convert(p_vc_addition,'utf8');
     ELSE
       IF p_clob IS NULL THEN
         dbms_lob.createtemporary(p_clob, TRUE);
       END IF;
       dbms_lob.writeappend(p_clob, length(p_vc_buffer), p_vc_buffer);
-      p_vc_buffer := p_vc_addition;
+      p_vc_buffer := convert(p_vc_addition,'utf8');
     END IF;
      
     -- Full Flush requested
