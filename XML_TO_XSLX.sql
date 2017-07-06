@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE  "XML_TO_XSLX" 
+CREATE OR REPLACE PACKAGE  XML_TO_XSLX 
   AUTHID CURRENT_USER
 IS
   WIDTH_COEFFICIENT CONSTANT NUMBER := 6;
@@ -42,8 +42,8 @@ end;
 /
 
 
-CREATE OR REPLACE PACKAGE BODY  "XML_TO_XSLX" 
-is
+CREATE OR REPLACE PACKAGE BODY XML_TO_XSLX 
+IS
   STRING_HEIGHT      constant number default 14.4; 
   
   subtype t_color is varchar2(7);
@@ -229,6 +229,12 @@ is
     v_str := replace(v_str,'D','.');
     v_str := replace(v_str,'G',',');
     v_str := replace(v_str,'FM','');
+    -- plus/minus sign
+    if instr(v_str,'S') > 0 then
+      v_str := replace(v_str,'S','');
+      v_str := '+'||v_str||';-'||v_str;
+    end if;
+    
     --currency
     v_str := replace(v_str,'L',convert('&quot;'||rtrim(to_char(0,'FML0'),'0')||'&quot;','UTF8'));    
     
@@ -506,7 +512,7 @@ is
      
     -- Standard Flow
     IF NVL(LENGTHB(p_vc_buffer), 0) + NVL(LENGTHB(p_vc_addition), 0) < (32767/2) THEN
-      -- Danke fÃ¼r Frank Menne wegen utf-8
+      -- Danke für Frank Menne wegen utf-8
       p_vc_buffer := p_vc_buffer || convert(p_vc_addition,'utf8');
     ELSE
       IF p_clob IS NULL THEN

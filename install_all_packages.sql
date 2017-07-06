@@ -1,8 +1,8 @@
 /**********************************************
 **
 ** Author: Pavel Glebov
-** Date: 11-2016
-** Version: 2.08
+** Date: 07-2017
+** Version: 2.10
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -636,12 +636,25 @@ as
                               
 END IR_TO_XML;
 /
-create or replace PACKAGE BODY  IR_TO_XML as   
+create or replace PACKAGE BODY IR_TO_XML   
+as    
 /*
 ** Minor bugfixes by J.P.Lourens  9-Oct-2016
 */  
   subtype largevarchar2 is varchar2(32767); 
- 
+  subtype columntype is varchar2(15); 
+  subtype formatmask is varchar2(100);  
+
+  format_error EXCEPTION;
+  PRAGMA EXCEPTION_INIT(format_error, -01830);
+  date_format_error EXCEPTION;
+  PRAGMA EXCEPTION_INIT(format_error, -01821);
+  conversion_error exception;
+  PRAGMA EXCEPTION_INIT(conversion_error,-06502);
+  
+  type t_date_table is table of date index by binary_integer;  
+  type t_number_table is table of number index by binary_integer;  
+  
   cursor cur_highlight(p_report_id in APEX_APPLICATION_PAGE_IR_RPT.REPORT_ID%TYPE,
                        p_delimetered_column_list in varchar2) 
   IS
@@ -651,7 +664,7 @@ create or replace PACKAGE BODY  IR_TO_XML as
   from (
   select report_id,
          case when condition_operator in ('not in', 'in') then
-		         get_highlight_in_cond_sql(CONDITION_EXPRESSION,CONDITION_SQL,CONDITION_COLUMN_NAME)
+		         IR_TO_XML.get_highlight_in_cond_sql(CONDITION_EXPRESSION,CONDITION_SQL,CONDITION_COLUMN_NAME)
 		      else 
 		         replace(replace(replace(replace(condition_sql,'#APXWS_EXPR#',''''||CONDITION_EXPRESSION||''''),'#APXWS_EXPR2#',''''||CONDITION_EXPRESSION2||''''),'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||CONDITION_COLUMN_NAME||'"') 
 		     end condition_sql,
@@ -676,7 +689,7 @@ create or replace PACKAGE BODY  IR_TO_XML as
   type t_col_format_mask is table of APEX_APPLICATION_PAGE_IR_COMP.computation_format_mask%TYPE index by APEX_APPLICATION_PAGE_IR_COL.column_alias%TYPE;
   type t_header_alignment is table of APEX_APPLICATION_PAGE_IR_COL.heading_alignment%TYPE index by APEX_APPLICATION_PAGE_IR_COL.column_alias%TYPE;
   type t_column_alignment is table of apex_application_page_ir_col.column_alignment%type index by apex_application_page_ir_col.column_alias%type;
-  type t_column_types is table of apex_application_page_ir_col.column_type%type index by apex_application_page_ir_col.column_alias%type;
+  type t_column_types is table of apex_application_page_ir_col.column_type%type index by binary_integer;
   type t_highlight is table of cur_highlight%ROWTYPE index by binary_integer;
   
   type ir_report is record
@@ -713,10 +726,10 @@ create or replace PACKAGE BODY  IR_TO_XML as
      text            largevarchar2,
      datatype        VARCHAR2(50)
    );  
-  l_report              ir_report;   
-  v_debug               clob;  
-  v_debug_buffer        largevarchar2; 
-  v_default_date_nls    varchar2(50); 
+  l_report                   ir_report;   
+  v_debug                    clob;  
+  v_debug_buffer             largevarchar2; 
+  
   ------------------------------------------------------------------------------
   /**
   * http://mk-commi.blogspot.co.at/2014/11/concatenating-varchar2-values-into-clob.html  
@@ -822,21 +835,33 @@ create or replace PACKAGE BODY  IR_TO_XML as
   return APEX_APPLICATION_PAGE_IR_COL.report_label%TYPE
   is
   begin
-    return l_report.column_names(p_column_alias);
+    -- https://github.com/glebovpavel/IR_to_MSExcel/issues/9
+    -- Thanks HeavyS 
+    return  apex_plugin_util.replace_substitutions(p_value => l_report.column_names(p_column_alias));
   exception
     when others then
        raise_application_error(-20001,'get_column_names: p_column_alias='||p_column_alias||' '||SQLERRM);
   end get_column_names;
   ------------------------------------------------------------------------------
   function get_col_format_mask(p_column_alias in apex_application_page_ir_col.column_alias%type)
-  return APEX_APPLICATION_PAGE_IR_COMP.computation_format_mask%TYPE
+  return formatmask
   is
   begin
     return replace(l_report.col_format_mask(p_column_alias),'"','');
   exception
     when others then
-       raise_application_error(-20001,'get_column_names: p_column_alias='||p_column_alias||' '||SQLERRM);
+       raise_application_error(-20001,'get_col_format_mask: p_column_alias='||p_column_alias||' '||SQLERRM);
   end get_col_format_mask;
+  ------------------------------------------------------------------------------
+  procedure set_col_format_mask(p_column_alias in apex_application_page_ir_col.column_alias%type,
+                                p_format_mask  in formatmask)
+  is
+  begin
+      l_report.col_format_mask(p_column_alias) := p_format_mask;
+  exception
+    when others then
+       raise_application_error(-20001,'set_col_format_mask: p_column_alias='||p_column_alias||' '||SQLERRM);
+  end set_col_format_mask;
   ------------------------------------------------------------------------------
   function get_header_alignment(p_column_alias in apex_application_page_ir_col.column_alias%type)
   return APEX_APPLICATION_PAGE_IR_COL.heading_alignment%TYPE
@@ -845,7 +870,7 @@ create or replace PACKAGE BODY  IR_TO_XML as
     return l_report.header_alignment(p_column_alias);
   exception
     when others then
-       raise_application_error(-20001,'get_column_names: p_column_alias='||p_column_alias||' '||SQLERRM);
+       raise_application_error(-20001,'get_header_alignment: p_column_alias='||p_column_alias||' '||SQLERRM);
   end get_header_alignment;
   ------------------------------------------------------------------------------
   function get_column_alignment(p_column_alias in apex_application_page_ir_col.column_alias%type)
@@ -855,18 +880,19 @@ create or replace PACKAGE BODY  IR_TO_XML as
     return l_report.column_alignment(p_column_alias);
   exception
     when others then
-       raise_application_error(-20001,'get_column_names: p_column_alias='||p_column_alias||' '||SQLERRM);
+       raise_application_error(-20001,'get_column_alignment: p_column_alias='||p_column_alias||' '||SQLERRM);
   end get_column_alignment;
   ------------------------------------------------------------------------------
-  function get_column_types(p_column_alias in apex_application_page_ir_col.column_alias%type)
+  function get_column_types(p_num in binary_integer)
   return apex_application_page_ir_col.column_type%type
   is
   begin
-    return l_report.column_types(p_column_alias);
+    return l_report.column_types(p_num);
   exception
     when others then
-       raise_application_error(-20001,'get_column_names: p_column_alias='||p_column_alias||' '||SQLERRM);
+       raise_application_error(-20001,'get_column_names: p_num='||p_num||' '||SQLERRM);
   END get_column_types;
+
   ------------------------------------------------------------------------------  
   function get_column_alias(p_num in binary_integer)
   return varchar2
@@ -890,15 +916,46 @@ create or replace PACKAGE BODY  IR_TO_XML as
   END get_column_alias_sql;
   ------------------------------------------------------------------------------
   function get_current_row(p_current_row in apex_application_global.vc_arr2,
-                           p_id in binary_integer)
+                           p_id          in binary_integer)
   return largevarchar2
   is
   begin
     return p_current_row(p_id);
   exception
     when others then
-       raise_application_error(-20001,'get_current_row: p_id='||p_id||' '||SQLERRM);
+       raise_application_error(-20001,'get_current_row: string: p_id='||p_id||' '||SQLERRM);
   end get_current_row; 
+  ------------------------------------------------------------------------------
+  function get_current_row(p_current_row in t_date_table,
+                           p_id          in binary_integer)
+  return date
+  is
+  begin
+    if p_current_row.exists(p_id) then
+      return p_current_row(p_id);
+    else
+      return null;
+    end if;
+  exception
+    when others then
+       raise_application_error(-20001,'get_current_row:date: p_id='||p_id||' '||SQLERRM);
+  end get_current_row;   
+  ------------------------------------------------------------------------------
+  function get_current_row(p_current_row in t_number_table,
+                           p_id          in binary_integer)
+  return number
+  is
+  begin
+    if p_current_row.exists(p_id) then
+      return p_current_row(p_id);
+    else
+      return null;
+    end if;
+  exception
+    when others then
+       raise_application_error(-20001,'get_current_row:number: p_id='||p_id||' '||SQLERRM);
+  end get_current_row;   
+
   ------------------------------------------------------------------------------
   -- :::: -> :
   function rr(p_str in varchar2)
@@ -915,9 +972,11 @@ create or replace PACKAGE BODY  IR_TO_XML as
     v_tmp largevarchar2;
   begin
     -- p_str can be encoded html-string 
-    -- wee need forst convert to text
+    -- wee need first convert to text
     v_tmp := REGEXP_REPLACE(p_str,'<(BR)\s*/*>',chr(13)||chr(10),1,0,'i');
     v_tmp := REGEXP_REPLACE(v_tmp,'<[^<>]+>',' ',1,0,'i');
+    -- https://community.oracle.com/message/14074217#14074217
+    v_tmp := regexp_replace(v_tmp, '[^[:print:]'||chr(13)||chr(10)||chr(9)||']', ' ');
     v_tmp := UTL_I18N.UNESCAPE_REFERENCE(v_tmp); 
     -- and finally encode them
     v_tmp := substr(v_tmp,1,2000);    
@@ -1092,7 +1151,7 @@ create or replace PACKAGE BODY  IR_TO_XML as
       l_report.col_format_mask(i.column_alias) := i.computation_format_mask;
       l_report.header_alignment(i.column_alias) := i.heading_alignment; 
       l_report.column_alignment(i.column_alias) := i.column_alignment; 
-      l_report.column_types(i.column_alias) := i.column_type;
+      --l_report.column_types(i.column_alias) := i.column_type;
       IF i.column_order > 0 THEN
         IF i.break_column_order = 0 THEN 
           --displayed column
@@ -1107,7 +1166,7 @@ create or replace PACKAGE BODY  IR_TO_XML as
       log('column='||i.column_alias||' l_report.col_format_mask='||i.computation_format_mask);
       log('column='||i.column_alias||' l_report.header_alignment='||i.heading_alignment);
       log('column='||i.column_alias||' l_report.column_alignment='||i.column_alignment);
-      log('column='||i.column_alias||' l_report.column_types='||i.column_type);
+      --log('column='||i.column_alias||' l_report.column_types='||i.column_type);
     end loop displayed_columns;    
     
     -- calculate columns count with aggregation separately
@@ -1198,36 +1257,48 @@ create or replace PACKAGE BODY  IR_TO_XML as
     return false;
   end is_control_break;
   ------------------------------------------------------------------------------
-  FUNCTION get_cell_date(p_query_value IN VARCHAR2,p_format_mask IN VARCHAR2)
+  FUNCTION get_cell(p_query_value IN varchar2,
+                    p_format_mask IN varchar2,
+                    p_date        IN date)
   RETURN t_cell_data
   IS
-    format_error EXCEPTION;
-    PRAGMA EXCEPTION_INIT(format_error, -01830);
     v_data t_cell_data;
-  BEGIN
-     v_data.value := to_date(p_query_value) - to_date('01-03-1900','DD-MM-YYYY') + 61;
+  BEGIN     
+     v_data.value := p_date - to_date('01-03-1900','DD-MM-YYYY') + 61;
      v_data.datatype := 'DATE';
+     
+     -- https://github.com/glebovpavel/IR_to_MSExcel/issues/16
+     -- thanks Valentine Nikitsky 
      if p_format_mask is not null then
-       v_data.text := to_char(to_date(p_query_value),p_format_mask);
-     ELSE
-       v_data.text := to_char(to_date(p_query_value),v_default_date_nls);
+       if upper(p_format_mask)='SINCE' then
+            v_data.text := apex_util.get_since(p_date);
+            v_data.value := null;
+            v_data.datatype := 'STRING';
+       else
+          v_data.text := to_char(p_date,p_format_mask);  -- normally v_data.text used in XML only
+       end if;
+     else
+       v_data.text := p_query_value;
      end if;
-    
-    return v_data;
+     
+     return v_data;
   EXCEPTION
     WHEN invalid_number or format_error THEN 
       v_data.value := NULL;          
       v_data.datatype := 'STRING';
       v_data.text := p_query_value;
       return v_data;
-  END get_cell_date;
+  END get_cell;
+  
   ------------------------------------------------------------------------------
-  function get_formatted_number(p_str_to_convert in varchar2,p_format_string in varchar2,p_nls in varchar2 default null)
+  function get_formatted_number(p_number         IN number,
+                                p_format_string  IN varchar2,
+                                p_nls            IN varchar2 default null)
   return varchar2
   is
     v_str varchar2(100);
   begin
-    v_str := trim(to_char(to_number(p_str_to_convert),p_format_string,p_nls));
+    v_str := trim(to_char(p_number,p_format_string,p_nls));
     if instr(v_str,'#') > 0 and ltrim(v_str,'#') is null then --format fail
       raise invalid_number;
     else
@@ -1235,15 +1306,16 @@ create or replace PACKAGE BODY  IR_TO_XML as
     end if;    
   end get_formatted_number;  
   ------------------------------------------------------------------------------
-  FUNCTION get_cell_number(p_query_value IN VARCHAR2,p_format_mask IN VARCHAR2)
+  FUNCTION get_cell(p_query_value IN varchar2,
+                    p_format_mask IN varchar2,
+                    p_number      IN number)
   RETURN t_cell_data
   IS
-    conversion_error exception;
-    PRAGMA EXCEPTION_INIT(conversion_error,-06502);
     v_data t_cell_data;
   BEGIN
-   v_data.datatype := 'NUMBER';
-   v_data.value := get_formatted_number(p_query_value,'9999999999999990D00000000','NLS_NUMERIC_CHARACTERS = ''.,''');
+   v_data.datatype := 'NUMBER';   
+   v_data.value := get_formatted_number(p_number,'9999999999999990D00000000','NLS_NUMERIC_CHARACTERS = ''.,''');
+   
    if p_format_mask is not null then
      v_data.text := get_formatted_number(p_query_value,p_format_mask);
    ELSE
@@ -1257,9 +1329,12 @@ create or replace PACKAGE BODY  IR_TO_XML as
       v_data.datatype := 'STRING';
       v_data.text := p_query_value;
       return v_data;
-  END get_cell_number;  
+  END get_cell;  
   ------------------------------------------------------------------------------
-  function print_row(p_current_row     IN APEX_APPLICATION_GLOBAL.VC_ARR2)
+  function print_row(p_current_row          IN apex_application_global.vc_arr2,
+                     p_cur_date_row         IN t_date_table,
+                     p_cur_number_row       IN t_number_table
+                    )
   return varchar2 is
     v_clob            largevarchar2; --change
     v_column_alias    APEX_APPLICATION_PAGE_IR_COL.column_alias%TYPE;
@@ -1268,7 +1343,7 @@ create or replace PACKAGE BODY  IR_TO_XML as
     v_row_back_color  varchar2(10);
     v_cell_color      varchar2(10);
     v_cell_back_color VARCHAR2(10);     
-    v_column_type     VARCHAR2(10);
+    v_column_type     columntype;
     v_cell_data       t_cell_data;
   begin
       --check that row need to be highlighted
@@ -1292,16 +1367,16 @@ create or replace PACKAGE BODY  IR_TO_XML as
     for i in l_report.start_with..l_report.end_with loop
       v_cell_color       := NULL;
       v_cell_back_color  := NULL;
-      v_cell_data.VALUE  := NULL;  
+      v_cell_data.value  := NULL;  
       v_cell_data.text   := NULL; 
-      v_column_alias := get_column_alias_sql(i);
-      v_column_type := get_column_types(v_column_alias);
-      v_format_mask := get_col_format_mask(v_column_alias);
+      v_column_alias     := get_column_alias_sql(i);
+      v_column_type      := get_column_types(i);
+      v_format_mask      := get_col_format_mask(v_column_alias);
       
       IF v_column_type = 'DATE' THEN
-         v_cell_data := get_cell_date(get_current_row(p_current_row,i),v_format_mask);                   
+         v_cell_data := get_cell(get_current_row(p_current_row,i),v_format_mask,get_current_row(p_cur_date_row,i));
       ELSIF  v_column_type = 'NUMBER' THEN      
-         v_cell_data := get_cell_number(get_current_row(p_current_row,i),v_format_mask);
+         v_cell_data := get_cell(get_current_row(p_current_row,i),v_format_mask,get_current_row(p_cur_number_row,i));
       ELSE --STRING
         v_format_mask := NULL;
         v_cell_data.VALUE  := NULL;  
@@ -1351,13 +1426,13 @@ create or replace PACKAGE BODY  IR_TO_XML as
     v_header_xml := '<HEADER>';
     <<headers>>
     for i in 1..l_report.displayed_columns.count   loop
-      V_COLUMN_ALIAS := get_column_alias(i);
+      v_column_alias := get_column_alias(i);
       -- if current column is not control break column
       if apex_plugin_util.get_position_in_list(l_report.break_on,v_column_alias) is null then      
         v_header_xml := v_header_xml ||bcoll(p_column_alias => v_column_alias,
                                              p_header_align => get_header_alignment(v_column_alias),
                                              p_align        => get_column_alignment(v_column_alias),
-                                             p_colmn_type   => get_column_types(v_column_alias),
+                                             p_colmn_type   => get_column_types(i),
                                              p_format_mask  => get_col_format_mask(v_column_alias)
                                              )
                                      ||get_xmlval(regexp_replace(get_column_names(v_column_alias),'<[^>]*>',' '))
@@ -1525,51 +1600,114 @@ create or replace PACKAGE BODY  IR_TO_XML as
       v_aggregate_xml := v_aggregate_xml || ecoll(i);
     end loop visible_columns;
     return  v_aggregate_xml || '</AGGREGATE>'||chr(10);
-  end print_aggregate;    
-  ------------------------------------------------------------------------------    
-  
-  function get_default_date_nls
+  end print_aggregate;      
+  ------------------------------------------------------------------------------
+  function can_show_as_date(p_format_string in varchar2)
+  return boolean
+  is 
+    v_dummy varchar2(50);
+  begin
+    v_dummy := to_char(sysdate,p_format_string);
+    
+    return true;
+  exception
+    when invalid_number or format_error or date_format_error or conversion_error then 
+      return false;
+  end can_show_as_date;  
+  ------------------------------------------------------------------------------
+  function get_current_format(p_data_type in binary_integer)
   return varchar2
   is
-    v_format varchar2(50);
+    v_format    formatmask;
+    v_parameter varchar2(50);
   begin
+    if p_data_type in (dbms_types.TYPECODE_TIMESTAMP_TZ,181) then
+       v_parameter := 'NLS_TIMESTAMP_TZ_FORMAT';
+    elsif p_data_type in (dbms_types.TYPECODE_TIMESTAMP_LTZ,231) then
+       v_parameter := 'NLS_TIMESTAMP_TZ_FORMAT';
+    elsif p_data_type in (dbms_types.TYPECODE_TIMESTAMP,180) then
+       v_parameter := 'NLS_TIMESTAMP_FORMAT';      
+    elsif p_data_type = dbms_types.TYPECODE_DATE then
+       v_parameter := 'NLS_DATE_FORMAT';      
+    else 
+       return 'dd.mm.yyyy';
+    end if;     
+    
     SELECT value 
     into v_format
     FROM V$NLS_Parameters 
-    WHERE parameter ='NLS_DATE_FORMAT';
+    WHERE parameter = v_parameter;    
     
     return v_format;
-  end get_default_date_nls;
+  end get_current_format;
+  ------------------------------------------------------------------------------
+  -- excel has only DATE-format mask (no timezones etc)
+  -- if format mask can be shown in excel - show column as date- type
+  -- else - as string 
+  procedure prepare_col_format_mask(p_col_number in binary_integer,
+                                    p_data_type  in binary_integer )
+  is
+    v_format_mask          formatmask;
+    v_default_format_mask  formatmask;
+    v_final_format_mask    formatmask;
+    v_col_alias            varchar2(255);    
+  begin
+     v_default_format_mask := get_current_format(p_data_type);
+     log('v_default_format_mask='||v_default_format_mask);
+     begin
+       v_col_alias   := get_column_alias_sql(p_col_number);
+       v_format_mask := get_col_format_mask(v_col_alias);
+       log('v_col_alias='||v_col_alias||' v_format_mask='||v_format_mask);
+     exception
+       when no_data_found then 
+          v_format_mask := '';
+     end;  
+     
+     v_final_format_mask := nvl(v_format_mask,v_default_format_mask);
+     if can_show_as_date(v_final_format_mask) then
+        log('Can show as date');
+        if v_col_alias is not null then 
+           set_col_format_mask(p_column_alias => v_col_alias,
+                               p_format_mask  => v_final_format_mask);
+        end if;                       
+        l_report.column_types(p_col_number) := 'DATE';
+     else
+        log('Can not show as date');
+        l_report.column_types(p_col_number) := 'STRING';
+     end if;
+  end prepare_col_format_mask;
   ------------------------------------------------------------------------------
   
   procedure get_xml_from_ir(v_data in out nocopy clob,p_max_rows in integer)
   is
-   v_cur            INTEGER; 
-   v_result         INTEGER;
-   v_colls_count    BINARY_INTEGER;
-   v_row            APEX_APPLICATION_GLOBAL.VC_ARR2;
-   v_prev_row       APEX_APPLICATION_GLOBAL.VC_ARR2;
-   v_columns        APEX_APPLICATION_GLOBAL.VC_ARR2;
-   v_current_row    number default 0;
-   v_desc_tab       DBMS_SQL.DESC_TAB2;
-   v_inside         boolean default false;
-   v_sql            largevarchar2;
-   v_bind_variables DBMS_SQL.VARCHAR2_TABLE;
-   v_buffer         largevarchar2;
-   v_bind_var_name  varchar2(255);
-   v_binded         BOOLEAN; 
+   v_cur                INTEGER; 
+   v_result             INTEGER;
+   v_colls_count        BINARY_INTEGER;
+   v_row                APEX_APPLICATION_GLOBAL.VC_ARR2;
+   v_date_row           t_date_table;
+   v_number_row         t_number_table;
+   v_char_dummy         varchar2(1);
+   v_date_dummy         date;
+   v_number_dummy       number;
+   v_prev_row           APEX_APPLICATION_GLOBAL.VC_ARR2;
+   v_columns            APEX_APPLICATION_GLOBAL.VC_ARR2;
+   v_current_row        number default 0;
+   v_desc_tab           DBMS_SQL.DESC_TAB2;
+   v_inside             boolean default false;
+   v_sql                largevarchar2;
+   v_bind_variables     DBMS_SQL.VARCHAR2_TABLE;
+   v_buffer             largevarchar2;
+   v_bind_var_name      varchar2(255);
+   v_binded             boolean; 
+   v_format_mask        formatmask;
   begin
-    v_default_date_nls := get_default_date_nls;
-    
-    EXECUTE IMMEDIATE 'alter session set nls_date_format="dd.mm.yyyy hh24:mi:ss"';
-    
     v_cur := dbms_sql.open_cursor(2); 
     v_sql := apex_plugin_util.replace_substitutions(p_value  => l_report.report.sql_query,
                                                     p_escape => false);    
     dbms_sql.parse(v_cur,v_sql,dbms_sql.native);     
     dbms_sql.describe_columns2(v_cur,v_colls_count,v_desc_tab);    
     --skip internal primary key if need
-    for i in 1..v_desc_tab.count loop
+    for i in 1..v_desc_tab.count loop      
       if lower(v_desc_tab(i).col_name) = 'apxws_row_pk' then
         l_report.skipped_columns := 1;
       end if;
@@ -1589,6 +1727,24 @@ create or replace PACKAGE BODY  IR_TO_XML as
     log('l_report.start_with='||l_report.start_with);
     log('l_report.end_with='||l_report.end_with);
     log('l_report.skipped_columns='||l_report.skipped_columns);
+
+    -- init column datatypes and format masks
+    for i in 1..v_desc_tab.count loop      
+      log('column_type='||v_desc_tab(i).col_type);
+      -- don't know why column types in dbms_sql.describe_columns2 do not correspond to types in dbms_types      
+      if v_desc_tab(i).col_type in (dbms_types.TYPECODE_TIMESTAMP_TZ,181,
+                                    dbms_types.TYPECODE_TIMESTAMP_LTZ,231,
+                                    dbms_types.TYPECODE_TIMESTAMP,180,
+                                    dbms_types.TYPECODE_DATE) 
+      then
+         prepare_col_format_mask(p_col_number => i,p_data_type => v_desc_tab(i).col_type);      
+      elsif v_desc_tab(i).col_type = dbms_types.TYPECODE_NUMBER then
+         l_report.column_types(i) := 'NUMBER';
+      else
+         l_report.column_types(i) := 'STRING';
+         log('column_type='||v_desc_tab(i).col_type||' STRING');
+      end if;        
+    end loop;
     
     v_bind_variables := wwv_flow_utilities.get_binds(v_sql);
        
@@ -1624,15 +1780,18 @@ create or replace PACKAGE BODY  IR_TO_XML as
        end if; 
     end loop;          
   
-    for i in 1..v_colls_count loop
-       v_row(i) := ' ';
-    end loop;
-    
-    log('<<define_columns>>');
+    log('<<define_columns>>');    
     for i in 1..v_colls_count loop
        log('define column '||i);
-       dbms_sql.define_column(v_cur, i, v_row(i),32767);
-    end loop define_columns;
+       log('column type '||v_desc_tab(i).col_type);      
+       if l_report.column_types(i) = 'DATE' then   
+         dbms_sql.define_column(v_cur, i, v_date_dummy);
+       elsif l_report.column_types(i) = 'NUMBER' then   
+         dbms_sql.define_column(v_cur, i, v_number_dummy);
+       else --STRING
+         dbms_sql.define_column(v_cur, i, v_char_dummy,32767);
+       end if;         
+    end loop define_columns;    
     
     v_result := dbms_sql.execute(v_cur);         
    
@@ -1644,8 +1803,20 @@ create or replace PACKAGE BODY  IR_TO_XML as
            -- get column values of the row 
             v_current_row := v_current_row + 1;
             <<query_columns>>
-            for i in 1..v_colls_count loop
-               DBMS_SQL.COLUMN_VALUE(v_cur, i,v_row(i));                
+            for i in 1..v_colls_count loop               
+               log('column type '||v_desc_tab(i).col_type);
+               v_row(i) := ' ';
+               v_date_row(i) := NULL;
+               v_number_row(i) := NULL;
+               if l_report.column_types(i) = 'DATE' then
+                 dbms_sql.column_value(v_cur, i,v_date_row(i));
+                 v_row(i) := to_char(v_date_row(i));
+               elsif l_report.column_types(i) = 'NUMBER' then
+                dbms_sql.column_value(v_cur, i,v_number_row(i));
+                v_row(i) := to_char(v_number_row(i));
+               else 
+                 dbms_sql.column_value(v_cur, i,v_row(i));                 
+               end if;  
             end loop;     
             --check control break
             if v_current_row > 1 then
@@ -1665,7 +1836,10 @@ create or replace PACKAGE BODY  IR_TO_XML as
             for i in 1..v_colls_count loop
               v_prev_row(i) := v_row(i);                           
             end loop;                 
-            add(v_data,v_buffer,print_row(v_row));
+            add(v_data,v_buffer,print_row(p_current_row    => v_row,
+                                          p_cur_date_row   => v_date_row,
+                                          p_cur_number_row => v_number_row
+                                         ));
          ELSE
            EXIT; 
          END IF; 
@@ -1863,7 +2037,7 @@ begin
   dbms_lob.createtemporary(v_debug,true, DBMS_LOB.CALL);  
 END IR_TO_XML;
 /
-CREATE OR REPLACE PACKAGE  "XML_TO_XSLX" 
+CREATE OR REPLACE PACKAGE  XML_TO_XSLX 
   AUTHID CURRENT_USER
 IS
   WIDTH_COEFFICIENT CONSTANT NUMBER := 6;
@@ -1907,8 +2081,8 @@ end;
 /
 
 
-CREATE OR REPLACE PACKAGE BODY  "XML_TO_XSLX" 
-is
+CREATE OR REPLACE PACKAGE BODY XML_TO_XSLX 
+IS
   STRING_HEIGHT      constant number default 14.4; 
   
   subtype t_color is varchar2(7);
@@ -2094,6 +2268,12 @@ is
     v_str := replace(v_str,'D','.');
     v_str := replace(v_str,'G',',');
     v_str := replace(v_str,'FM','');
+    -- plus/minus sign
+    if instr(v_str,'S') > 0 then
+      v_str := replace(v_str,'S','');
+      v_str := '+'||v_str||';-'||v_str;
+    end if;
+    
     --currency
     v_str := replace(v_str,'L',convert('&quot;'||rtrim(to_char(0,'FML0'),'0')||'&quot;','UTF8'));    
     
@@ -2371,7 +2551,7 @@ is
      
     -- Standard Flow
     IF NVL(LENGTHB(p_vc_buffer), 0) + NVL(LENGTHB(p_vc_addition), 0) < (32767/2) THEN
-      -- Danke fÃ¼r Frank Menne wegen utf-8
+      -- Danke für Frank Menne wegen utf-8
       p_vc_buffer := p_vc_buffer || convert(p_vc_addition,'utf8');
     ELSE
       IF p_clob IS NULL THEN
@@ -2995,3 +3175,4 @@ as
   
 end IR_TO_MSEXCEL;
 /
+

@@ -10,7 +10,7 @@ The "GPV Interactive Report to MSExcel v2" APEX plugin lets you get results of y
 Many features of Interactive Reports are supported:
  $  (new in v2.0) APEX 5 support
  $  (new in v2.0) Different Rendering Engines
- $  Correct export of datatypes (String/Date/Number)
+ $  Correct export of datatypes (String/Date/Number/Timestamp)
  $  Filtering and Sorting
  $  Control Break
  $  Computations
@@ -21,9 +21,13 @@ The minimum required APEX-version is 5.0.
 Documentation, downloads, and other useful information can be found [here](http://glebovpavel.github.io/Description_IR_TO_XSLX/).
 Here's a link to a [demo](https://apex.oracle.com/pls/apex/f?p=35446) page.
 
+##Current Version
+
+Version 2.10
+
 ##Current Stable Version
 
-Version 2.07
+Version 2.08
 
 ##License
 
