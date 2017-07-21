@@ -658,6 +658,23 @@ as
     return false;
   end is_control_break;
   ------------------------------------------------------------------------------
+
+  function get_formatted_number(p_number         IN number,
+                                p_format_string  IN varchar2,
+                                p_nls            IN varchar2 default null)
+  return varchar2
+  is
+    v_str varchar2(100);
+  begin
+    v_str := trim(to_char(p_number,p_format_string,p_nls));
+    if instr(v_str,'#') > 0 and ltrim(v_str,'#') is null then --format fail
+      raise invalid_number;
+    else
+      return v_str;
+    end if;    
+  end get_formatted_number;  
+  ------------------------------------------------------------------------------
+
   FUNCTION get_cell(p_query_value IN varchar2,
                     p_format_mask IN varchar2,
                     p_date        IN date)
@@ -665,7 +682,7 @@ as
   IS
     v_data t_cell_data;
   BEGIN     
-     v_data.value := p_date - to_date('01-03-1900','DD-MM-YYYY') + 61;
+     v_data.value := get_formatted_number(p_date - to_date('01-03-1900','DD-MM-YYYY') + 61,'9999999999999990D00000000','NLS_NUMERIC_CHARACTERS = ''.,''');     
      v_data.datatype := 'DATE';
      
      -- https://github.com/glebovpavel/IR_to_MSExcel/issues/16
@@ -689,24 +706,9 @@ as
       v_data.datatype := 'STRING';
       v_data.text := p_query_value;
       return v_data;
-  END get_cell;
-  
+  END get_cell;  
   ------------------------------------------------------------------------------
-  function get_formatted_number(p_number         IN number,
-                                p_format_string  IN varchar2,
-                                p_nls            IN varchar2 default null)
-  return varchar2
-  is
-    v_str varchar2(100);
-  begin
-    v_str := trim(to_char(p_number,p_format_string,p_nls));
-    if instr(v_str,'#') > 0 and ltrim(v_str,'#') is null then --format fail
-      raise invalid_number;
-    else
-      return v_str;
-    end if;    
-  end get_formatted_number;  
-  ------------------------------------------------------------------------------
+
   FUNCTION get_cell(p_query_value IN varchar2,
                     p_format_mask IN varchar2,
                     p_number      IN number)
