@@ -18,8 +18,26 @@
         return colWidthsDelimeteredString;
       }
 
+      function blockUIForDownload() {
+       var token = new Date().getTime(); //use the current timestamp as the token value
+       var fileDownloadCheckTimer;
+       var mySpinner;
+       var mySpinner = apex.widget.waitPopup();
+       fileDownloadCheckTimer = window.setInterval(function () {
+         var cookieValue = apex.storage.getCookie('GPV_DOWNLOAD_STARTED');
+         if (cookieValue)
+          {
+           window.clearInterval(fileDownloadCheckTimer);
+           document.cookie = "GPV_DOWNLOAD_STARTED=; expires=Thu, 01 Jan 1970 00:00:00 GMT"; //clears this cookie value
+           mySpinner.remove();
+           $(".gpvCloseButton").click(); //close download window
+          }
+       }, 1000);
+     }
+
       //exposed
       function getExcel ( p_region_static_id, plugin_id_in ) {
+        blockUIForDownload();
         apex.navigation.redirect(
               "wwv_flow.show?p_flow_id=" + $v('pFlowId')
                          + "&p_flow_step_id=" + $v('pFlowStepId')
@@ -67,6 +85,7 @@
                  {            
                   $('.a-IRR-iconList').append(html.toString());
                  };
+                $dialog_window.parent().find("button").addClass("gpvCloseButton");
              };  //5.1 
             if (p_version !=="5.1") 
              {

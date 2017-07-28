@@ -923,6 +923,7 @@ IS
     htp.p( 'Content-disposition: attachment; filename='||get_file_name (p_app_id,p_page_id,p_region_id)||'.xlsx;' );
     htp.p('Cache-Control: must-revalidate, max-age=0');
     htp.p('Expires: Thu, 01 Jan 1970 01:00:00 CET');
+    htp.p('Set-Cookie: GPV_DOWNLOAD_STARTED=1;');
     owa_util.http_header_close;
     wpg_docload.download_file( t_excel );
  
