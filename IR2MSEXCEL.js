@@ -25,6 +25,7 @@
        var mySpinner = apex.widget.waitPopup();
        fileDownloadCheckTimer = window.setInterval(function () {
          var cookieValue = apex.storage.getCookie('GPV_DOWNLOAD_STARTED');
+         console.log('Check'); 
          if (cookieValue)
           {
            window.clearInterval(fileDownloadCheckTimer);
@@ -114,6 +115,7 @@
                 $dialog_window.find('table.a-IRR-dialogTable tbody td span')
                     .closest('tr')
                     .append( '<tr><td align="center" nowrap="nowrap"><span>XLSX</span></td></tr>');
+                $dialog_window.parent().find("button").addClass("gpvCloseButton");
              }     //5.0  
 
             };
