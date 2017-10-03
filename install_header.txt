@@ -1,14 +1,14 @@
 /**********************************************
 **
 ** Author: Pavel Glebov
-** Date: 07-2017
-** Version: 2.12
+** Date: 10-2017
+** Version: 2.13
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
 ** IR_TO_XML.sql 
 ** AS_ZIP.sql  
-** XML_TO_XSLX.sql
+** IR_TO_XSLX.sql
 ** IR_TO_MSEXCEL.sql
 ** APEXIR_XLSX_PKG.sql (mock)
 **

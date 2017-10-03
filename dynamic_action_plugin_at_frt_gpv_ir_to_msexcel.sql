@@ -53,7 +53,7 @@ wwv_flow_api.create_plugin(
 '	<br />',
 '	<br />',
 '	&nbsp;</p>'))
-,p_version_identifier=>'2.12'
+,p_version_identifier=>'2.13'
 ,p_about_url=>'http://glebovpavel.github.io/plugin'
 ,p_plugin_comment=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
 'Do not move ExcelTemplate.zip to the WEB-Server !!!',
@@ -130,6 +130,20 @@ wwv_flow_api.create_plugin_attribute(
 ,p_default_value=>'Y'
 ,p_is_translatable=>false
 ,p_help_text=>'Add "Download XLSX" Icon to the standard download menu of Affected IR Region. When empty, this icon will be added to any IR of the current page.'
+);
+wwv_flow_api.create_plugin_attribute(
+ p_id=>wwv_flow_api.id(3505142065020695)
+,p_plugin_id=>wwv_flow_api.id(53536159026691458890)
+,p_attribute_scope=>'COMPONENT'
+,p_attribute_sequence=>4
+,p_display_sequence=>40
+,p_prompt=>'Add autofilter to columns'
+,p_attribute_type=>'CHECKBOX'
+,p_is_required=>false
+,p_default_value=>'Y'
+,p_supported_ui_types=>'DESKTOP:JQM_SMARTPHONE'
+,p_is_translatable=>false
+,p_help_text=>'Should the excel file be generated with filter on every column.'
 );
 wwv_flow_api.create_plugin_event(
  p_id=>wwv_flow_api.id(28606529846288868300)
