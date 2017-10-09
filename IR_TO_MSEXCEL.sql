@@ -145,25 +145,28 @@ as
   is
     p_download_type      varchar2(1);
     p_custom_width       varchar2(1000);
+	p_autofilter              char;
     v_maximum_rows       number;
     v_dummy              apex_plugin.t_dynamic_action_ajax_result;
     v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
   begin      
       p_download_type:= nvl(p_dynamic_action.attribute_02,'E');
+	  p_autofilter:= nvl(p_dynamic_action.attribute_04,'Y');
       v_affected_region_id := get_affected_region_id(p_dynamic_action_id => p_dynamic_action.ID
                                                     ,p_html_region_id    => apex_application.g_x03);
       
       v_maximum_rows := nvl(nvl(p_dynamic_action.attribute_01,
-                                xml_to_xslx.get_max_rows (p_app_id    => apex_application.g_x01,
+                                IR_TO_XLSX.get_max_rows (p_app_id    => apex_application.g_x01,
                                                           p_page_id   => apex_application.g_x02,
                                                           p_region_id => v_affected_region_id)
                                 ),1000);                                               
       if p_download_type = 'E' then -- Excel XLSX
-        XML_TO_XSLX.download_file(p_app_id       => apex_application.g_x01,
+        IR_TO_XLSX.download_file(p_app_id       => apex_application.g_x01,
                                   p_page_id      => apex_application.g_x02,
                                   p_region_id    => v_affected_region_id,
                                   p_col_length   => apex_application.g_x04||p_custom_width,
-                                  p_max_rows     => v_maximum_rows
+                                  p_max_rows     => v_maximum_rows,
+                                  p_autofilter => p_autofilter
                                   );
       elsif p_download_type = 'X' then -- XML
         IR_TO_XML.get_report_xml(p_app_id            => apex_application.g_x01,
