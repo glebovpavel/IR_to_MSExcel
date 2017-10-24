@@ -445,18 +445,20 @@ as
   ------------------------------------------------------------------------------
   function get_hidden_columns_cnt(p_app_id       in number,
                                   p_page_id      in number,
-                                  p_region_id    in number)
+                                  p_region_id    in number,
+                                  p_report_id    in number)
   return number
   -- J.P.Lourens 9-Oct-16 added p_region_id as input variable, and added v_get_query_column_list
   is 
-   v_cnt  number;
+   v_hidden_columns  number default 0;
+   v_hidden_computation_columns  number default 0;
    v_get_query_column_list varchar2(32676);
   begin
   
       v_get_query_column_list := apex_util.table_to_string(get_query_column_list);
       
       select count(*)
-      into v_cnt
+      into v_hidden_columns
       from APEX_APPLICATION_PAGE_IR_COL
      where application_id = p_app_id
        AND page_id = p_page_id
@@ -469,9 +471,15 @@ as
           or instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') = 0)
        and instr(':'||v_get_query_column_list||':',':'||column_alias||':') > 0;
        
-       --and instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') > 0;       
+       select count(*)
+       into v_hidden_computation_columns
+       from apex_application_page_ir_comp
+       where application_id = p_app_id
+         and page_id = p_page_id       
+         and report_id = p_report_id         
+         and instr(':'||l_report.ir_data.report_columns||':',':'||computation_column_alias||':') = 0;       
       
-      return v_cnt;
+      return v_hidden_columns + v_hidden_computation_columns;
   exception
     when no_data_found then
       return 0;
@@ -515,7 +523,7 @@ as
     l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list));
     
     -- J.P.Lourens 9-Oct-16 added p_region_id as input variable
-    l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id,p_page_id,p_region_id);
+    l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id,p_page_id,p_region_id,l_report_id);
     
     <<displayed_columns>>                                      
     for i in (select column_alias,
@@ -566,8 +574,7 @@ as
       log('column='||i.column_alias||' l_report.column_names='||i.report_label);
       log('column='||i.column_alias||' l_report.col_format_mask='||i.computation_format_mask);
       log('column='||i.column_alias||' l_report.header_alignment='||i.heading_alignment);
-      log('column='||i.column_alias||' l_report.column_alignment='||i.column_alignment);
-      --log('column='||i.column_alias||' l_report.column_types='||i.column_type);
+      log('column='||i.column_alias||' l_report.column_alignment='||i.column_alignment);      
     end loop displayed_columns;    
     
     -- calculate columns count with aggregation separately
@@ -595,8 +602,8 @@ as
     log('l_report.max_columns_on_break='||rr(l_report.ir_data.max_columns_on_break));
     LOG('l_report.min_columns_on_break='||rr(l_report.ir_data.min_columns_on_break));
     log('l_report.median_columns_on_break='||rr(l_report.ir_data.median_columns_on_break));
-    log('l_report.count_columns_on_break='||rr(l_report.ir_data.count_distnt_col_on_break));
-    log('l_report.count_distnt_col_on_break='||rr(l_report.ir_data.count_columns_on_break));
+    log('l_report.count_columns_on_break='||rr(l_report.ir_data.count_columns_on_break));    
+    log('l_report.count_distnt_col_on_break='||rr(l_report.ir_data.count_distnt_col_on_break));
     log('l_report.break_really_on='||APEX_UTIL.TABLE_TO_STRING(l_report.break_really_on));
     log('l_report.agg_cols_cnt='||l_report.agg_cols_cnt);
     log('l_report.hidden_cols_cnt='||l_report.hidden_cols_cnt);
@@ -864,7 +871,7 @@ as
                                                 l_report.row_highlight.count + 
                                                 l_report.col_highlight.count
                                  )||',';
-    end loop visible_columns;
+    end loop break_columns;
     
     return  '<BREAK_HEADER>'||get_xmlval(rtrim(v_cb_xml,',')) || '</BREAK_HEADER>'||chr(10);    
   end print_control_break_header;
@@ -891,7 +898,8 @@ as
                         p_agg_text        IN varchar2,
                         p_position        in BINARY_INTEGER, --start position in sql-query
                         p_col_number      IN BINARY_INTEGER, --column position when displayed
-                        p_default_format_mask     IN varchar2 default null )  
+                        p_default_format_mask     IN varchar2 default null,
+                        p_overwrite_format_mask   IN varchar2 default null) --should be used forcibly  
   return varchar2
   is
     v_tmp_pos       BINARY_INTEGER;  -- current column position in sql-query 
@@ -906,8 +914,18 @@ as
         v_col_alias := get_column_alias_sql(p_col_number);
         v_g_format_mask :=  get_col_format_mask(v_col_alias);   
         v_format_mask := nvl(v_g_format_mask,p_default_format_mask);
+        v_format_mask := nvl(p_overwrite_format_mask,v_format_mask);
         v_row_value :=  get_current_row(p_current_row,p_position + l_report.hidden_cols_cnt + v_tmp_pos);
         v_agg_value := trim(to_char(v_row_value,v_format_mask));
+
+        log('--find an aggregate');
+        log('p_col_number='||p_col_number);
+        log('v_col_alias='||v_col_alias);
+        log('v_g_format_mask='||v_g_format_mask);
+        log('p_default_format_mask='||p_default_format_mask);
+        log('v_tmp_pos='||v_tmp_pos);
+        log('p_position='||p_position);        
+        log('v_row_value='||v_row_value);      
         
         return  get_xmlval(p_agg_text||v_agg_value||' '||chr(10));
       else
@@ -922,8 +940,7 @@ as
         log('p_default_format_mask='||p_default_format_mask);
         log('v_tmp_pos='||v_tmp_pos);
         log('p_position='||p_position);
-        -- J.P.Lourens 9-Oct-16 added to log     
-        log('l_report.hidden_cols_cnt='||l_report.hidden_cols_cnt);    
+        -- J.P.Lourens 9-Oct-16 added to log             
         log('v_row_value='||v_row_value);
         log('v_format_mask='||v_format_mask);
         raise;
@@ -992,14 +1009,16 @@ as
                                        p_current_row   => p_current_row,
                                        p_agg_text      => 'Count:',
                                        p_position      => v_position,
-                                       p_col_number    => i);
+                                       p_col_number    => i,
+                                       p_overwrite_format_mask   => '999G999G999G999G990');
       v_position := v_position + l_report.count_columns_on_break.count;                                 
       v_aggregate_xml := v_aggregate_xml || get_agg_text(p_curr_col_name => get_column_alias_sql(i),
                                        p_agg_rows      => l_report.count_distnt_col_on_break,
                                        p_current_row   => p_current_row,
                                        p_agg_text      => 'Count distinct:',
                                        p_position      => v_position,
-                                       p_col_number    => i);
+                                       p_col_number    => i,
+                                       p_overwrite_format_mask   => '999G999G999G999G990');
       v_aggregate_xml := v_aggregate_xml || ecoll(i);
     end loop visible_columns;
     return  v_aggregate_xml || '</AGGREGATE>'||chr(10);
@@ -1289,6 +1308,9 @@ as
         sys.owa_util.mime_header(p_mime_header, FALSE );
         sys.htp.p('Content-length: ' || sys.dbms_lob.getlength( v_blob));
         sys.htp.p('Content-Disposition: attachment; filename="'||p_file_name||'"' );
+        sys.htp.p('Cache-Control: must-revalidate, max-age=0');
+        sys.htp.p('Expires: Thu, 01 Jan 1970 01:00:00 CET');
+        sys.htp.p('Set-Cookie: GPV_DOWNLOAD_STARTED=1;');
         sys.owa_util.http_header_close;
         sys.wpg_docload.download_file( v_blob );
         dbms_lob.freetemporary(v_blob);

@@ -53,7 +53,7 @@ wwv_flow_api.create_plugin(
 '	<br />',
 '	<br />',
 '	&nbsp;</p>'))
-,p_version_identifier=>'2.12'
+,p_version_identifier=>'2.13'
 ,p_about_url=>'http://glebovpavel.github.io/plugin'
 ,p_plugin_comment=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
 'Do not move ExcelTemplate.zip to the WEB-Server !!!',

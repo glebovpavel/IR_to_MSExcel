@@ -8,12 +8,23 @@ as
   function ajax (p_dynamic_action in apex_plugin.t_dynamic_action,
                  p_plugin         in apex_plugin.t_plugin )
   return apex_plugin.t_dynamic_action_ajax_result;
+  
+  function is_ir2msexcel return boolean; 
+  
                                 
 end IR_TO_MSEXCEL;
 /
 
 create or replace PACKAGE BODY  "IR_TO_MSEXCEL" 
 as
+  v_plugin_running boolean default false;
+  
+  function is_ir2msexcel 
+  return boolean
+  is
+  begin
+    return nvl(v_plugin_running,false);    
+  end is_ir2msexcel;
   
   function get_affected_region_id(p_dynamic_action_id IN apex_application_page_da_acts.action_id%TYPE,
                                   p_html_region_id    IN VARCHAR2
@@ -149,6 +160,7 @@ as
     v_dummy              apex_plugin.t_dynamic_action_ajax_result;
     v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
   begin      
+      v_plugin_running := true;
       p_download_type:= nvl(p_dynamic_action.attribute_02,'E');
       v_affected_region_id := get_affected_region_id(p_dynamic_action_id => p_dynamic_action.ID
                                                     ,p_html_region_id    => apex_application.g_x03);
@@ -193,9 +205,11 @@ as
      else
       raise_application_error(-20001,'GPV_IR_TO_MSEXCEL : unknown Return Type');
      end if;    
+     v_plugin_running := false;
      return v_dummy;
   exception
     when others then
+      v_plugin_running := false;
       raise_application_error(-20001,SQLERRM||chr(10)||dbms_utility.format_error_backtrace);
   end ajax;
   
