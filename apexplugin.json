@@ -1,6 +1,6 @@
 {
   "name" : "GPV Interactive Report to MSExcel",
-  "version" : "2.10",
+  "version" : "2.20",
   "description" : "Getting result of your Interactive Report in Microsoft Excel.",
   "keywords" : ["Intearctive Report", "export", "excel", "Report"],
   "homepage" : "http://glebovpavel.github.io/Description_IR_TO_XSLX/",

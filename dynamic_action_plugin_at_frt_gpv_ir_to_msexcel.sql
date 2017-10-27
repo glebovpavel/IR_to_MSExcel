@@ -97,13 +97,6 @@ wwv_flow_api.create_plugin_attr_value(
 ,p_return_value=>'E'
 );
 wwv_flow_api.create_plugin_attr_value(
- p_id=>wwv_flow_api.id(28606546858176206157)
-,p_plugin_attribute_id=>wwv_flow_api.id(28606546102171197397)
-,p_display_sequence=>20
-,p_display_value=>'XML (Debug)'
-,p_return_value=>'X'
-);
-wwv_flow_api.create_plugin_attr_value(
  p_id=>wwv_flow_api.id(28606547259203207829)
 ,p_plugin_attribute_id=>wwv_flow_api.id(28606546102171197397)
 ,p_display_sequence=>30

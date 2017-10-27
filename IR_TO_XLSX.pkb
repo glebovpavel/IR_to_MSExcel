@@ -1,56 +1,3 @@
-CREATE OR REPLACE PACKAGE IR_TO_XLSX
-  AUTHID CURRENT_USER
-IS
-  procedure download_file(p_app_id       IN NUMBER,
-                          p_page_id      IN NUMBER,
-                          p_region_id    IN NUMBER,
-                          p_col_length   IN VARCHAR2 DEFAULT NULL,
-                          p_max_rows     IN NUMBER,
-                          p_autofilter   IN CHAR DEFAULT 'Y' 
-                         ); 
- 
-  function convert_date_format(p_format IN VARCHAR2)
-  return varchar2;
-  function convert_number_format(p_format IN VARCHAR2)
-  return varchar2;
-  
-  function get_max_rows (p_app_id      IN NUMBER,
-                         p_page_id     IN NUMBER,
-                         p_region_id   IN NUMBER)
-  return number;
-
-   /* 
-    function to handle cases of 'in' and 'not in' conditions for highlights
-       used in cursor cur_highlight
-    
-    Author: Srihari Ravva
-  */ 
-  function get_highlight_in_cond_sql(p_condition_expression  in APEX_APPLICATION_PAGE_IR_COND.CONDITION_EXPRESSION%TYPE,
-                                     p_condition_sql         in APEX_APPLICATION_PAGE_IR_COND.CONDITION_SQL%TYPE,
-                                     p_condition_column_name in APEX_APPLICATION_PAGE_IR_COND.CONDITION_COLUMN_NAME%TYPE)
-  return varchar2;
-  /*
-  -- format test cases
-  select ir_to_xlsx.convert_date_format('dd.mm.yyyy hh24:mi:ss'),to_char(sysdate,'dd.mm.yyyy hh24:mi:ss') from dual
-  union
-  select ir_to_xlsx.convert_date_format('dd.mm.yyyy hh12:mi:ss'),to_char(sysdate,'dd.mm.yyyy hh12:mi:ss') from dual
-  union
-  select ir_to_xlsx.convert_date_format('day-mon-yyyy'),to_char(sysdate,'day-mon-yyyy') from dual
-  union
-  select ir_to_xlsx.convert_date_format('month'),to_char(sysdate,'month') from dual
-  union
-  select ir_to_xlsx.convert_date_format('RR-MON-DD'),to_char(sysdate,'RR-MON-DD') from dual 
-  union
-  select ir_to_xlsx.convert_number_format('FML999G999G999G999G990D0099'),to_char(123456789/451,'FML999G999G999G999G990D0099') from dual
-  union
-  select ir_to_xlsx.convert_date_format('DD-MON-YYYY HH:MIPM'),to_char(sysdate,'DD-MON-YYYY HH:MIPM') from dual 
-  union
-  select ir_to_xlsx.convert_date_format('fmDay, fmDD fmMonth, YYYY'),to_char(sysdate,'fmDay, fmDD fmMonth, YYYY') from dual 
-  */
-                    
-end;
-/
-
 CREATE OR REPLACE PACKAGE BODY IR_TO_XLSX
 as    
 
@@ -199,7 +146,7 @@ as
   format_error EXCEPTION;
   PRAGMA EXCEPTION_INIT(format_error, -01830);
   date_format_error EXCEPTION;
-  PRAGMA EXCEPTION_INIT(format_error, -01821);
+  PRAGMA EXCEPTION_INIT(date_format_error, -01821);
   conversion_error exception;
   PRAGMA EXCEPTION_INIT(conversion_error,-06502);
   
@@ -661,14 +608,7 @@ as
                                    p_level   => 4);
   end log; 
   ------------------------------------------------------------------------------
-  function get_log
-  return clob
-  is
-  begin
-    log('LogFinish',TRUE);
-    return v_debug;
-  end  get_log; 
-  ------------------------------------------------------------------------------
+  
   function get_column_names(p_column_alias in apex_application_page_ir_col.column_alias%type)
   return APEX_APPLICATION_PAGE_IR_COL.report_label%TYPE
   is
@@ -880,18 +820,20 @@ as
   ------------------------------------------------------------------------------
   function get_hidden_columns_cnt(p_app_id       in number,
                                   p_page_id      in number,
-                                  p_region_id    in number)
+                                  p_region_id    in number,
+                                  p_report_id    in number)
   return number
   -- J.P.Lourens 9-Oct-16 added p_region_id as input variable, and added v_get_query_column_list
   is 
-   v_cnt  number;
+   v_hidden_columns  number default 0;
+   v_hidden_computation_columns  number default 0;
    v_get_query_column_list varchar2(32676);
   begin
   
       v_get_query_column_list := apex_util.table_to_string(get_query_column_list);
       
       select count(*)
-      into v_cnt
+      into v_hidden_columns
       from APEX_APPLICATION_PAGE_IR_COL
      where application_id = p_app_id
        AND page_id = p_page_id
@@ -904,14 +846,19 @@ as
           or instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') = 0)
        and instr(':'||v_get_query_column_list||':',':'||column_alias||':') > 0;
        
-       --and instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') > 0;       
+       select count(*)
+       into v_hidden_computation_columns
+       from apex_application_page_ir_comp
+       where application_id = p_app_id
+         and page_id = p_page_id       
+         and report_id = p_report_id         
+         and instr(':'||l_report.ir_data.report_columns||':',':'||computation_column_alias||':') = 0;       
       
-      return v_cnt;
+      return v_hidden_columns + v_hidden_computation_columns;
   exception
     when no_data_found then
       return 0;
-  end get_hidden_columns_cnt;     
-  
+  end get_hidden_columns_cnt;
   ------------------------------------------------------------------------------ 
   
   procedure init_t_report(p_app_id       IN NUMBER,
@@ -936,7 +883,7 @@ as
     from apex_application_page_ir_rpt r
     where application_id = p_app_id 
       and page_id = p_page_id
-      and session_id = v('APP_SESSION')
+      and session_id = nv('APP_SESSION')
       and application_user = v('APP_USER')
       and base_report_id = l_report_id;
   
@@ -950,7 +897,10 @@ as
     l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list));
     
     -- J.P.Lourens 9-Oct-16 added p_region_id as input variable
-    l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id,p_page_id,p_region_id);
+    l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id    => p_app_id,
+                                                       p_page_id   => p_page_id,
+                                                       p_region_id => p_region_id,
+                                                       p_report_id => l_report_id);
     
     <<displayed_columns>>                                      
     for i in (select column_alias,
@@ -1001,8 +951,7 @@ as
       log('column='||i.column_alias||' l_report.column_names='||i.report_label);
       log('column='||i.column_alias||' l_report.col_format_mask='||i.computation_format_mask);
       log('column='||i.column_alias||' l_report.header_alignment='||i.heading_alignment);
-      log('column='||i.column_alias||' l_report.column_alignment='||i.column_alignment);
-      --log('column='||i.column_alias||' l_report.column_types='||i.column_type);
+      log('column='||i.column_alias||' l_report.column_alignment='||i.column_alignment);      
     end loop displayed_columns;    
     
     -- calculate columns count with aggregation separately
@@ -1030,8 +979,8 @@ as
     log('l_report.max_columns_on_break='||rr(l_report.ir_data.max_columns_on_break));
     LOG('l_report.min_columns_on_break='||rr(l_report.ir_data.min_columns_on_break));
     log('l_report.median_columns_on_break='||rr(l_report.ir_data.median_columns_on_break));
-    log('l_report.count_columns_on_break='||rr(l_report.ir_data.count_distnt_col_on_break));
-    log('l_report.count_distnt_col_on_break='||rr(l_report.ir_data.count_columns_on_break));
+    log('l_report.count_columns_on_break='||rr(l_report.ir_data.count_columns_on_break));    
+    log('l_report.count_distnt_col_on_break='||rr(l_report.ir_data.count_distnt_col_on_break));
     log('l_report.break_really_on='||APEX_UTIL.TABLE_TO_STRING(l_report.break_really_on));
     log('l_report.agg_cols_cnt='||l_report.agg_cols_cnt);
     log('l_report.hidden_cols_cnt='||l_report.hidden_cols_cnt);
@@ -1059,11 +1008,13 @@ as
   exception
     when no_data_found then
       raise_application_error(-20001,'No Interactive Report found on Page='||p_page_id||' Application='||p_app_id||' Please make sure that the report was running at least once by this session.');
+    /*
     when others then 
      log('Exception in init_t_report');
-     log(' Page='||p_page_id);
-     log(' Application='||p_app_id);
+     log('Page='||p_page_id);
+     log('Application='||p_app_id);
      raise;
+    */ 
   end init_t_report;  
   ------------------------------------------------------------------------------
  
@@ -1208,13 +1159,14 @@ as
     return null;
   end find_rel_position;
   ------------------------------------------------------------------------------
-  function get_agg_text(p_curr_col_name   IN varchar2,
-                        p_agg_rows        IN APEX_APPLICATION_GLOBAL.VC_ARR2,
-                        p_current_row     IN APEX_APPLICATION_GLOBAL.VC_ARR2,
-                        p_agg_text        IN varchar2,
-                        p_position        in BINARY_INTEGER, --start position in sql-query
-                        p_col_number      IN BINARY_INTEGER, --column position when displayed
-                        p_default_format_mask     IN varchar2 default null )  
+  function get_agg_text(p_curr_col_name          IN VARCHAR2,
+                        p_agg_rows               IN APEX_APPLICATION_GLOBAL.VC_ARR2,
+                        p_current_row            IN APEX_APPLICATION_GLOBAL.VC_ARR2,
+                        p_agg_text               IN VARCHAR2,
+                        p_position               IN BINARY_INTEGER, --start position in sql-query
+                        p_col_number             IN BINARY_INTEGER, --column position when displayed
+                        p_default_format_mask    IN VARCHAR2 DEFAULT NULL,
+                        p_overwrite_format_mask   IN varchar2 default null) --should be used forcibly 
   return varchar2
   is
     v_tmp_pos       BINARY_INTEGER;  -- current column position in sql-query 
@@ -1229,6 +1181,7 @@ as
         v_col_alias := get_column_alias_sql(p_col_number);
         v_g_format_mask :=  get_col_format_mask(v_col_alias);   
         v_format_mask := nvl(v_g_format_mask,p_default_format_mask);
+        v_format_mask := nvl(p_overwrite_format_mask,v_format_mask);
         v_row_value :=  get_current_row(p_current_row,p_position + l_report.hidden_cols_cnt + v_tmp_pos);
         v_agg_value := trim(to_char(v_row_value,v_format_mask));
         
@@ -1312,14 +1265,16 @@ as
                                        p_current_row   => p_current_row,
                                        p_agg_text      => 'Count:',
                                        p_position      => v_position,
-                                       p_col_number    => i);
+                                       p_col_number    => i,
+                                       p_overwrite_format_mask   => '999G999G999G999G990');
       v_position := v_position + l_report.count_columns_on_break.count;                                 
       v_aggregate_xml := v_aggregate_xml || get_agg_text(p_curr_col_name => get_column_alias_sql(i),
                                        p_agg_rows      => l_report.count_distnt_col_on_break,
                                        p_current_row   => p_current_row,
                                        p_agg_text      => 'Count distinct:',
                                        p_position      => v_position,
-                                       p_col_number    => i);
+                                       p_col_number    => i,
+                                       p_overwrite_format_mask   => '999G999G999G999G990');
       v_agg_obj(v_i) := v_aggregate_xml;
     end loop visible_columns;
     return  v_agg_obj;
@@ -1487,7 +1442,7 @@ as
                          ||'</c>'||chr(10));
     
     end print_number_cell; 
-
+    --
     procedure print_agg(p_agg_obj APEX_APPLICATION_GLOBAL.VC_ARR2,
                         p_rownum    in out binary_integer,
                         p_clob      in out nocopy clob,
@@ -1508,9 +1463,9 @@ as
             LOOP
                 v_agg_strings_cnt := greatest(length(regexp_replace('[^:]','')) + 1,v_agg_strings_cnt);
                 v_style_id := get_aggregate_style_id(p_font         => '',
-                                        p_back         => '',
-                                        p_data_type    => 'CHAR',
-                                        p_format_mask  => '');
+                                                    p_back         => '',
+                                                    p_data_type    => 'CHAR',
+                                                    p_format_mask  => '');
                 print_char_cell(p_coll       => y,
                                 p_row        => v_rownum,
                                 p_string     => get_xmlval( rtrim( p_agg_obj(y),chr(10))),
@@ -1530,12 +1485,10 @@ as
         end if;
         dbms_lob.freetemporary(v_agg_clob);
   end print_agg;
-
+  --
   begin    
     pragma inline(add,'YES');     
-    pragma inline(get_cell_name,'YES');   
-
-    --!
+    
     add(v_clob,v_buffer,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
     add(v_clob,v_buffer,'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
         <dimension ref="A1"/>
@@ -1719,7 +1672,7 @@ as
                else 
                  dbms_sql.column_value(v_cur, i,v_row(i));                 
                end if;  
-            end loop;     
+            end loop query_columns;     
             --check control break
             if v_current_row > 1 then
              if is_control_break(v_row,v_prev_row) then
@@ -1731,7 +1684,7 @@ as
                 v_break_header :=  print_control_break_header_obj(v_row);
                 if v_break_header IS NOT NULL then
                     add(v_clob,v_buffer,'<row>'||chr(10));
-                    print_char_cell( p_coll      => 1,
+                    print_char_cell(p_coll      => 1,
                                     p_row       => v_rownum,
                                     p_string    =>  get_xmlval(v_break_header),
                                     p_clob      => v_clob,
@@ -1744,27 +1697,28 @@ as
                               
                v_last_agg_obj := get_aggregate(v_row);                           
                v_inside := true;
-            END IF;            --            
-            <<query_columns>>            
+            END IF;            --                        
             for i in 1..v_colls_count loop
               v_prev_row(i) := v_row(i);                           
             end loop;
             
             add(v_clob,v_buffer,'<row>'||chr(10));
             /* CELLS INSIDE ROW PRINTING*/
+            v_row_color := NULL;
+            v_row_back_color  := NULL;
             <<row_highlights>>
             for h in 1..l_report.row_highlight.count loop
-            BEGIN 
+            begin 
                 -- J.P.Lourens 9-Oct-16 
                 -- current_row is based on report_sql which starts with the highlight columns, then the skipped columns and then the rest
                 -- So to capture the highlight values the value for l_report.skipped_columns should NOT be taken into account
-                IF get_current_row(v_row,/*l_report.skipped_columns + */l_report.row_highlight(h).COND_NUMBER) IS NOT NULL THEN
-                    v_row_color       := l_report.row_highlight(h).HIGHLIGHT_ROW_FONT_COLOR;
-                    v_row_back_color  := l_report.row_highlight(h).HIGHLIGHT_ROW_COLOR;
-                END IF;
+                if get_current_row(v_row,/*l_report.skipped_columns + */l_report.row_highlight(h).cond_number) IS NOT NULL THEN
+                    v_row_color       := l_report.row_highlight(h).highlight_row_font_color;
+                    v_row_back_color  := l_report.row_highlight(h).highlight_row_color;
+                end if;
                 exception       
-                when no_data_found then
-                    log('row_highlights: ='||' end_with='||l_report.end_with||' agg_cols_cnt='||l_report.agg_cols_cnt||' COND_NUMBER='||l_report.row_highlight(h).cond_number||' h='||h);
+                  when no_data_found then
+                      log('row_highlights: ='||' end_with='||l_report.end_with||' agg_cols_cnt='||l_report.agg_cols_cnt||' COND_NUMBER='||l_report.row_highlight(h).cond_number||' h='||h);
                 end; 
             end loop row_highlights;
             
@@ -1799,11 +1753,11 @@ as
                     -- J.P.Lourens 9-Oct-16 
                     -- current_row is based on report_sql which starts with the highlight columns, then the skipped columns and then the rest
                     -- So to capture the highlight values the value for l_report.skipped_columns should NOT be taken into account
-                    if get_current_row(v_row,/*l_report.skipped_columns + */l_report.col_highlight(h).COND_NUMBER) is not null 
-                        and v_column_alias = l_report.col_highlight(h).CONDITION_COLUMN_NAME 
+                    if get_current_row(v_row,/*l_report.skipped_columns + */l_report.col_highlight(h).cond_number) is not null 
+                        and v_column_alias = l_report.col_highlight(h).condition_column_name 
                     then
-                        v_cell_color       := l_report.col_highlight(h).HIGHLIGHT_CELL_FONT_COLOR;
-                        v_cell_back_color  := l_report.col_highlight(h).HIGHLIGHT_CELL_COLOR;
+                        v_cell_color       := l_report.col_highlight(h).highlight_cell_font_color;
+                        v_cell_back_color  := l_report.col_highlight(h).highlight_cell_color;
                     end if;
                     exception
                 when no_data_found then
@@ -1811,27 +1765,17 @@ as
                 end;
                 END loop cell_highlights;
             
-                /*
-                cell.font_color := nvl(v_cell_color,v_row_color);
-                cell.back_color := nvl(v_cell_back_color,v_row_back_color);
-                cell.align :=  get_column_alignment(v_column_alias);
-                cell.column_alias := v_column_alias;
-                cell.column_type := v_cell_data.datatype;
-                cell.colmn_value := v_cell_data.value;
-                cell.format_mask := v_format_mask;
-                cell.column_text :=get_xmlval(v_cell_data.text);
-                */
                 begin            
-                    v_style_id := get_style_id(p_font         =>   nvl(v_cell_color,v_row_color),
+                    v_style_id := get_style_id(p_font          => nvl(v_cell_color,v_row_color),
                                                 p_back         => nvl(v_cell_back_color,v_row_back_color),
-                                                p_data_type    =>  v_cell_data.datatype,
+                                                p_data_type    => v_cell_data.datatype,
                                                 p_format_mask  => v_format_mask,
-                                                p_align        =>  lower(get_column_alignment(v_column_alias))
+                                                p_align        => lower(get_column_alignment(v_column_alias))
                                                 );
                     if v_cell_data.datatype in ('NUMBER') then
-                        print_number_cell(p_coll      => v_i, 
+                        print_number_cell(p_coll        => v_i, 
                                             p_row       => v_rownum, 
-                                            p_value     =>  v_cell_data.value,
+                                            p_value     => v_cell_data.value,
                                             p_clob      => v_clob,
                                             p_buffer    => v_buffer,
                                             p_style_id  => v_style_id
@@ -1885,56 +1829,27 @@ as
     add(v_strings_clob,v_string_buffer,'</sst>'||chr(10),TRUE);
   end generate_from_report;
   ------------------------------------------------------------------------------
- 
-  procedure set_collection(p_collection_name in varchar2,p_data in clob)
-  is
-   v_tmp char;
-  begin
-    IF apex_collection.collection_exists (p_collection_name) = FALSE
-    THEN
-      apex_collection.create_collection (p_collection_name);
-    END IF;
-   begin
-     select '1' --clob001
-     into v_tmp
-     from apex_collections 
-     where collection_name = p_collection_name
-        and seq_id = 1;
-        
-     apex_collection.update_member ( p_collection_name => p_collection_name
-                                    , p_seq            => 1
-                                    , p_clob001        => p_data);
-   exception
-     when no_data_found then
-      apex_collection.add_member ( p_collection_name => p_collection_name
-                                 , p_clob001         => p_data );
-       
-   end;
-  end set_collection;
-  ------------------------------------------------------------------------------
     
-   procedure get_report(                          
-                          p_app_id          IN NUMBER,
-                          p_page_id         IN NUMBER,  
-                          p_region_id       IN NUMBER,
-                          p_get_page_items  IN CHAR DEFAULT 'N', -- Y,N - include page items in XML
-                          p_items_list      IN VARCHAR2,         -- "," delimetered list of items that for including in XML
-                          p_max_rows        IN NUMBER,            -- maximum rows for export   
-                          v_clob in out nocopy CLOB,
-                          p_strings in out nocopy CLOB,
-                          p_col_length IN VARCHAR2,
-                          p_width_coefficient IN number, 
-                          p_autofilter IN CHAR DEFAULT 'Y'      
-                         )                 
+   procedure get_report(p_app_id          IN NUMBER,
+                        p_page_id         IN NUMBER,  
+                        p_region_id       IN NUMBER,
+                        p_max_rows        IN NUMBER,            -- maximum rows for export   
+                        v_clob in out nocopy CLOB,
+                        p_strings in out nocopy CLOB,
+                        p_col_length IN VARCHAR2,
+                        p_width_coefficient IN number, 
+                        p_autofilter IN CHAR DEFAULT 'Y'      
+                       )                 
   is  
   begin
     dbms_lob.trim (v_debug,0);
   
     log('p_app_id='||p_app_id);
     log('p_page_id='||p_page_id);
-    log('p_get_page_items='||p_get_page_items);
-    log('p_items_list='||p_items_list);
+    log('p_region_id='||p_region_id);
     log('p_max_rows='||p_max_rows);
+    log('p_col_length='||p_col_length);
+    log('p_autofilter='||p_autofilter);    
     
     init_t_report(p_app_id,p_page_id,p_region_id);
     generate_from_report(v_clob,p_strings,p_col_length,p_width_coefficient,p_max_rows,p_autofilter);
@@ -2026,26 +1941,103 @@ as
      return apex_plugin_util.replace_substitutions(nvl(v_filename,'Excel'));
   end get_file_name;   
   ------------------------------------------------------------------------------
-  procedure download_file(p_app_id      IN NUMBER,
-                          p_page_id     IN NUMBER,
-                          p_region_id   IN NUMBER, 
-                          p_col_length  IN VARCHAR2 DEFAULT NULL,
-                          p_max_rows    IN NUMBER,
-                          p_autofilter  IN CHAR DEFAULT 'Y'
-                         )
+  -- download binary file
+  procedure download(p_data        IN OUT NOCOPY BLOB,
+                     p_mime_type   IN VARCHAR2,
+                     p_file_name   IN VARCHAR2)
+  is
+  begin
+    owa_util.mime_header( ccontent_type=> p_mime_type, 
+                          bclose_header => false );
+    sys.htp.p('Content-Length: ' || dbms_lob.getlength( p_data ) );
+    sys.htp.p('Content-disposition: attachment; filename='||p_file_name );    
+    sys.htp.p('Cache-Control: must-revalidate, max-age=0');
+    sys.htp.p('Expires: Thu, 01 Jan 1970 01:00:00 CET');
+    sys.htp.p('Set-Cookie: GPV_DOWNLOAD_STARTED=1;');
+    owa_util.http_header_close;    
+    wpg_docload.download_file( p_data );  
+  exception
+     when others then 
+        raise_application_error(-20001,'Download (blob)'||SQLERRM);
+  end download;
+  ------------------------------------------------------------------------------
+  
+  procedure download_debug(p_app_id      IN NUMBER,
+                           p_page_id     IN NUMBER,
+                           p_region_id   IN NUMBER, 
+                           p_col_length  IN VARCHAR2 DEFAULT NULL,
+                           p_max_rows    IN NUMBER,
+                           p_autofilter  IN CHAR DEFAULT 'Y'                           
+                          )
+  is
+    v_blob     blob;
+    v_cells    clob;
+    v_strings  clob;
+    v_desc_offset PLS_INTEGER := 1;
+    v_src_offset  PLS_INTEGER := 1;
+    v_lang        PLS_INTEGER := 0;
+    v_warning     PLS_INTEGER := 0;   
+  begin
+    dbms_lob.createtemporary(v_cells,true);
+    dbms_lob.createtemporary(v_strings,true);
+    dbms_lob.createtemporary(v_blob,true);
+    
+    get_report(p_app_id,
+               p_page_id ,  
+               p_region_id,
+               p_max_rows,            -- maximum rows for export   
+               v_cells ,
+               v_strings,
+               p_col_length,
+               WIDTH_COEFFICIENT,
+               p_autofilter);     
+
+    log('LogFinish',TRUE);
+    dbms_lob.converttoblob(v_blob, v_debug, dbms_lob.getlength(v_debug), v_desc_offset, v_src_offset, dbms_lob.default_csid, v_lang, v_warning);
+    sys.htp.init;
+    sys.owa_util.mime_header('text/txt', FALSE );
+    sys.htp.p('Content-length: ' || sys.dbms_lob.getlength( v_blob));
+    sys.htp.p('Content-Disposition: attachment; filename="log.txt"' );
+    sys.htp.p('Cache-Control: must-revalidate, max-age=0');
+    sys.htp.p('Expires: Thu, 01 Jan 1970 01:00:00 CET');
+    sys.htp.p('Set-Cookie: GPV_DOWNLOAD_STARTED=1;');
+    sys.owa_util.http_header_close;
+    sys.wpg_docload.download_file( v_blob );
+
+    dbms_lob.freetemporary(v_blob);
+  end download_debug;
+
+  ------------------------------------------------------------------------------
+  
+  procedure download_excel(p_app_id      IN NUMBER,
+                           p_page_id     IN NUMBER,
+                           p_region_id   IN NUMBER, 
+                           p_col_length  IN VARCHAR2 DEFAULT NULL,
+                           p_max_rows    IN NUMBER,
+                           p_autofilter  IN CHAR DEFAULT 'Y'                           
+                          )
   is
     t_template blob;
     t_excel    blob;
     v_cells    clob;
     v_strings  clob;
     zip_files  as_zip.file_list;
-  begin    
-    pragma inline(get_excel,'YES');     
+  begin        
     dbms_lob.createtemporary(t_excel,true);    
     dbms_lob.createtemporary(v_cells,true);
     dbms_lob.createtemporary(v_strings,true);
-    --!!!!!
-     
+
+    get_report(p_app_id,
+               p_page_id ,  
+               p_region_id,
+               p_max_rows,            -- maximum rows for export   
+               v_cells ,
+               v_strings,
+               p_col_length,
+               WIDTH_COEFFICIENT,
+               p_autofilter        
+              );
+              
     select file_content
     into t_template
     from apex_appl_plugin_files 
@@ -2057,22 +2049,7 @@ as
     for i in zip_files.first() .. zip_files.last loop
       as_zip.add1file( t_excel, zip_files( i ), as_zip.get_file( t_template, zip_files( i ) ) );
     end loop;    
-  
- 
-    get_report(                          
-                          p_app_id,
-                          p_page_id ,  
-                          p_region_id,
-                           'N', -- Y,N - include page items in XML
-                          NULL   ,         -- "," delimetered list of items that for including in XML
-                          p_max_rows,            -- maximum rows for export   
-                          v_cells ,
-                          v_strings,
-                          p_col_length,
-                          WIDTH_COEFFICIENT,
-                          p_autofilter        
-                         );
-    
+      
     add1file( t_excel, 'xl/styles.xml', get_styles_xml);    
     add1file( t_excel, 'xl/worksheets/Sheet1.xml', v_cells);
     add1file( t_excel, 'xl/sharedStrings.xml',v_strings);
@@ -2081,22 +2058,14 @@ as
     
     as_zip.finish_zip( t_excel );
  
-    --htp.flush;
-    --htp.init();
-    owa_util.mime_header( ccontent_type=> 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 
-                          bclose_header => false );
-    htp.p( 'Content-Length: ' || dbms_lob.getlength( t_excel ) );
-    htp.p( 'Content-disposition: attachment; filename='||get_file_name (p_app_id,p_page_id,p_region_id)||'.xlsx;' );
-    htp.p('Cache-Control: must-revalidate, max-age=0');
-    htp.p('Expires: Thu, 01 Jan 1970 01:00:00 CET');
-    htp.p('Set-Cookie: GPV_DOWNLOAD_STARTED=1;');
-    owa_util.http_header_close;
-    wpg_docload.download_file( t_excel );
- 
+    download(p_data      => t_excel,
+             p_mime_type => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+             p_file_name => get_file_name (p_app_id,p_page_id,p_region_id)||'.xlsx;'
+            );
     dbms_lob.freetemporary(t_excel);
     dbms_lob.freetemporary(v_cells);
     dbms_lob.freetemporary(v_strings);    
-  end download_file;
+  end download_excel;
   
 begin
   dbms_lob.createtemporary(v_debug,true, DBMS_LOB.CALL);  

@@ -1,34 +1,29 @@
-create or replace PACKAGE  "IR_TO_MSEXCEL" 
-  AUTHID CURRENT_USER
-as
-  FUNCTION render  (p_dynamic_action in apex_plugin.t_dynamic_action,
-                    p_plugin         in apex_plugin.t_plugin )
-  return apex_plugin.t_dynamic_action_render_result; 
-  
-  function ajax (p_dynamic_action in apex_plugin.t_dynamic_action,
-                 p_plugin         in apex_plugin.t_plugin )
-  return apex_plugin.t_dynamic_action_ajax_result;
-                                
-end IR_TO_MSEXCEL;
-/
-
 create or replace PACKAGE BODY  "IR_TO_MSEXCEL" 
 as
+  v_plugin_running boolean default false;
+  
+  function is_ir2msexcel 
+  return boolean
+  is
+  begin
+    return nvl(v_plugin_running,false);    
+  end is_ir2msexcel;
+  ------------------------------------------------------------------------------
   
   function get_affected_region_id(p_dynamic_action_id IN apex_application_page_da_acts.action_id%TYPE,
                                   p_html_region_id    IN VARCHAR2
                                  )
   return  apex_application_page_da_acts.affected_region_id%type
   is
-   v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
+    v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
   begin
   
       SELECT affected_region_id
       INTO v_affected_region_id
       FROM apex_application_page_da_acts aapda
       WHERE aapda.action_id = p_dynamic_action_id
-        and page_id in(v('APP_PAGE_ID'),0)
-        and application_id = v('APP_ID')
+        and page_id in(nv('APP_PAGE_ID'),0)
+        and application_id = nv('APP_ID')
         and rownum <2; 
       
       if v_affected_region_id is null then 
@@ -37,22 +32,22 @@ as
           into v_affected_region_id 
           from apex_application_page_regions 
           where  static_id = p_html_region_id
-            and page_id in (v('APP_PAGE_ID'),0)
-            and application_id = v('APP_ID');
+            and page_id in (nv('APP_PAGE_ID'),0)
+            and application_id = nv('APP_ID');
         exception 
           when no_data_found then 
            select region_id 
            into v_affected_region_id 
            from apex_application_page_regions 
-           where  region_id = ltrim(p_html_region_id,'R')
-             and page_id in (v('APP_PAGE_ID'),0)
-             and application_id = v('APP_ID'); 
+           where  region_id = to_number(ltrim(p_html_region_id,'R'))
+             and page_id in (nv('APP_PAGE_ID'),0)
+             and application_id = nv('APP_ID'); 
         end; 
       end if;       
       return v_affected_region_id;
   exception
     when others then
-      raise_application_error(-20001,'IR_TO_MSEXCEL.get_affected_region_id: No region found!');
+      raise_application_error(-20001,'IR_TO_MSEXCEL.get_affected_region_id: No region found!');      
   end get_affected_region_id;
   ------------------------------------------------------------------------------
   
@@ -68,10 +63,10 @@ as
       WHERE aapda.action_id = p_dynamic_action_id 
         and aapda.affected_region_id = r.region_id 
         and r.source_type ='Interactive Report' 
-        and aapda.page_id = v('APP_PAGE_ID') 
-        and aapda.application_id = v('APP_ID')
-        and r.page_id = v('APP_PAGE_ID') 
-        and r.application_id = v('APP_ID'); 
+        and aapda.page_id = nv('APP_PAGE_ID') 
+        and aapda.application_id = nv('APP_ID')
+        and r.page_id = nv('APP_PAGE_ID') 
+        and r.application_id = nv('APP_ID'); 
       
       return v_affected_region_selector;
   exception
@@ -113,8 +108,8 @@ as
         -- add XLSX Icon to all IR Regions on the page
         for i in (SELECT nvl(static_id,'R'||to_char(region_id)) as affected_region_selector      
                   FROM apex_application_page_regions r
-                  where r.page_id = v('APP_PAGE_ID')
-                    and r.application_id =v('APP_ID')
+                  where r.page_id = nv('APP_PAGE_ID')
+                    and r.application_id =nv('APP_ID')
                     and r.source_type ='Interactive Report'
                  )
         loop         
@@ -145,61 +140,44 @@ as
   is
     p_download_type      varchar2(1);
     p_custom_width       varchar2(1000);
-	p_autofilter              char;
+	  p_autofilter              char;
     v_maximum_rows       number;
     v_dummy              apex_plugin.t_dynamic_action_ajax_result;
     v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
   begin      
-      p_download_type:= nvl(p_dynamic_action.attribute_02,'E');
-	  p_autofilter:= nvl(p_dynamic_action.attribute_04,'Y');
+      p_download_type := nvl(p_dynamic_action.attribute_02,'E');
+  	  p_autofilter:= nvl(p_dynamic_action.attribute_04,'Y');
       v_affected_region_id := get_affected_region_id(p_dynamic_action_id => p_dynamic_action.ID
                                                     ,p_html_region_id    => apex_application.g_x03);
       
       v_maximum_rows := nvl(nvl(p_dynamic_action.attribute_01,
                                 IR_TO_XLSX.get_max_rows (p_app_id    => apex_application.g_x01,
-                                                          p_page_id   => apex_application.g_x02,
-                                                          p_region_id => v_affected_region_id)
+                                                         p_page_id   => apex_application.g_x02,
+                                                         p_region_id => v_affected_region_id)
                                 ),1000);                                               
-      if p_download_type = 'E' then -- Excel XLSX
-        IR_TO_XLSX.download_file(p_app_id       => apex_application.g_x01,
+      if p_download_type = 'E' then 
+        ir_to_xlsx.download_excel(p_app_id        => apex_application.g_x01,
                                   p_page_id      => apex_application.g_x02,
                                   p_region_id    => v_affected_region_id,
                                   p_col_length   => apex_application.g_x04||p_custom_width,
                                   p_max_rows     => v_maximum_rows,
-                                  p_autofilter => p_autofilter
+                                  p_autofilter   => p_autofilter
                                   );
-      elsif p_download_type = 'X' then -- XML
-        IR_TO_XML.get_report_xml(p_app_id            => apex_application.g_x01,
-                                 p_page_id           => apex_application.g_x02, 
-                                 p_region_id         => v_affected_region_id,
-                                 p_return_type       => 'X',                        
-                                 p_get_page_items    => 'N',
-                                 p_items_list        => null,
-                                 p_collection_name   => null,
-                                 p_max_rows          => v_maximum_rows
-                                );
-      elsif p_download_type = 'T' then -- Debug txt
-        IR_TO_XML.get_report_xml(p_app_id            => apex_application.g_x01,
-                                 p_page_id           => apex_application.g_x02, 
-                                 p_region_id         => v_affected_region_id,
-                                 p_return_type       => 'Q',                        
-                                 p_get_page_items    => 'N',
-                                 p_items_list        => null,
-                                 p_collection_name   => null,
-                                 p_max_rows          => v_maximum_rows
-                                );
-      elsif p_download_type = 'M' then -- use Moritz Klein engine https://github.com/commi235                        
-       apexir_xlsx_pkg.download(  p_ir_region_id   => v_affected_region_id,
-                                  p_app_id         => apex_application.g_x01,
-                                  p_ir_page_id     => apex_application.g_x02
-                                );
-     else
-      raise_application_error(-20001,'GPV_IR_TO_MSEXCEL : unknown Return Type');
-     end if;    
+      elsif p_download_type = 'T' then 
+        ir_to_xlsx.download_debug(p_app_id        => apex_application.g_x01,
+                                  p_page_id      => apex_application.g_x02,
+                                  p_region_id    => v_affected_region_id,
+                                  p_col_length   => apex_application.g_x04||p_custom_width,
+                                  p_max_rows     => v_maximum_rows,
+                                  p_autofilter   => p_autofilter
+                                  );
+      else
+        raise_application_error(-20001,'Unknown download_type: '||p_download_type);
+      end if;
      return v_dummy;
   exception
     when others then
-      raise_application_error(-20001,SQLERRM||chr(10)||dbms_utility.format_error_backtrace);
+      raise_application_error(-20001,SQLERRM||chr(10)||dbms_utility.format_error_backtrace);      
   end ajax;
   
 end IR_TO_MSEXCEL;

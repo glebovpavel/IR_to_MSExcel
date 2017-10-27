@@ -23,11 +23,11 @@ Here's a link to a [demo](https://apex.oracle.com/pls/apex/f?p=35446) page.
 
 ##Current Version
 
-Version 2.10
+Version 2.20
 
 ##Current Stable Version
 
-Version 2.08
+Version 2.13
 
 ##License
 
