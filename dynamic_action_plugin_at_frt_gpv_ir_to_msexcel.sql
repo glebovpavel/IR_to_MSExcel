@@ -5,18 +5,18 @@ whenever sqlerror exit sql.sqlcode rollback
 -- ORACLE Application Express (APEX) export file
 --
 -- You should run the script connected to SQL*Plus as the Oracle user
--- APEX_050000 or as the owner (parsing schema) of the application.
+-- APEX_050100 or as the owner (parsing schema) of the application.
 --
 -- NOTE: Calls to apex_application_install override the defaults below.
 --
 --------------------------------------------------------------------------------
 begin
 wwv_flow_api.import_begin (
- p_version_yyyy_mm_dd=>'2013.01.01'
-,p_release=>'5.0.3.00.03'
-,p_default_workspace_id=>1653323006606074
-,p_default_application_id=>1000
-,p_default_owner=>'GPV'
+ p_version_yyyy_mm_dd=>'2016.08.24'
+,p_release=>'5.1.0.00.45'
+,p_default_workspace_id=>11260317213760192
+,p_default_application_id=>200
+,p_default_owner=>'PLUGIN3'
 );
 end;
 /
@@ -28,18 +28,19 @@ end;
 prompt --application/shared_components/plugins/dynamic_action/at_frt_gpv_ir_to_msexcel
 begin
 wwv_flow_api.create_plugin(
- p_id=>wwv_flow_api.id(53536159026691458890)
+ p_id=>wwv_flow_api.id(53547601452765754881)
 ,p_plugin_type=>'DYNAMIC ACTION'
 ,p_name=>'AT.FRT.GPV_IR_TO_MSEXCEL'
 ,p_display_name=>'GPV Interactive Report to MSExcel v2'
 ,p_category=>'MISC'
 ,p_supported_ui_types=>'DESKTOP'
+,p_api_version=>1
 ,p_render_function=>'IR_TO_MSEXCEL.render'
 ,p_ajax_function=>'IR_TO_MSEXCEL.ajax'
 ,p_standard_attributes=>'REGION'
 ,p_substitute_attributes=>true
 ,p_subscribe_plugin_settings=>true
-,p_help_text=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
+,p_help_text=>wwv_flow_string.join(wwv_flow_t_varchar2(
 '<p>',
 '	The &quot;GPV Interactive Report to MSExcel v2&quot; APEX plugin lets you get results of your Interactive Report in Excel-format, with <span class="short_text" id="result_box" lang="en"><span class="hps">correct display of Strings</span></span>, Num'
 ||'ber and Dates.</p>',
@@ -53,16 +54,16 @@ wwv_flow_api.create_plugin(
 '	<br />',
 '	<br />',
 '	&nbsp;</p>'))
-,p_version_identifier=>'2.13'
+,p_version_identifier=>'2.20'
 ,p_about_url=>'http://glebovpavel.github.io/plugin'
-,p_plugin_comment=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
+,p_plugin_comment=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'Do not move ExcelTemplate.zip to the WEB-Server !!!',
 ''))
 ,p_files_version=>15
 );
 wwv_flow_api.create_plugin_attribute(
- p_id=>wwv_flow_api.id(55619869846565187490)
-,p_plugin_id=>wwv_flow_api.id(53536159026691458890)
+ p_id=>wwv_flow_api.id(55631312272639483481)
+,p_plugin_id=>wwv_flow_api.id(53547601452765754881)
 ,p_attribute_scope=>'COMPONENT'
 ,p_attribute_sequence=>1
 ,p_display_sequence=>10
@@ -71,14 +72,14 @@ wwv_flow_api.create_plugin_attribute(
 ,p_is_required=>false
 ,p_default_value=>'1000'
 ,p_is_translatable=>false
-,p_help_text=>wwv_flow_utilities.join(wwv_flow_t_varchar2(
+,p_help_text=>wwv_flow_string.join(wwv_flow_t_varchar2(
 'Rows greater than this value will not be exported. ',
 'To export all the rows set the value to 1000000000.',
 'When empty - value from Interactive Report Attributes-> Maximum Row Count will be used.'))
 );
 wwv_flow_api.create_plugin_attribute(
- p_id=>wwv_flow_api.id(28606546102171197397)
-,p_plugin_id=>wwv_flow_api.id(53536159026691458890)
+ p_id=>wwv_flow_api.id(28617988528245493388)
+,p_plugin_id=>wwv_flow_api.id(53547601452765754881)
 ,p_attribute_scope=>'COMPONENT'
 ,p_attribute_sequence=>2
 ,p_display_sequence=>20
@@ -90,30 +91,30 @@ wwv_flow_api.create_plugin_attribute(
 ,p_lov_type=>'STATIC'
 );
 wwv_flow_api.create_plugin_attr_value(
- p_id=>wwv_flow_api.id(28606546417100201200)
-,p_plugin_attribute_id=>wwv_flow_api.id(28606546102171197397)
+ p_id=>wwv_flow_api.id(28617988843174497191)
+,p_plugin_attribute_id=>wwv_flow_api.id(28617988528245493388)
 ,p_display_sequence=>10
 ,p_display_value=>'Excel XLSX'
 ,p_return_value=>'E'
 );
 wwv_flow_api.create_plugin_attr_value(
- p_id=>wwv_flow_api.id(28606547259203207829)
-,p_plugin_attribute_id=>wwv_flow_api.id(28606546102171197397)
+ p_id=>wwv_flow_api.id(28617989685277503820)
+,p_plugin_attribute_id=>wwv_flow_api.id(28617988528245493388)
 ,p_display_sequence=>30
 ,p_display_value=>'Debug TXT'
 ,p_return_value=>'T'
 );
 wwv_flow_api.create_plugin_attr_value(
- p_id=>wwv_flow_api.id(28606547657607240629)
-,p_plugin_attribute_id=>wwv_flow_api.id(28606546102171197397)
+ p_id=>wwv_flow_api.id(28617990083681536620)
+,p_plugin_attribute_id=>wwv_flow_api.id(28617988528245493388)
 ,p_display_sequence=>40
 ,p_display_value=>'commi235 Render Engine (must be installed separately)'
 ,p_return_value=>'M'
 ,p_help_text=>'To use this feature you must separately install commi235 (Moritz Klein) Render Engine https://github.com/commi235/APEX_IR_XLSX'
 );
 wwv_flow_api.create_plugin_attribute(
- p_id=>wwv_flow_api.id(28606547989464274837)
-,p_plugin_id=>wwv_flow_api.id(53536159026691458890)
+ p_id=>wwv_flow_api.id(28617990415538570828)
+,p_plugin_id=>wwv_flow_api.id(53547601452765754881)
 ,p_attribute_scope=>'COMPONENT'
 ,p_attribute_sequence=>3
 ,p_display_sequence=>30
@@ -125,8 +126,8 @@ wwv_flow_api.create_plugin_attribute(
 ,p_help_text=>'Add "Download XLSX" Icon to the standard download menu of Affected IR Region. When empty, this icon will be added to any IR of the current page.'
 );
 wwv_flow_api.create_plugin_attribute(
- p_id=>wwv_flow_api.id(3505142065020695)
-,p_plugin_id=>wwv_flow_api.id(53536159026691458890)
+ p_id=>wwv_flow_api.id(14947568139316686)
+,p_plugin_id=>wwv_flow_api.id(53547601452765754881)
 ,p_attribute_scope=>'COMPONENT'
 ,p_attribute_sequence=>4
 ,p_display_sequence=>40
@@ -139,8 +140,8 @@ wwv_flow_api.create_plugin_attribute(
 ,p_help_text=>'Should the excel file be generated with filter on every column.'
 );
 wwv_flow_api.create_plugin_event(
- p_id=>wwv_flow_api.id(28606529846288868300)
-,p_plugin_id=>wwv_flow_api.id(53536159026691458890)
+ p_id=>wwv_flow_api.id(28617972272363164291)
+,p_plugin_id=>wwv_flow_api.id(53547601452765754881)
 ,p_name=>'ondownloadxlsx'
 ,p_display_name=>'On Download XLSX'
 );
@@ -211,8 +212,8 @@ end;
 /
 begin
 wwv_flow_api.create_plugin_file(
- p_id=>wwv_flow_api.id(31135661297567599)
-,p_plugin_id=>wwv_flow_api.id(53536159026691458890)
+ p_id=>wwv_flow_api.id(42578087371863590)
+,p_plugin_id=>wwv_flow_api.id(53547601452765754881)
 ,p_file_name=>'IR2MSEXCEL.js'
 ,p_mime_type=>'application/javascript'
 ,p_file_charset=>'utf-8'
@@ -280,8 +281,8 @@ end;
 /
 begin
 wwv_flow_api.create_plugin_file(
- p_id=>wwv_flow_api.id(55623036280164458710)
-,p_plugin_id=>wwv_flow_api.id(53536159026691458890)
+ p_id=>wwv_flow_api.id(55634478706238754701)
+,p_plugin_id=>wwv_flow_api.id(53547601452765754881)
 ,p_file_name=>'ExcelTemplate.zip'
 ,p_mime_type=>'application/zip'
 ,p_file_charset=>'utf-8'
