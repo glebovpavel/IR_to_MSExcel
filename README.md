@@ -16,10 +16,11 @@ Many features of Interactive Reports are supported:
  $  Computations
  $  Aggregations
  $  No BI Publisher Required
+ $  (new in 2.20) Great performance 
 
 The minimum required APEX-version is 5.0.
 Documentation, downloads, and other useful information can be found [here](http://glebovpavel.github.io/Description_IR_TO_XSLX/).
-Here's a link to a [demo](https://apex.oracle.com/pls/apex/f?p=35446) page.
+Here's a link to the [main project page + demo](http://glebovpavel.github.io/Description_IR_TO_XSLX/).
 
 ##Current Version
 
