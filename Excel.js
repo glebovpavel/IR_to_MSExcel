@@ -44,6 +44,7 @@ function getCellNumber(value,colDataType,decimalSeparator) {
 			cell.t = 'n';	  
 			cell.z = colDataType.formatMaskExcel;
 			cell.v = num;	
+			cell.color = { name: 'accent5', rgb: '4BACC6' };
 		} else {
 			console.log("Can't parse number <" + value + ">");
 			cell.t = 's';	 
@@ -53,17 +54,30 @@ function getCellNumber(value,colDataType,decimalSeparator) {
  return cell;
 }
 
-function sheet_from_array_of_arrays(data, colDataTypesArr,decimalSeparator,langCode) {	
+function sheet_from_array_of_arrays(data,colDataTypesArr,decimalSeparator,langCode) {	
 	//console.log(colDataTypesArr);
 	var ws = {};
 	var range = {s: {c:10000000, r:10000000}, e: {c:0, r:0 }};
 	var cellAddr; 
 	var cell = {};
-	var R,C; // iterators
+	var R,C,I; // iterators
   var columnNum; 
 	
-	for(R = 0; R < data.length; R++) { // rows
-    columnNum = 0;
+	// print headers
+	for(I = 0; I < colDataTypesArr.length; I++) {
+		columnNum = colDataTypesArr[I].displayOrder;
+		if( columnNum < 1000000 ) {								
+        // recalculate column range		
+				if(range.s.c > columnNum) range.s.c = columnNum;				
+				if(range.e.c < columnNum) range.e.c = columnNum;
+		    cell = {v: colDataTypesArr[I].heading,t: 's'};
+			cellAddr = XLSX.utils.encode_cell({c:columnNum,r:0});  
+			ws[cellAddr] = cell;
+		}	
+	}	
+	
+	
+	for(R = 0; R < data.length; R++) { // rows    
 		// recalculate row range		
 		if(range.s.r > R) range.s.r = R;
 		if(range.e.r < R) range.e.r = R;
@@ -75,7 +89,7 @@ function sheet_from_array_of_arrays(data, colDataTypesArr,decimalSeparator,langC
 				if(range.s.c > columnNum) range.s.c = columnNum;				
 				if(range.e.c < columnNum) range.e.c = columnNum;
 
-				cellAddr = XLSX.utils.encode_cell({c:columnNum,r:R});
+				cellAddr = XLSX.utils.encode_cell({c:columnNum,r:R + 1}); // R + 1 because header
 
 				if(colDataTypesArr[C].dataType == 'NUMBER') {
 					cell = getCellNumber(data[R][C],colDataTypesArr[C],decimalSeparator)
@@ -83,11 +97,10 @@ function sheet_from_array_of_arrays(data, colDataTypesArr,decimalSeparator,langC
 					cell = getCellDate(data[R][C],colDataTypesArr[C],langCode);
 				} else {
 					// string
-					cell = {v: data[R][C],t: 's'};				
+					cell = {v: data[R][C],t: 's'};
 				}	
 
 				ws[cellAddr] = cell;
-				columnNum++; 
 			}
 		}
 	}
@@ -126,21 +139,24 @@ function getRows(iGrid) {
   return rows;	
 }
 
-function getColumnsDataTypeArray(columns,colProp) {  
+function getColumnHeadersArray(columns) {
 	var I; //iterator
 	var currColumnNo = 0;
-	// sort columns in order data comes from server 
-	columns.sort(function(a, b) { 
-    return a.index - b.index;
-   })
 	
 	// assign to the each data column a corresponding column number in excel 
 	// first sort columns in display order
 	var displayInColumnArr = columns.map(function(a) { 
-     if(a.hidden) {
-			 return {dataOrder : a.index, displayOrder : 1000000, hidden: a.hidden, name : a.property};			 
+    var colHeader =  {index : a.index, 
+	 									  displayOrder : 1000000,
+										  heading: a.heading,
+											headingAlignment: a.headingAlignment,
+											width: a.width
+										 };
+		if(a.hidden) {
+			return colHeader;
 		 } else {
-			 return {dataOrder : a.index, displayOrder : a.seq, hidden: a.hidden, name : a.property}; 
+			 colHeader.displayOrder = a.seq;
+			 return colHeader;
 		 }		 
 	 }).sort(function(a, b) { 
     return a.displayOrder - b.displayOrder;
@@ -151,12 +167,19 @@ function getColumnsDataTypeArray(columns,colProp) {
 		  displayInColumnArr[I].displayOrder = currColumnNo;
 			currColumnNo++;
 		}	
-	}	
-	//third sort in the order data comes from the server 
+	}		
 	displayInColumnArr.sort(function(a, b) { 
-    return a.dataOrder - b.dataOrder;
+    return a.index - b.index;
    });
 	
+	return displayInColumnArr;
+}
+
+function getColumnsDataTypeArray(columns,colProp,colHeaders) {  
+	// sort columns in order data comes from server 
+	columns.sort(function(a, b) { 
+    return a.index - b.index;
+   });	 
 	
 	//console.log(displayInColumnArr);
 	//console.log(columns);
@@ -169,7 +192,10 @@ function getColumnsDataTypeArray(columns,colProp) {
 									  formatMask : "",
 									  formatMaskExcel : "",
 									  name : "",
-									  displayOrder : displayInColumnArr[i].displayOrder
+									  displayOrder : colHeaders[i].displayOrder,
+									  heading: colHeaders[i].heading,
+                    headingAlignment: colHeaders[i].headingAlignment,
+                    width: colHeaders[i].width
 									};	  
 		for(var b = 0; b < colProp.length; b++) {			
 			if(columns[i].id == colProp[b].COLUMN_ID) {				
@@ -197,13 +223,19 @@ function main(columnPropertiesFromServer) {
 	//console.log(rows);
 	//console.log(columns);
 	
-	var colDataTypesArr = getColumnsDataTypeArray(columns,columnPropertiesFromServer.column_properties);  //ordered in the order in which the columns comes from the server
-	console.log(colDataTypesArr);
+	//ordered in the display order
+	var columnHeaders = getColumnHeadersArray(columns);
+	//ordered in the order in which the columns comes from the server
+	var colPropertiesArr = getColumnsDataTypeArray(columns,
+																								 columnPropertiesFromServer.column_properties,
+																								 columnHeaders
+																							 ) ;  
+	//console.log(colPropertiesArr);
 	//console.log(columnPropertiesFromServer);
 	
 	
 	ws = sheet_from_array_of_arrays(rows,
-																	colDataTypesArr,
+																	colPropertiesArr,
 																	columnPropertiesFromServer.decimal_seperator,
 																	columnPropertiesFromServer.lang_code
 																 ); 
