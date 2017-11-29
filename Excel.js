@@ -10,16 +10,18 @@
 function getCellDate(value,colDataType,langCode) {
   var cell = {v: value};
 	var formatMask = colDataType.formatMask;
-	var dateStrict = !( formatMask.search("mmmm") > 0 || formatMask.search("ddd") > 0 ); //because of bug https://github.com/moment/moment/issues/4227
+	var dateStrict = !( formatMask.search("MMMM") >= 0 || formatMask.search("ddd") >= 0 ); //because of bug https://github.com/moment/moment/issues/4227	
 	var langCode = langCode || 'en';	
-	var parsedDate = moment(value,formatMask,langCode,dateStrict);
+	var parsedDate = moment(value,formatMask,langCode,dateStrict);		
+	var epoch = new Date(1899,11,31);
 	
 	if(value) {
 		if( parsedDate.isValid()) {
-		 //console.log(moment(cell.v,colDataTypesArr[C].formatMask,true).toDate());
+			//console.log(value);
+			//console.log(formatMask);		  
 			cell.t = 'n'; // excel recognizes date as number that have a date format string			
-			cell.z = colDataType.formatMaskExcel;
-			cell.v = (parsedDate.toDate() - new Date(Date.UTC(1899, 11, 30))) / (24 * 60 * 60 * 1000);
+			cell.z = colDataType.formatMaskExcel;						
+			cell.v = ((parsedDate.toDate() - epoch) / (24 * 60 * 60 * 1000)) + 1;			// + 1 because excel leap bug
 		}	
 	 else {
 		 console.log("Can't parse date <" + value + "> with format <" + formatMask + "> strict:" + dateStrict);
@@ -37,18 +39,18 @@ function getCellNumber(value,colDataType,decimalSeparator) {
 	var cell = {v: str};
 	
 	if(value) {
-    str.replace(re, ""); //remove all symbols except didits and decimalSeparator		
+    str.replace(re, ""); //remove all symbols except digits and decimalSeparator		
 		str.replace(decimalSeparator, "."); //change decimalSeparator to JS-decimal separator
-		num = parseFloat(str);	
+		num = parseFloat(str);			
 		if( !isNaN(num) ) {
 			cell.t = 'n';	  
 			cell.z = colDataType.formatMaskExcel;
 			cell.v = num;	
-			cell.color = { name: 'accent5', rgb: '4BACC6' };
+			//cell.color = { name: 'accent5', rgb: '4BACC6' };
 		} else {
 			console.log("Can't parse number <" + value + ">");
 			cell.t = 's';	 
-			cell.v = val;	
+			cell.v = value;	
 		}
 	}
  return cell;
@@ -76,7 +78,7 @@ function sheet_from_array_of_arrays(data,colDataTypesArr,decimalSeparator,langCo
 		}	
 	}	
 	
-	
+	//print data
 	for(R = 0; R < data.length; R++) { // rows    
 		// recalculate row range		
 		if(range.s.r > R) range.s.r = R;
@@ -127,7 +129,7 @@ function getRows(iGrid) {
 	iGrid.model.forEach(function (row_in) { 
 		//console.log(row_in);
 		var row = row_in.slice();      // make a copy of row
-		var rowProperties = row.pop(); // properties a saved at the end of array
+		var rowProperties = row.pop(); // properties are saved at the end of array
 
 		if(rowProperties) {
 			if(rowProperties.endControlBreak) {
@@ -256,3 +258,12 @@ getColumnsProperties(main);
 
 
 
+
+/*
+Exception: ReferenceError: getColumnsProperties is not defined
+@Scratchpad/1:255:1
+*/
+/*
+Exception: ReferenceError: getColumnsProperties is not defined
+@Scratchpad/1:255:1
+*/
