@@ -56,57 +56,112 @@ function getCellNumber(value,colDataType,decimalSeparator) {
  return cell;
 }
 
-function sheet_from_array_of_arrays(data,colDataTypesArr,decimalSeparator,langCode) {	
+function getCellChar(value) {
+	return  {v: value,t: 's'};
+}
+
+
+function recalculateRangeAndGetCellAddr(range,colNo,rowNo) {
+	// recalculate column range	
+	if(range.s.c > colNo) range.s.c = colNo;				
+	if(range.e.c < colNo) range.e.c = colNo;
+	// recalculate row range		
+	if(range.s.r > rowNo) range.s.r = rowNo;
+	if(range.e.r < rowNo) range.e.r = rowNo;
+	
+	return XLSX.utils.encode_cell({c:colNo,r:rowNo});
+	
+}
+
+function getWorksheet(data,properties) {	
 	//console.log(colDataTypesArr);
 	var ws = {};
 	var range = {s: {c:10000000, r:10000000}, e: {c:0, r:0 }};
-	var cellAddr; 
+	var cellAddr = {}; 
 	var cell = {};
-	var R,C,I; // iterators
+	var R,C,I,A; // iterators
   var columnNum; 
+	var rowNum = 0;
+	var colDataTypesArr = properties.columnsProperties;
+	var isControlBreak = properties.haveControlBreaks;
+	var rowAdditionalnfo;
+	var controlBreakArr = [];
+	var startColumn = properties.hasAggregates ? 1 : 0; 
 	
 	// print headers
 	for(I = 0; I < colDataTypesArr.length; I++) {
 		columnNum = colDataTypesArr[I].displayOrder;
-		if( columnNum < 1000000 ) {								
-        // recalculate column range		
-				if(range.s.c > columnNum) range.s.c = columnNum;				
-				if(range.e.c < columnNum) range.e.c = columnNum;
-		    cell = {v: colDataTypesArr[I].heading,t: 's'};
-			cellAddr = XLSX.utils.encode_cell({c:columnNum,r:0});  
+		if( columnNum < 1000000 ) {						
+			cell = getCellChar(colDataTypesArr[I].heading);		  
+			cellAddr = recalculateRangeAndGetCellAddr(range,columnNum  + startColumn,rowNum);
 			ws[cellAddr] = cell;
 		}	
-	}	
+	}
+	rowNum++;
 	
 	//print data
-	for(R = 0; R < data.length; R++) { // rows    
-		// recalculate row range		
-		if(range.s.r > R) range.s.r = R;
-		if(range.e.r < R) range.e.r = R;
-
-		for(C = 0; C < data[R].length; C++) {			//columns
-			columnNum = colDataTypesArr[C].displayOrder;
-			if( columnNum < 1000000 ) {								
-        // recalculate column range		
-				if(range.s.c > columnNum) range.s.c = columnNum;				
-				if(range.e.c < columnNum) range.e.c = columnNum;
-
-				cellAddr = XLSX.utils.encode_cell({c:columnNum,r:R + 1}); // R + 1 because header
-
+	for(R = 0; R < data.length; R++) { // rows
+		rowAdditionalnfo = data[R][data[R].length - 1] || {}; // last record is an object with additional proprties				
+		//console.log(isControlBreak + " " + (rowAdditionalnfo.endControlBreak || false));
+		
+		// display control break		
+		if( isControlBreak && (!rowAdditionalnfo.agg) )  { 
+			for(C = 0; C < data[R].length; C++) {			//columns 
+				columnNum = colDataTypesArr[C].displayOrder;
+				if( columnNum > 1000000 ) {			//is control break
+					controlBreakArr.push({ displayOrder : columnNum,
+															   text : colDataTypesArr[C].heading + " : " + data[R][C]
+															 });
+				} // end column loop
+			}
+		  cellAddr = recalculateRangeAndGetCellAddr(range,startColumn,rowNum); 
+			// sort contol break columns in display order and convert them to the simple array of strings
+			controlBreakArr = controlBreakArr.sort(function(a,b){
+				return a.displayOrder - b.displayOrder;
+			}).map(function(a){
+				return a.text;
+			});
+			//console.log(controlBreakArr);			
+			cell = getCellChar(controlBreakArr.join(", "));				
+			ws[cellAddr] = cell;
+			rowNum++;							
+			controlBreakArr = [];
+		} 
+		
+		// display regular columns		
+		for(C = 0; C < data[R].length - 1; C++) {			//columns; -1 because last record is an object with additional proprties
+			columnNum = colDataTypesArr[C].displayOrder + startColumn;
+			if( columnNum < 1000000 ) {			//display visible columns	
+				cellAddr = recalculateRangeAndGetCellAddr(range,columnNum + startColumn,rowNum); 
 				if(colDataTypesArr[C].dataType == 'NUMBER') {
-					cell = getCellNumber(data[R][C],colDataTypesArr[C],decimalSeparator)
+					cell = getCellNumber(data[R][C],colDataTypesArr[C],properties.decimalSeparator)
 				} else if(colDataTypesArr[C].dataType == 'DATE') {				
-					cell = getCellDate(data[R][C],colDataTypesArr[C],langCode);
+					cell = getCellDate(data[R][C],colDataTypesArr[C],properties.langCode);
 				} else {
 					// string
-					cell = {v: data[R][C],t: 's'};
-				}	
-
+					cell = getCellChar(data[R][C]);
+				}					
 				ws[cellAddr] = cell;
+			} 
+		} // end column loop		
+		// aggregations
+		if(rowAdditionalnfo.agg) {
+			// print name of aggregation in the first column
+			if(rowAdditionalnfo.grandTotal) {
+			  cell = getCellChar(properties.aggregateLabels[rowAdditionalnfo.agg].overallLabel);	
+			} else {
+				cell = getCellChar(properties.aggregateLabels[rowAdditionalnfo.agg].label);	
 			}
+			cellAddr = recalculateRangeAndGetCellAddr(range,0,rowNum); 
+			ws[cellAddr] = cell;
+		} else {
+		  isControlBreak = rowAdditionalnfo.endControlBreak || false;			
 		}
-	}
-	if(range.s.c < 10000000) ws['!ref'] = XLSX.utils.encode_range(range);
+		rowNum++;				
+	} // end row loop	
+	
+	
+	if(range.s.c < 10000000) ws['!ref'] = XLSX.utils.encode_range(range); // to do: clarify	
 	return ws;
 }
 
@@ -125,122 +180,117 @@ function s2ab(s) {
 
 function getRows(iGrid) {
   var rows = [];
-	
-	iGrid.model.forEach(function (row_in) { 
-		//console.log(row_in);
-		var row = row_in.slice();      // make a copy of row
-		var rowProperties = row.pop(); // properties are saved at the end of array
-
-		if(rowProperties) {
-			if(rowProperties.endControlBreak) {
-				 rows.push([row[0]]);      
-			}
-		}  
-		rows.push(row);  
+	console.log(iGrid.getDataElements());
+	iGrid.model.forEach(function (row_in) { 		
+		//console.log(row_in);		
+		rows.push(row_in);  
   })	
   return rows;	
 }
 
-function getColumnHeadersArray(columns) {
+function getPreparedIGProperties(columns,propertiesFromPlugin) {
+	// all regular columns have displayOrder < 1000000 
+	// all hidden columns have displayOrder = 1000000
+	// all control breakcolumns have displayOrder > 1000000
+	
 	var I; //iterator
 	var currColumnNo = 0;
+	var controlBreakColumnNo = 1000001;
+	var colProp = propertiesFromPlugin.column_properties;
+	var haveControlBreaks = false;
 	
 	// assign to the each data column a corresponding column number in excel 
+	//
 	// first sort columns in display order
-	var displayInColumnArr = columns.map(function(a) { 
-    var colHeader =  {index : a.index, 
-	 									  displayOrder : 1000000,
-										  heading: a.heading,
-											headingAlignment: a.headingAlignment,
-											width: a.width
-										 };
-		if(a.hidden) {
-			return colHeader;
-		 } else {
-			 colHeader.displayOrder = a.seq;
-			 return colHeader;
-		 }		 
+	var displayInColumnArr = columns.map(function(a) { 		
+		haveControlBreaks = (a.controlBreakIndex || haveControlBreaks) ? true : false;
+		return  {index : a.index, 
+						 displayOrder : a.hidden ? (1000000 + (a.controlBreakIndex || 0)): a.seq, //to place hidden and control break columns at the end after sorting
+						 heading: a.heading,
+						 headingAlignment: a.headingAlignment,
+						 width: a.width,
+						 dataType    : "VARCHAR2",
+						 formatMask : "",
+						 formatMaskExcel : "",
+						 name : "",
+						 id : a.id,
+						 controlBreakIndex : a.controlBreakIndex,
+						 hidden : a.hidden
+						};		
 	 }).sort(function(a, b) { 
     return a.displayOrder - b.displayOrder;
-   });
-	// second renumerate columns	
-	for(I = 0; I < displayInColumnArr.length; I++) {
+   });	
+	
+	// second renumerate display order - skip hidden columns
+	for(I = 0; I < displayInColumnArr.length; I++) { // regular row
 		if(displayInColumnArr[I].displayOrder < 1000000) {
 		  displayInColumnArr[I].displayOrder = currColumnNo;
 			currColumnNo++;
-		}	
+		}	else if (displayInColumnArr[I].controlBreakIndex) { // control break row
+			displayInColumnArr[I].displayOrder = controlBreakColumnNo;
+			controlBreakColumnNo++;
+		}
 	}		
+  // third sort columns in the data order
 	displayInColumnArr.sort(function(a, b) { 
     return a.index - b.index;
    });
 	
-	return displayInColumnArr;
+	// add additional data from server to the colHeader (map by column id)
+	displayInColumnArr.forEach(function(val,index) {
+		var b; // iterator
+		for(b = 0; b < colProp.length; b++) {			
+			if(val.id == colProp[b].COLUMN_ID) {				
+				val.dataType = colProp[b].DATA_TYPE;
+				val.formatMask = colProp[b].DATE_FORMAT_MASK_JS;
+				val.formatMaskExcel = colProp[b].DATE_FORMAT_MASK_EXCEL;		
+				break;
+			}				
+		}		
+	});
+	
+	return { columnsProperties : displayInColumnArr,
+					 decimalSeparator: propertiesFromPlugin.decimal_seperator,
+					 langCode : propertiesFromPlugin.lang_code,
+					 haveControlBreaks : haveControlBreaks,
+					 hasAggregates : false,
+					 aggregateLabels : {}
+				 };
 }
 
-function getColumnsDataTypeArray(columns,colProp,colHeaders) {  
-	// sort columns in order data comes from server 
-	columns.sort(function(a, b) { 
-    return a.index - b.index;
-   });	 
-	
-	//console.log(displayInColumnArr);
-	//console.log(columns);
-	//console.log(colProp);
-	
-	var columnsDataType = [];	
-	var colDataType = {};
-	for(var i = 0; i < columns.length; i++) {
-		colDataType = { dataType    : "VARCHAR2",
-									  formatMask : "",
-									  formatMaskExcel : "",
-									  name : "",
-									  displayOrder : colHeaders[i].displayOrder,
-									  heading: colHeaders[i].heading,
-                    headingAlignment: colHeaders[i].headingAlignment,
-                    width: colHeaders[i].width
-									};	  
-		for(var b = 0; b < colProp.length; b++) {			
-			if(columns[i].id == colProp[b].COLUMN_ID) {				
-				colDataType.dataType = colProp[b].DATA_TYPE;
-				colDataType.formatMask = colProp[b].DATE_FORMAT_MASK_JS;
-				colDataType.formatMaskExcel = colProp[b].DATE_FORMAT_MASK_EXCEL;
-				colDataType.name = colProp[b].NAME;
-			}				
-		}
-   columnsDataType.push(colDataType);	
-	}
-	return columnsDataType;
+
+function hasAggregates(rows) {
+  // if aggregates exists last row always shows aggregates
+	var lastRecord = rows[rows.length -1] || [];
+	var rowAdditionalnfo = lastRecord[lastRecord.length -1] || {};
+	return rowAdditionalnfo.agg ? true : false;
 }
 
 /* main code */
 
-function main(columnPropertiesFromServer) {
-	var iGrid = apex.region("IG").widget().interactiveGrid("getCurrentView");
-	var columns = iGrid.view$.grid('getColumns');
-	var	ws_name = iGrid.model.name;
+function main(propertiesFromPlugin) {
+	var iGrid = apex.region("IG").widget();
+	var currentIGView = iGrid.interactiveGrid("getCurrentView");
+	var columnPropertiesFromIG = currentIGView.view$.grid("getColumns");
+	var	ws_name = currentIGView.model.name;
 	var wb = new Workbook(); 
 	var ws;
 	var wbout;
-	var rows = getRows(iGrid);	
+	var rows = getRows(currentIGView);	
+	
+	//console.log(iGrid);
 	//console.log(rows);
-	//console.log(columns);
+	//console.log(columnPropertiesFromIG);
+	//console.log(propertiesFromPlugin);	
 	
-	//ordered in the display order
-	var columnHeaders = getColumnHeadersArray(columns);
-	//ordered in the order in which the columns comes from the server
-	var colPropertiesArr = getColumnsDataTypeArray(columns,
-																								 columnPropertiesFromServer.column_properties,
-																								 columnHeaders
-																							 ) ;  
-	//console.log(colPropertiesArr);
-	//console.log(columnPropertiesFromServer);
+	var properties = getPreparedIGProperties(columnPropertiesFromIG,propertiesFromPlugin);  
+	properties.hasAggregates = hasAggregates(rows);
+	properties.aggregateLabels = iGrid.interactiveGrid("getViews").grid.aggregateLabels;
+	//console.log(properties);
 	
 	
-	ws = sheet_from_array_of_arrays(rows,
-																	colPropertiesArr,
-																	columnPropertiesFromServer.decimal_seperator,
-																	columnPropertiesFromServer.lang_code
-																 ); 
+	
+	ws = getWorksheet(rows,properties); 
 	// add worksheet to workbook 
 	//return;
 	wb.SheetNames.push(ws_name);
@@ -254,16 +304,3 @@ function main(columnPropertiesFromServer) {
 getColumnsProperties(main);
 
 
-
-
-
-
-
-/*
-Exception: ReferenceError: getColumnsProperties is not defined
-@Scratchpad/1:255:1
-*/
-/*
-Exception: ReferenceError: getColumnsProperties is not defined
-@Scratchpad/1:255:1
-*/
