@@ -45,8 +45,7 @@ function getCellNumber(value,colDataType,decimalSeparator) {
 		if( !isNaN(num) ) {
 			cell.t = 'n';	  
 			cell.z = colDataType.formatMaskExcel;
-			cell.v = num;	
-			//cell.color = { name: 'accent5', rgb: '4BACC6' };
+			cell.v = num;				
 		} else {
 			console.log("Can't parse number <" + value + ">");
 			cell.t = 's';	 
@@ -57,7 +56,31 @@ function getCellNumber(value,colDataType,decimalSeparator) {
 }
 
 function getCellChar(value) {
-	return  {v: value,t: 's'};
+	return  {v: value,
+					 t: 's',
+					 s :  {
+            "numFmt": "General",
+            "fill": {
+                "patternType": "darkHorizontal",
+                "fgColor": {
+                    "theme": 9,
+                    "tint": -0.249977111117893
+                },
+                "bgColor": {
+                    "theme": 5,
+                    "tint": 0.3999755851924192
+                }
+            },
+            "font": {
+                "sz": "12",
+                "color": {
+                    "theme": "1"
+                },
+                "name": "Calibri"
+            },
+            "border": {}
+}			
+					};
 }
 
 
@@ -304,3 +327,8 @@ function main(propertiesFromPlugin) {
 getColumnsProperties(main);
 
 
+
+/*
+Exception: ReferenceError: getColumnsProperties is not defined
+@Scratchpad/2:327:1
+*/
