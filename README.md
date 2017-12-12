@@ -17,6 +17,7 @@ Many features of Interactive Reports are supported:
  $  Aggregations
  $  No BI Publisher Required
  $  (new in 2.20) Great performance 
+ $  Coming soon: export from Interactive Grid
 
 The minimum required APEX-version is 5.0.
 Documentation, downloads, and other useful information can be found [here](http://glebovpavel.github.io/Description_IR_TO_XSLX/).
@@ -24,7 +25,7 @@ Here's a link to the [main project page + demo](http://glebovpavel.github.io/Des
 
 ##Current Version
 
-Version 2.20
+Version 2.21
 
 ##Current Stable Version
 
