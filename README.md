@@ -3,7 +3,7 @@ GPV Interactive Report to MSExcel
 
 Getting results of your Interactive Report in Microsoft Excel. 
 
-##About
+## About
 
 The "GPV Interactive Report to MSExcel v2" APEX plugin lets you get results of your Interactive Report in XSML-format, ready to be used in Microsoft Excel.
 
@@ -23,14 +23,14 @@ The minimum required APEX-version is 5.0.
 Documentation, downloads, and other useful information can be found [here](http://glebovpavel.github.io/Description_IR_TO_XSLX/).
 Here's a link to the [main project page + demo](http://glebovpavel.github.io/Description_IR_TO_XSLX/).
 
-##Current Version
+## Current Version
 
 Version 2.21
 
-##Current Stable Version
+## Current Stable Version
 
 Version 2.13
 
-##License
+## License
 
 See LICENSE.md (MIT)
