@@ -7,8 +7,38 @@
  * 3. Display to insert the result in a comment after the selection. (Ctrl+L)
  */
 
-function getCellDate(value,colDataType,langCode) {
-  var cell = {v: value};
+function buildFormatObj(formatIn) {
+	var formatObj = {};
+	var format = formatIn || {};
+	
+	if(!format.colors) {
+		format.colors = {};
+	}
+	
+	if(format.colors.backColor) {
+		formatObj.fill = { fgColor : { rgb: "FF" + format.colors.backColor.replace("#","") }};		
+	}
+	if(format.colors.color) {
+		formatObj.font = { color : { rgb: "FF" + format.colors.color.replace("#","") }};		
+	}
+	if(format.align) {				
+		if (format.align === "start") {
+			formatObj.alignment = { horizontal : "left" }		
+		} else if (format.align === "end") {
+			formatObj.alignment = { horizontal : "right" }		
+		} else {
+			formatObj.alignment = { horizontal : format.align }		
+		}			
+	}	
+		
+	return  formatObj;
+}
+
+
+function getCellDate(value,colDataType,langCode,format) {
+  var cell = {v : value,
+							s :  buildFormatObj(format)
+						 };
 	var formatMask = colDataType.formatMask;
 	var dateStrict = !( formatMask.search("MMMM") >= 0 || formatMask.search("ddd") >= 0 ); //because of bug https://github.com/moment/moment/issues/4227	
 	var langCode = langCode || 'en';	
@@ -32,11 +62,13 @@ function getCellDate(value,colDataType,langCode) {
 }
 
 
-function getCellNumber(value,colDataType,decimalSeparator) {	
+function getCellNumber(value,colDataType,decimalSeparator,format) {	
 	var num; 
   var re = new RegExp("[^0123456789" + decimalSeparator +"]","g");	
 	var str = "" + value;
-	var cell = {v: str};
+	var cell = {v : str, 
+							s :  buildFormatObj(format)
+						 };
 	
 	if(value) {
     str.replace(re, ""); //remove all symbols except digits and decimalSeparator		
@@ -55,32 +87,11 @@ function getCellNumber(value,colDataType,decimalSeparator) {
  return cell;
 }
 
-function getCellChar(value) {
+function getCellChar(value,format) {
 	return  {v: value,
 					 t: 's',
-					 s :  {
-            "numFmt": "General",
-            "fill": {
-                "patternType": "darkHorizontal",
-                "fgColor": {
-                    "theme": 9,
-                    "tint": -0.249977111117893
-                },
-                "bgColor": {
-                    "theme": 5,
-                    "tint": 0.3999755851924192
-                }
-            },
-            "font": {
-                "sz": "12",
-                "color": {
-                    "theme": "1"
-                },
-                "name": "Calibri"
-            },
-            "border": {}
-}			
-					};
+					 s :  buildFormatObj(format)
+				 };
 }
 
 
@@ -94,6 +105,18 @@ function recalculateRangeAndGetCellAddr(range,colNo,rowNo) {
 	
 	return XLSX.utils.encode_cell({c:colNo,r:rowNo});
 	
+}
+
+function getHighlight(id,highlights) {
+	var colors = {};
+	for(i = 0; i < highlights.length; i++ ) {
+		if(highlights[i].HIGHLIGHT_ID == id) {
+			   colors.backColor = highlights[i].BACKGROUND_COLOR;
+			   colors.color = highlights[i].TEXT_COLOR;
+			   break;
+			 }
+	}
+	return colors;
 }
 
 function getWorksheet(data,properties) {	
@@ -110,12 +133,13 @@ function getWorksheet(data,properties) {
 	var rowAdditionalnfo;
 	var controlBreakArr = [];
 	var startColumn = properties.hasAggregates ? 1 : 0; 
-	
+	var cellFormat = {};
+
 	// print headers
 	for(I = 0; I < colDataTypesArr.length; I++) {
 		columnNum = colDataTypesArr[I].displayOrder;
-		if( columnNum < 1000000 ) {						
-			cell = getCellChar(colDataTypesArr[I].heading);		  
+		if( columnNum < 1000000 ) {					
+			cell = getCellChar(colDataTypesArr[I].heading,{align : colDataTypesArr[I].headingAlignment});		  
 			cellAddr = recalculateRangeAndGetCellAddr(range,columnNum  + startColumn,rowNum);
 			ws[cellAddr] = cell;
 		}	
@@ -126,6 +150,10 @@ function getWorksheet(data,properties) {
 	for(R = 0; R < data.length; R++) { // rows
 		rowAdditionalnfo = data[R][data[R].length - 1] || {}; // last record is an object with additional proprties				
 		//console.log(isControlBreak + " " + (rowAdditionalnfo.endControlBreak || false));
+		cellFormat = { colors : {}};
+		if(rowAdditionalnfo.highlight) {
+			cellFormat.colors = getHighlight(rowAdditionalnfo.highlight,properties.highlights);
+		}			
 		
 		// display control break		
 		if( isControlBreak && (!rowAdditionalnfo.agg) )  { 
@@ -153,16 +181,17 @@ function getWorksheet(data,properties) {
 		
 		// display regular columns		
 		for(C = 0; C < data[R].length - 1; C++) {			//columns; -1 because last record is an object with additional proprties
+		  cellFormat.align = colDataTypesArr[C].alignment;
 			columnNum = colDataTypesArr[C].displayOrder + startColumn;
 			if( columnNum < 1000000 ) {			//display visible columns	
 				cellAddr = recalculateRangeAndGetCellAddr(range,columnNum + startColumn,rowNum); 
 				if(colDataTypesArr[C].dataType == 'NUMBER') {
-					cell = getCellNumber(data[R][C],colDataTypesArr[C],properties.decimalSeparator)
+					cell = getCellNumber(data[R][C],colDataTypesArr[C],properties.decimalSeparator,cellFormat)
 				} else if(colDataTypesArr[C].dataType == 'DATE') {				
-					cell = getCellDate(data[R][C],colDataTypesArr[C],properties.langCode);
+					cell = getCellDate(data[R][C],colDataTypesArr[C],properties.langCode,cellFormat);
 				} else {
 					// string
-					cell = getCellChar(data[R][C]);
+					cell = getCellChar(data[R][C],cellFormat);
 				}					
 				ws[cellAddr] = cell;
 			} 
@@ -201,14 +230,34 @@ function s2ab(s) {
 	return buf;
 }
 
-function getRows(iGrid) {
-  var rows = [];
-	console.log(iGrid.getDataElements());
-	iGrid.model.forEach(function (row_in) { 		
-		//console.log(row_in);		
-		rows.push(row_in);  
-  })	
-  return rows;	
+function getRows(iGrid,propertiesFromPlugin,callback) {
+  var rows = [];		
+	var gridView = iGrid.interactiveGrid("getViews").grid; 
+	var model = gridView.model;
+	var count = model.getOption("pageSize");  		
+
+	//https://community.oracle.com/thread/4014257  
+	function loadBatchOfRecords(model, offset, count) {  
+			var i = 0;  			
+		  console.log("load some at " + offset); 
+			model.forEachInPage(offset, count, function(r) {  
+					i += 1;  
+				  if(r)  {						
+						rows.push(r);  				
+					}				
+					if (i === count || !r) {  						
+							// got all the records we asked for or no more available  
+							if (r) {  								  								  								
+									// if there are more recorda available get them  
+									loadBatchOfRecords(model, offset + count, count);  
+							}  else {
+								callback(rows,iGrid,propertiesFromPlugin);
+							}								
+					}  
+			 });  
+	}  	
+
+	loadBatchOfRecords(model, 0, count);	
 }
 
 function getPreparedIGProperties(columns,propertiesFromPlugin) {
@@ -231,6 +280,7 @@ function getPreparedIGProperties(columns,propertiesFromPlugin) {
 						 displayOrder : a.hidden ? (1000000 + (a.controlBreakIndex || 0)): a.seq, //to place hidden and control break columns at the end after sorting
 						 heading: a.heading,
 						 headingAlignment: a.headingAlignment,
+						 alignment : a.alignment,
 						 width: a.width,
 						 dataType    : "VARCHAR2",
 						 formatMask : "",
@@ -276,6 +326,7 @@ function getPreparedIGProperties(columns,propertiesFromPlugin) {
 					 decimalSeparator: propertiesFromPlugin.decimal_seperator,
 					 langCode : propertiesFromPlugin.lang_code,
 					 haveControlBreaks : haveControlBreaks,
+					 highlights : propertiesFromPlugin.highlights,
 					 hasAggregates : false,
 					 aggregateLabels : {}
 				 };
@@ -289,29 +340,20 @@ function hasAggregates(rows) {
 	return rowAdditionalnfo.agg ? true : false;
 }
 
-/* main code */
 
-function main(propertiesFromPlugin) {
-	var iGrid = apex.region("IG").widget();
+function buildExcel(rows,iGrid,propertiesFromPlugin) {  
 	var currentIGView = iGrid.interactiveGrid("getCurrentView");
-	var columnPropertiesFromIG = currentIGView.view$.grid("getColumns");
 	var	ws_name = currentIGView.model.name;
 	var wb = new Workbook(); 
 	var ws;
-	var wbout;
-	var rows = getRows(currentIGView);	
+	var wbout;	
+	var columnPropertiesFromIG = currentIGView.view$.grid("getColumns");
 	
-	//console.log(iGrid);
-	//console.log(rows);
-	//console.log(columnPropertiesFromIG);
-	//console.log(propertiesFromPlugin);	
+	var properties = getPreparedIGProperties(columnPropertiesFromIG,propertiesFromPlugin);  	
 	
-	var properties = getPreparedIGProperties(columnPropertiesFromIG,propertiesFromPlugin);  
 	properties.hasAggregates = hasAggregates(rows);
 	properties.aggregateLabels = iGrid.interactiveGrid("getViews").grid.aggregateLabels;
 	//console.log(properties);
-	
-	
 	
 	ws = getWorksheet(rows,properties); 
 	// add worksheet to workbook 
@@ -320,15 +362,14 @@ function main(propertiesFromPlugin) {
 	wb.Sheets[ws_name] = ws;
 	wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
 
-	saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), "test.xlsx");
+	saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), "test.xlsx");	
+}
 
+
+function main(propertiesFromPlugin) {
+	var iGrid = apex.region("IG").widget();
+	getRows(iGrid,propertiesFromPlugin,buildExcel);		
 }
 
 getColumnsProperties(main);
 
-
-
-/*
-Exception: ReferenceError: getColumnsProperties is not defined
-@Scratchpad/2:327:1
-*/
