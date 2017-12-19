@@ -1,11 +1,9 @@
-/*
- * This is a JavaScript Scratchpad.
- *
- * Enter some JavaScript, then Right Click or choose from the Execute Menu:
- * 1. Run to evaluate the selected text (Ctrl+R),
- * 2. Inspect to bring up an Object Inspector on the result (Ctrl+I), or,
- * 3. Display to insert the result in a comment after the selection. (Ctrl+L)
- */
+(function(parent, $, undefined){
+  
+	if (parent.excel_ig_gpv === undefined) {
+
+		parent.excel_ig_gpv = function () {
+//start			
 
 function buildFormatObj(formatIn) {
 	var formatObj = {};
@@ -47,8 +45,6 @@ function getCellDate(value,colDataType,langCode,format) {
 	
 	if(value) {
 		if( parsedDate.isValid()) {
-			//console.log(value);
-			//console.log(formatMask);		  
 			cell.t = 'n'; // excel recognizes date as number that have a date format string			
 			cell.z = colDataType.formatMaskExcel;						
 			cell.v = ((parsedDate.toDate() - epoch) / (24 * 60 * 60 * 1000)) + 1;			// + 1 because excel leap bug
@@ -122,10 +118,12 @@ function getHighlight(id,highlights) {
 	return colors;
 }
 
-function getWorksheet(data,properties) {	
-	//console.log(colDataTypesArr);
-	var ws = {};
+function getWorksheet(data,properties) {		
+	var ws = { "!cols" : [],
+					   "!autofilter" : []
+					 };
 	var range = {s: {c:10000000, r:10000000}, e: {c:0, r:0 }};
+	var rangeStr;
 	var cellAddr = {}; 
 	var cell = {};
 	var R,C,I,A; // iterators
@@ -146,18 +144,21 @@ function getWorksheet(data,properties) {
 			cell = getCellChar(colDataTypesArr[I].heading,{align : colDataTypesArr[I].headingAlignment});		  
 			cellAddr = recalculateRangeAndGetCellAddr(range,columnNum  + startColumn,rowNum);
 			ws[cellAddr] = cell;
+			// set column width
+			ws['!cols'].push({wch:colDataTypesArr[I].width/6}); // 6 - is a WIDTH_COEFFICIENT	
 		}	
 	}
-	rowNum++;
 	
 	//print data
 	for(R = 0; R < data.length; R++) { // rows
-		rowAdditionalnfo = data[R][data[R].length - 1] || {}; // last record is an object with additional proprties				
-		//console.log(isControlBreak + " " + (rowAdditionalnfo.endControlBreak || false));
+		rowAdditionalnfo = data[R][data[R].length - 1] || {}; // last record is an object with additional proprties						
 		cellFormat = { colors : {}};
 		if(rowAdditionalnfo.highlight) {
 			rowColors = getHighlight(rowAdditionalnfo.highlight,properties.highlights);			
 		}			
+		else {
+			rowColors = {};
+		}
 		
 		// display control break		
 		if( isControlBreak && (!rowAdditionalnfo.agg) )  { 
@@ -175,8 +176,7 @@ function getWorksheet(data,properties) {
 				return a.displayOrder - b.displayOrder;
 			}).map(function(a){
 				return a.text;
-			});
-			//console.log(controlBreakArr);			
+			});			
 			cell = getCellChar(controlBreakArr.join(", "));				
 			ws[cellAddr] = cell;
 			rowNum++;							
@@ -192,7 +192,7 @@ function getWorksheet(data,properties) {
 			} else {
 				cellFormat.colors = {};
 			}							
-			columnNum = colDataTypesArr[C].displayOrder + startColumn;
+			columnNum = colDataTypesArr[C].displayOrder;
 			if( columnNum < 1000000 ) {			//display visible columns	
 				cellAddr = recalculateRangeAndGetCellAddr(range,columnNum + startColumn,rowNum); 				
 				// show cell highlights
@@ -233,7 +233,12 @@ function getWorksheet(data,properties) {
 	} // end row loop	
 	
 	
-	if(range.s.c < 10000000) ws['!ref'] = XLSX.utils.encode_range(range); // to do: clarify	
+	rangeStr = XLSX.utils.encode_range(range); // to do: clarify			
+	if(range.s.c < 10000000) { 		
+		ws['!ref'] = rangeStr; 
+		ws['!autofilter'] = { ref: rangeStr }; // not working on my PC -(
+	}
+	
 	return ws;
 }
 
@@ -258,8 +263,7 @@ function getRows(iGrid,propertiesFromPlugin,callback) {
 
 	//https://community.oracle.com/thread/4014257  
 	function loadBatchOfRecords(model, offset, count) {  
-			var i = 0;  			
-		  console.log("load some at " + offset); 
+			var i = 0;  					  
 			model.forEachInPage(offset, count, function(r) {  
 					i += 1;  
 				  if(r)  {						
@@ -289,20 +293,19 @@ function getPreparedIGProperties(columns,propertiesFromPlugin) {
 	var currColumnNo = 0;
 	var controlBreakColumnNo = 1000001;
 	var colProp = propertiesFromPlugin.column_properties;
-	var haveControlBreaks = false;
+	var haveControlBreaks = false;		
 	
-	//console.log(columns);
 	// assign to the each data column a corresponding column number in excel 
 	//
 	// first sort columns in display order
 	var displayInColumnArr = columns.map(function(a) { 		
-		haveControlBreaks = (a.controlBreakIndex || haveControlBreaks) ? true : false;
+		haveControlBreaks = (a.controlBreakIndex || haveControlBreaks) ? true : false;		
 		return  {index : a.index, 
 						 displayOrder : a.hidden ? (1000000 + (a.controlBreakIndex || 0)): a.seq, //to place hidden and control break columns at the end after sorting
 						 heading: a.heading,
 						 headingAlignment: a.headingAlignment,
 						 alignment : a.alignment,
-						 width: a.width,
+						 width: a.curWidth,
 						 dataType    : "VARCHAR2",
 						 formatMask : "",
 						 formatMaskExcel : "",
@@ -325,6 +328,8 @@ function getPreparedIGProperties(columns,propertiesFromPlugin) {
 			controlBreakColumnNo++;
 		}
 	}		
+
+	
   // third sort columns in the data order
 	displayInColumnArr.sort(function(a, b) { 
     return a.index - b.index;
@@ -374,24 +379,86 @@ function buildExcel(rows,iGrid,propertiesFromPlugin) {
 	
 	properties.hasAggregates = hasAggregates(rows);
 	properties.aggregateLabels = iGrid.interactiveGrid("getViews").grid.aggregateLabels;
-	//console.log(properties);
-	console.log(rows);
+
+	ws = getWorksheet(rows,properties); 	
 	
-	ws = getWorksheet(rows,properties); 
+	//return;  
 	// add worksheet to workbook 
-	//return;
 	wb.SheetNames.push(ws_name);
-	wb.Sheets[ws_name] = ws;
+	wb.Sheets[ws_name] = ws;	
 	wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
 
 	saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), "test.xlsx");	
 }
 
+function addDownloadXLSXiconToIG(vRegionID,vPluginID) {
+  var vWidget$ = apex.region(vRegionID).widget();
+  var toolbar = vWidget$.interactiveGrid("getToolbar");
 
-function main(propertiesFromPlugin) {
-	var iGrid = apex.region("IG").widget();
-	getRows(iGrid,propertiesFromPlugin,buildExcel);		
+  // find toolbar group
+  var toolbarGroup = toolbar.toolbar('findGroup', "actions4");
+	
+	toolbarGroup.controls.push({
+		type: 'BUTTON',
+		label: "XLSX",
+		title: "XLSX",
+		labelKey: "XLSX", // label from text messages
+		action: "GPVGETXLSX",
+		icon: "icon-ig-download",
+		iconOnly: false,
+		iconBeforeLabel: true,
+		hot: false
+	});
+	// add actions
+	var vActions = vWidget$.interactiveGrid('getActions');
+
+	// check if action exists, then just assign it
+	var vAction$ = vActions.lookup("GPVGETXLSX");
+	if(!vAction$){
+		vActions.add(
+			{
+				name   : "GPVGETXLSX"
+				, action : function(event, element) {					
+					apex.server.plugin ( vPluginID, 
+                                        {x01: "G",
+                                         x02: $v("pFlowId"),
+                                         x03: $v("pFlowStepId")
+                                        },                                   
+                                        {success: function(propertiesFromPlugin){																
+                                             getRows(vWidget$,propertiesFromPlugin,buildExcel);		
+                                        }                                  
+                                        }); 
+				}
+				, hide : false
+				, disabled : false
+			});
+	}else{
+		vAction$.hide = false;
+		vAction$.disabled = false;
+	}
+	// refresh grid
+	toolbar.toolbar('refresh');
+}	
+	
+function downloadXLSXfromIG(vRegionID,vPluginID) {
+	var vWidget$ = apex.region(vRegionID).widget();
+	apex.server.plugin ( vPluginID, 
+											{x01: "G",
+											 x02: $v("pFlowId"),
+											 x03: $v("pFlowStepId")
+											},                                   
+											{success: function(propertiesFromPlugin){																
+												getRows(vWidget$,propertiesFromPlugin,buildExcel);		
+											}                                  
+											}); 
 }
-
-getColumnsProperties(main);
-
+//end
+			
+      return {
+        addDownloadXLSXiconToIG:addDownloadXLSXiconToIG
+      , downloadXLSXfromIG: downloadXLSXfromIG
+      };
+			
+		}();
+	}
+})(window, apex.jQuery)			
