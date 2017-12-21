@@ -282,6 +282,80 @@ as
   end convert_number_format;  
   ------------------------------------------------------------------------------
   
+  function get_current_format(p_data_type in binary_integer)
+  return varchar2
+  is
+    v_format    formatmask;
+    v_parameter varchar2(50);
+  begin
+    if p_data_type in (dbms_types.TYPECODE_TIMESTAMP_TZ,181) then
+       v_parameter := 'NLS_TIMESTAMP_TZ_FORMAT';
+    elsif p_data_type in (dbms_types.TYPECODE_TIMESTAMP_LTZ,231) then
+       v_parameter := 'NLS_TIMESTAMP_TZ_FORMAT';
+    elsif p_data_type in (dbms_types.TYPECODE_TIMESTAMP,180) then
+       v_parameter := 'NLS_TIMESTAMP_FORMAT';
+    elsif p_data_type = dbms_types.TYPECODE_DATE then
+       v_parameter := 'NLS_DATE_FORMAT';
+    else
+       return 'dd.mm.yyyy';
+    end if;
+
+    SELECT value
+    into v_format
+    FROM V$NLS_Parameters
+    WHERE parameter = v_parameter;
+
+    return v_format;
+  end get_current_format;
+  ------------------------------------------------------------------------------
+
+  function convert_date_format_js(p_datatype in varchar2, p_format in varchar2)
+  return varchar2
+  is
+    v_str        varchar2(100);
+    v_24h_format  boolean default true;
+  begin
+    if p_format is null then
+      if p_datatype = 'TIMESTAMP_TZ' then
+        v_str := get_current_format(dbms_types.TYPECODE_TIMESTAMP_TZ);
+      elsif p_datatype = 'TIMESTAMP_LTZ' then
+        v_str := get_current_format(dbms_types.TYPECODE_TIMESTAMP_LTZ);  
+      elsif p_datatype = 'TIMESTAMP' then
+        v_str := get_current_format(dbms_types.TYPECODE_TIMESTAMP);          
+      elsif p_datatype = 'DATE' then
+       v_str := get_current_format(dbms_types.TYPECODE_DATE);
+      else
+        v_str := get_current_format('');
+      end if;
+    else
+      v_str := p_format;
+    end if;
+    
+    v_str := upper(v_str);
+    --date
+    v_str := replace(v_str,'DAY','ddd');
+    v_str := replace(v_str,'MONTH','MMMM');
+    v_str := replace(v_str,'MON','MMM');
+    v_str := replace(v_str,'R','Y');
+    v_str := replace(v_str,'FM','');
+    if instr(v_str,'PM') > 0 then
+      v_24h_format := false;
+    end if;
+    v_str := replace(v_str,'AM/PM','');
+    v_str := replace(v_str,'PM','');
+    --time
+    v_str := replace(v_str,'MI','mm');
+    v_str := replace(v_str,'SS','ss');
+    v_str := replace(v_str,'HH24','HH');
+    v_str := replace(v_str,'HH12','hh');
+    if not v_24h_format then
+      v_str := replace(v_str,'HH','hh');
+    end if;
+    
+    return v_str;
+  end convert_date_format_js;
+  ------------------------------------------------------------------------------
+  
   function add_font(p_font in t_color,p_bold in varchar2 default null)
   return binary_integer 
   is  
@@ -1291,33 +1365,8 @@ as
   exception
     when invalid_number or format_error or date_format_error or conversion_error then 
       return false;
-  end can_show_as_date;  
-  ------------------------------------------------------------------------------
-  function get_current_format(p_data_type in binary_integer)
-  return varchar2
-  is
-    v_format    formatmask;
-    v_parameter varchar2(50);
-  begin
-    if p_data_type in (dbms_types.TYPECODE_TIMESTAMP_TZ,181) then
-       v_parameter := 'NLS_TIMESTAMP_TZ_FORMAT';
-    elsif p_data_type in (dbms_types.TYPECODE_TIMESTAMP_LTZ,231) then
-       v_parameter := 'NLS_TIMESTAMP_TZ_FORMAT';
-    elsif p_data_type in (dbms_types.TYPECODE_TIMESTAMP,180) then
-       v_parameter := 'NLS_TIMESTAMP_FORMAT';      
-    elsif p_data_type = dbms_types.TYPECODE_DATE then
-       v_parameter := 'NLS_DATE_FORMAT';      
-    else 
-       return 'dd.mm.yyyy';
-    end if;     
-    
-    SELECT value 
-    into v_format
-    FROM V$NLS_Parameters 
-    WHERE parameter = v_parameter;    
-    
-    return v_format;
-  end get_current_format;
+  end can_show_as_date;    
+  
   ------------------------------------------------------------------------------
   -- excel has only DATE-format mask (no timezones etc)
   -- if format mask can be shown in excel - show column as date- type

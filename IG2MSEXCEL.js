@@ -33,13 +33,13 @@ function buildFormatObj(formatIn) {
 }
 
 
-function getCellDate(value,colDataType,langCode,format) {
+function getCellDate(value,colDataType,langCode,format,moment) {
   var cell = {v : value,
 							s :  buildFormatObj(format)
 						 };
 	var formatMask = colDataType.formatMask;
 	var dateStrict = !( formatMask.search("MMMM") >= 0 || formatMask.search("ddd") >= 0 ); //because of bug https://github.com/moment/moment/issues/4227	
-	var langCode = langCode || 'en';	
+	var langCode = langCode || 'en';		
 	var parsedDate = moment(value,formatMask,langCode,dateStrict);		
 	var epoch = new Date(1899,11,31);
 	
@@ -207,7 +207,7 @@ function getWorksheet(data,properties) {
 				if(colDataTypesArr[C].dataType == 'NUMBER') {
 					cell = getCellNumber(data[R][C],colDataTypesArr[C],properties.decimalSeparator,cellFormat)
 				} else if(colDataTypesArr[C].dataType == 'DATE') {				
-					cell = getCellDate(data[R][C],colDataTypesArr[C],properties.langCode,cellFormat);
+					cell = getCellDate(data[R][C],colDataTypesArr[C],properties.langCode,cellFormat,properties.moment);
 				} else {
 					// string
 					cell = getCellChar(data[R][C],cellFormat);
@@ -255,12 +255,25 @@ function s2ab(s) {
 	return buf;
 }
 
-function getRows(iGrid,propertiesFromPlugin,callback) {
+function getRows(iGrid,propertiesFromPlugin,callback,fileName,pathIn) {
   var rows = [];		
 	var gridView = iGrid.interactiveGrid("getViews").grid; 
 	var model = gridView.model;
 	var count = model.getOption("pageSize");  		
-
+	var config; //requirejs config
+	var packages; // requirejs config.packages	
+	var path=$("script[src$='IG2MSEXCEL.js']").attr("src").replace('IG2MSEXCEL.js',''); 	
+	var localPath;
+  
+	if(path.charAt(0) === "/") {
+		 path = document.location.origin + path;
+	} else {
+     var localPath = document.location.origin + document.location.pathname; 
+     localPath = localPath.replace(/f$/, '');
+		 path = localPath + path;
+	}
+	console.log(path);
+	
 	//https://community.oracle.com/thread/4014257  
 	function loadBatchOfRecords(model, offset, count) {  
 			var i = 0;  					  
@@ -274,9 +287,31 @@ function getRows(iGrid,propertiesFromPlugin,callback) {
 							if (r) {  								  								  								
 									// if there are more recorda available get them  
 									loadBatchOfRecords(model, offset + count, count);  
-							}  else {
-								callback(rows,iGrid,propertiesFromPlugin);
-							}								
+							}  else {								
+								// load large JS-libraries dynamically using requirejs
+								config = requirejs.s.contexts._.config; //get current config
+                // add own settings for xlsx-js
+								config.shim.xlsx = {
+                                    deps: ['jszip'],
+                                    exports: 'XLSX'
+                };							 
+               config.paths.xlsx = path + 'xlsx.full.min';
+               config.paths.jszip = path + 'jszip.min';							 
+								
+							 // 	add moment.js								
+							 config.moment = {
+                 noGlobal: true
+               };
+ 							 config.paths.moment = path + 'moment-with-locales';
+							 config.packages = packages;
+               requirejs.config(config);
+               require(['jszip'], function (jszip) {
+                     window.JSZip = jszip;
+                     require(['xlsx','moment'], function (xlsx,moment) {											    											    
+											    callback(rows,iGrid,propertiesFromPlugin,fileName,path,moment);		
+                     });
+              });								
+						 }								
 					}  
 			 });  
 	}  	
@@ -367,7 +402,7 @@ function hasAggregates(rows) {
 }
 
 
-function buildExcel(rows,iGrid,propertiesFromPlugin) {  
+function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {  
 	var currentIGView = iGrid.interactiveGrid("getCurrentView");
 	var	ws_name = currentIGView.model.name;
 	var wb = new Workbook(); 
@@ -379,7 +414,8 @@ function buildExcel(rows,iGrid,propertiesFromPlugin) {
 	
 	properties.hasAggregates = hasAggregates(rows);
 	properties.aggregateLabels = iGrid.interactiveGrid("getViews").grid.aggregateLabels;
-
+	properties.moment = moment;
+  
 	ws = getWorksheet(rows,properties); 	
 	
 	//return;  
@@ -388,11 +424,12 @@ function buildExcel(rows,iGrid,propertiesFromPlugin) {
 	wb.Sheets[ws_name] = ws;	
 	wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
 
-	saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), "test.xlsx");	
+	saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), fileName  + ".xlsx");	
 }
 
-function addDownloadXLSXiconToIG(vRegionID,vPluginID) {
-  var vWidget$ = apex.region(vRegionID).widget();
+function addDownloadXLSXiconToIG(vRegionID,vPluginID,fileName,path) {
+  try {
+	var vWidget$ = apex.region(vRegionID).widget();
   var toolbar = vWidget$.interactiveGrid("getToolbar");
 
   // find toolbar group
@@ -425,7 +462,7 @@ function addDownloadXLSXiconToIG(vRegionID,vPluginID) {
                                          x03: $v("pFlowStepId")
                                         },                                   
                                         {success: function(propertiesFromPlugin){																
-                                             getRows(vWidget$,propertiesFromPlugin,buildExcel);		
+                                             getRows(vWidget$,propertiesFromPlugin,buildExcel,fileName,path);		
                                         }                                  
                                         }); 
 				}
@@ -438,9 +475,12 @@ function addDownloadXLSXiconToIG(vRegionID,vPluginID) {
 	}
 	// refresh grid
 	toolbar.toolbar('refresh');
+	} catch(err) {
+		console.log(err);
+	}	
 }	
 	
-function downloadXLSXfromIG(vRegionID,vPluginID) {
+function downloadXLSXfromIG(vRegionID,vPluginID,fileName,path) {
 	var vWidget$ = apex.region(vRegionID).widget();
 	apex.server.plugin ( vPluginID, 
 											{x01: "G",
@@ -448,7 +488,7 @@ function downloadXLSXfromIG(vRegionID,vPluginID) {
 											 x03: $v("pFlowStepId")
 											},                                   
 											{success: function(propertiesFromPlugin){																
-												getRows(vWidget$,propertiesFromPlugin,buildExcel);		
+												getRows(vWidget$,propertiesFromPlugin,buildExcel,fileName,path);		
 											}                                  
 											}); 
 }

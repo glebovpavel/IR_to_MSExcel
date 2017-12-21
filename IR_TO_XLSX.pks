@@ -20,6 +20,8 @@ IS
   return varchar2;
   function convert_number_format(p_format IN VARCHAR2)
   return varchar2;
+  function convert_date_format_js(p_datatype in varchar2, p_format in varchar2)
+  return varchar2;
   
   function get_max_rows (p_app_id      IN NUMBER,
                          p_page_id     IN NUMBER,
