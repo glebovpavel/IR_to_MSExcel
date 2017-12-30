@@ -1,7 +1,7 @@
-GPV Interactive Report to MSExcel
+GPV Interactive Report/Grid to MSExcel
 =================================
 
-Getting results of your Interactive Report/ Grid in Microsoft Excel. 
+Getting results of your Interactive Report/Grid in Microsoft Excel. 
 
 ## About
 
@@ -28,7 +28,7 @@ Version 3.0
 
 ## Current Stable Version
 
-Version 3.0
+Version 2.21
 
 ## License
 
