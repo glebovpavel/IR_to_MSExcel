@@ -262,20 +262,21 @@ as
   is
     p_download_type      varchar2(1);
     p_custom_width       varchar2(1000);
-	  p_autofilter              char;
+	p_autofilter         char;
     v_maximum_rows       number;
     v_dummy              apex_plugin.t_dynamic_action_ajax_result;
     v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
   begin
+      v_plugin_running := true;
       --to get properties needed for export in IG
       if apex_application.g_x01 = 'G' then 
         print_column_properties_json(p_application_id => apex_application.g_x02,
                                     p_page_id        => apex_application.g_x03);
         return v_dummy;
-      end if;    
-      
+      end if;  
+  
       p_download_type := nvl(p_dynamic_action.attribute_02,'E');
-  	  p_autofilter:= nvl(p_dynamic_action.attribute_04,'Y');
+      p_autofilter:= nvl(p_dynamic_action.attribute_04,'Y');
       v_affected_region_id := get_affected_region_id(p_dynamic_action_id => p_dynamic_action.ID
                                                     ,p_html_region_id    => apex_application.g_x03);
       

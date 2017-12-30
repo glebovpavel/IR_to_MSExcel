@@ -1,8 +1,13 @@
 /**********************************************
 **
 ** Author: Pavel Glebov
+<<<<<<< HEAD
 ** Date: 12-2017
 ** Version: 3.0
+=======
+** Date: 10-2017
+** Version: 2.21
+>>>>>>> 7556d4c219c9eea70d5589a1a4204689500bba70
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -3063,10 +3068,11 @@ as
   is
     p_download_type      varchar2(1);
     p_custom_width       varchar2(1000);
-	  p_autofilter              char;
+	p_autofilter         char;
     v_maximum_rows       number;
     v_dummy              apex_plugin.t_dynamic_action_ajax_result;
     v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
+<<<<<<< HEAD
   begin
       --to get properties needed for export in IG
       if apex_application.g_x01 = 'G' then 
@@ -3075,6 +3081,10 @@ as
         return v_dummy;
       end if;    
       
+=======
+  begin      
+      v_plugin_running := true;
+>>>>>>> 7556d4c219c9eea70d5589a1a4204689500bba70
       p_download_type := nvl(p_dynamic_action.attribute_02,'E');
   	  p_autofilter:= nvl(p_dynamic_action.attribute_04,'Y');
       v_affected_region_id := get_affected_region_id(p_dynamic_action_id => p_dynamic_action.ID
