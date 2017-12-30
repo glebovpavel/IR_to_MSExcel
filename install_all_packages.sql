@@ -2928,6 +2928,7 @@ as
     v_affected_region_IG_selector apex_application_page_regions.static_id%type;
     v_is_ig                    boolean default false;
     v_is_ir                    boolean default false;
+    v_workspace                apex_applications.workspace%TYPE;
   BEGIN
     v_plugin_id := apex_plugin.get_ajax_identifier;
     v_affected_region_IR_selector := get_affected_region_static_id(p_dynamic_action.ID,'Interactive Report');
@@ -2943,12 +2944,18 @@ as
          APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,v_affected_region_IG_selector);
       else
         -- add XLSX Icon to all IR Regions on the page
+        select workspace
+        into v_workspace
+        from apex_applications
+        where application_id =nv('APP_ID');
+
         for i in (SELECT nvl(static_id,'R'||to_char(region_id)) as affected_region_selector,
                          r.source_type
                   FROM apex_application_page_regions r
                   where r.page_id = v('APP_PAGE_ID')
                     and r.application_id =v('APP_ID')
                     and r.source_type  in ('Interactive Report','Interactive Grid')
+                    and r.workspace = v_workspace
                  )
         loop
            if i.source_type = 'Interactive Report' then 
@@ -3072,21 +3079,17 @@ as
     v_maximum_rows       number;
     v_dummy              apex_plugin.t_dynamic_action_ajax_result;
     v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
-<<<<<<< HEAD
   begin
+      v_plugin_running := true;
       --to get properties needed for export in IG
       if apex_application.g_x01 = 'G' then 
         print_column_properties_json(p_application_id => apex_application.g_x02,
                                     p_page_id        => apex_application.g_x03);
         return v_dummy;
-      end if;    
-      
-=======
-  begin      
-      v_plugin_running := true;
->>>>>>> 7556d4c219c9eea70d5589a1a4204689500bba70
+      end if;  
+  
       p_download_type := nvl(p_dynamic_action.attribute_02,'E');
-  	  p_autofilter:= nvl(p_dynamic_action.attribute_04,'Y');
+      p_autofilter:= nvl(p_dynamic_action.attribute_04,'Y');
       v_affected_region_id := get_affected_region_id(p_dynamic_action_id => p_dynamic_action.ID
                                                     ,p_html_region_id    => apex_application.g_x03);
       
