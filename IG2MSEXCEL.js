@@ -3,9 +3,8 @@
 	if (parent.excel_ig_gpv === undefined) {
 
 		parent.excel_ig_gpv = function () {
-//start			
 
-function buildFormatObj(formatIn) {
+  function buildFormatObj(formatIn) {
 	var formatObj = {};
 	var format = formatIn || {};
 	
@@ -141,13 +140,18 @@ function getWorksheet(data,properties) {
 	for(I = 0; I < colDataTypesArr.length; I++) {
 		columnNum = colDataTypesArr[I].displayOrder;
 		if( columnNum < 1000000 ) {					
-			cell = getCellChar(colDataTypesArr[I].heading,{align : colDataTypesArr[I].headingAlignment});		  
+			cell = getCellChar(colDataTypesArr[I].heading,{align : colDataTypesArr[I].headingAlignment,
+																										 colors: {
+																											  backColor : "C4D79B"
+																										 }
+																										});		  
 			cellAddr = recalculateRangeAndGetCellAddr(range,columnNum  + startColumn,rowNum);
 			ws[cellAddr] = cell;
 			// set column width
 			ws['!cols'].push({wch:colDataTypesArr[I].width/6}); // 6 - is a WIDTH_COEFFICIENT	
 		}	
-	}
+	};
+	rowNum++;
 	
 	//print data
 	for(R = 0; R < data.length; R++) { // rows
@@ -272,7 +276,6 @@ function getRows(iGrid,propertiesFromPlugin,callback,fileName,pathIn) {
      localPath = localPath.replace(/f$/, '');
 		 path = localPath + path;
 	}
-	console.log(path);
 	
 	//https://community.oracle.com/thread/4014257  
 	function loadBatchOfRecords(model, offset, count) {  
@@ -408,6 +411,8 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
 	var wb = new Workbook(); 
 	var ws;
 	var wbout;	
+  var mySpinner = apex.widget.waitPopup();
+
 	var columnPropertiesFromIG = currentIGView.view$.grid("getColumns");
 	
 	var properties = getPreparedIGProperties(columnPropertiesFromIG,propertiesFromPlugin);  	
@@ -425,6 +430,7 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
 	wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
 
 	saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), fileName  + ".xlsx");	
+	mySpinner.remove();
 }
 
 function addDownloadXLSXiconToIG(vRegionID,vPluginID,fileName,path) {
