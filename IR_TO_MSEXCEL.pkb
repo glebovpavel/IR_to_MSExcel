@@ -287,7 +287,7 @@ as
       v_affected_region_id := get_affected_region_id(p_dynamic_action_id => p_dynamic_action.ID
                                                     ,p_html_region_id    => apex_application.g_x03);
       
-      v_maximum_rows := nvl(nvl(p_dynamic_action.attribute_01,
+      v_maximum_rows := nvl(nvl(APEX_PLUGIN_UTIL.GET_PLSQL_EXPRESSION_RESULT(p_dynamic_action.attribute_01),
                                 IR_TO_XLSX.get_max_rows (p_app_id    => apex_application.g_x01,
                                                          p_page_id   => apex_application.g_x02,
                                                          p_region_id => v_affected_region_id)
