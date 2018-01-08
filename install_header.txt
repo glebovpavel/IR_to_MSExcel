@@ -1,13 +1,8 @@
 /**********************************************
 **
 ** Author: Pavel Glebov
-<<<<<<< HEAD
-** Date: 12-2017
-** Version: 3.0
-=======
-** Date: 10-2017
-** Version: 2.21
->>>>>>> 7556d4c219c9eea70d5589a1a4204689500bba70
+** Date: 01-2018
+** Version: 3.1
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **

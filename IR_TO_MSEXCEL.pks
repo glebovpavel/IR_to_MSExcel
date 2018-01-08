@@ -1,4 +1,4 @@
-create or replace PACKAGE  "IR_TO_MSEXCEL" 
+create or replace PACKAGE IR_TO_MSEXCEL 
   AUTHID CURRENT_USER
 as
   FUNCTION render  (p_dynamic_action in apex_plugin.t_dynamic_action,
@@ -11,7 +11,7 @@ as
 
   function is_ir2msexcel 
   return boolean;
-
+  
 end IR_TO_MSEXCEL;
 /
 

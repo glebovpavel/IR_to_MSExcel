@@ -1,5 +1,6 @@
-create or replace PACKAGE BODY  "IR_TO_MSEXCEL" 
+create or replace PACKAGE BODY  IR_TO_MSEXCEL 
 as
+  subtype t_large_varchar2  is varchar2(32767);
   v_plugin_running boolean default false;
   
   function is_ir2msexcel 
@@ -123,10 +124,17 @@ as
     v_is_ig                    boolean default false;
     v_is_ir                    boolean default false;
     v_workspace                apex_applications.workspace%TYPE;
+    v_found                    boolean default false;
   BEGIN
     v_plugin_id := apex_plugin.get_ajax_identifier;
     v_affected_region_IR_selector := get_affected_region_static_id(p_dynamic_action.ID,'Interactive Report');
     v_affected_region_IG_selector := get_affected_region_static_id(p_dynamic_action.ID,'Interactive Grid');
+    
+    select workspace
+    into v_workspace
+    from apex_applications
+    where application_id =nv('APP_ID');
+    
     if nvl(p_dynamic_action.attribute_03,'Y') = 'Y' then -- add "Download XLSX" icon
       if v_affected_region_IR_selector is not null then
         -- add XLSX Icon to Affected IR Region
@@ -138,16 +146,11 @@ as
          APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,v_affected_region_IG_selector);
       else
         -- add XLSX Icon to all IR Regions on the page
-        select workspace
-        into v_workspace
-        from apex_applications
-        where application_id =nv('APP_ID');
-
         for i in (SELECT nvl(static_id,'R'||to_char(region_id)) as affected_region_selector,
                          r.source_type
                   FROM apex_application_page_regions r
-                  where r.page_id = v('APP_PAGE_ID')
-                    and r.application_id =v('APP_ID')
+                  where r.page_id = nv('APP_PAGE_ID')
+                    and r.application_id =nv('APP_ID')
                     and r.source_type  in ('Interactive Report','Interactive Grid')
                     and r.workspace = v_workspace
                  )
@@ -184,7 +187,27 @@ as
     elsif v_affected_region_IG_selector is not null then      
       v_result.javascript_function := 'function(){excel_ig_gpv.downloadXLSXfromIG('''||v_affected_region_IG_selector||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_IG_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''')}';
     else
-     v_result.javascript_function := 'function(){console.log("No Affected Region Found!");}';
+      -- try to find first IR/IG on the page
+      for i in (SELECT nvl(static_id,'R'||to_char(region_id)) as affected_region_selector,
+                         r.source_type
+                  FROM apex_application_page_regions r
+                  where r.page_id = nv('APP_PAGE_ID')
+                    and r.application_id =nv('APP_ID')
+                    and r.source_type  in ('Interactive Report','Interactive Grid')
+                    and r.workspace = v_workspace
+                    and rownum < 2
+                 )
+        loop
+          if i.source_type = 'Interactive Report' then
+            v_result.javascript_function := 'function(){excel_gpv.getExcel('''||i.affected_region_selector||''','''||v_plugin_id||''')}';
+          else
+            v_result.javascript_function := 'function(){excel_ig_gpv.downloadXLSXfromIG('''||i.affected_region_selector||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_IG_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''')}';
+          end if; 
+          v_found := true;
+        end loop;        
+        if not v_found then
+          v_result.javascript_function := 'function(){console.log("No Affected Region Found!");}';
+        end if;  
     end if;
     
     v_result.ajax_identifier := v_plugin_id;
@@ -268,8 +291,9 @@ as
   return apex_plugin.t_dynamic_action_ajax_result
   is
     p_download_type      varchar2(1);
-    p_custom_width       varchar2(1000);
+    p_custom_width       t_large_varchar2;
 	p_autofilter         char;
+    p_export_links       char;
     v_maximum_rows       number;
     v_dummy              apex_plugin.t_dynamic_action_ajax_result;
     v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
@@ -278,12 +302,14 @@ as
       --to get properties needed for export in IG
       if apex_application.g_x01 = 'G' then 
         print_column_properties_json(p_application_id => apex_application.g_x02,
-                                    p_page_id        => apex_application.g_x03);
+                                     p_page_id        => apex_application.g_x03);
         return v_dummy;
       end if;  
   
       p_download_type := nvl(p_dynamic_action.attribute_02,'E');
-      p_autofilter:= nvl(p_dynamic_action.attribute_04,'Y');
+      p_autofilter := nvl(p_dynamic_action.attribute_04,'Y');
+      p_export_links := nvl(p_dynamic_action.attribute_05,'N');
+      p_custom_width := p_dynamic_action.attribute_06;
       v_affected_region_id := get_affected_region_id(p_dynamic_action_id => p_dynamic_action.ID
                                                     ,p_html_region_id    => apex_application.g_x03);
       
@@ -296,18 +322,27 @@ as
         ir_to_xlsx.download_excel(p_app_id        => apex_application.g_x01,
                                   p_page_id      => apex_application.g_x02,
                                   p_region_id    => v_affected_region_id,
-                                  p_col_length   => apex_application.g_x04||p_custom_width,
+                                  p_col_length   => apex_application.g_x04,
                                   p_max_rows     => v_maximum_rows,
-                                  p_autofilter   => p_autofilter
+                                  p_autofilter   => p_autofilter,
+                                  p_export_links => p_export_links,
+                                  p_custom_width => p_custom_width
                                   );
       elsif p_download_type = 'T' then 
         ir_to_xlsx.download_debug(p_app_id        => apex_application.g_x01,
                                   p_page_id      => apex_application.g_x02,
                                   p_region_id    => v_affected_region_id,
-                                  p_col_length   => apex_application.g_x04||p_custom_width,
+                                  p_col_length   => apex_application.g_x04,
                                   p_max_rows     => v_maximum_rows,
-                                  p_autofilter   => p_autofilter
+                                  p_autofilter   => p_autofilter,
+                                  p_export_links => p_export_links,
+                                  p_custom_width => p_custom_width
                                   );
+      elsif p_download_type = 'M' then -- use Moritz Klein engine https://github.com/commi235
+        apexir_xlsx_pkg.download( p_ir_region_id => v_affected_region_id,
+                                  p_app_id => apex_application.g_x01,
+                                  p_ir_page_id => apex_application.g_x02
+                                 );      
       else
         raise_application_error(-20001,'Unknown download_type: '||p_download_type);
       end if;

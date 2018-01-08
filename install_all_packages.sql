@@ -1,13 +1,8 @@
 /**********************************************
 **
 ** Author: Pavel Glebov
-<<<<<<< HEAD
-** Date: 12-2017
-** Version: 3.0
-=======
-** Date: 10-2017
-** Version: 2.21
->>>>>>> 7556d4c219c9eea70d5589a1a4204689500bba70
+** Date: 01-2018
+** Version: 3.1
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -610,14 +605,18 @@ IS
                            p_region_id    IN NUMBER,
                            p_col_length   IN VARCHAR2 DEFAULT NULL,
                            p_max_rows     IN NUMBER,
-                           p_autofilter   IN CHAR DEFAULT 'Y'
+                           p_autofilter   IN CHAR DEFAULT 'Y',
+                           p_export_links IN CHAR DEFAULT 'N',
+                           p_custom_width IN VARCHAR2
                           ); 
-  procedure download_debug(p_app_id      IN NUMBER,
-                           p_page_id     IN NUMBER,
-                           p_region_id   IN NUMBER, 
-                           p_col_length  IN VARCHAR2 DEFAULT NULL,
-                           p_max_rows    IN NUMBER,
-                           p_autofilter  IN CHAR DEFAULT 'Y'                           
+  procedure download_debug(p_app_id       IN NUMBER,
+                           p_page_id      IN NUMBER,
+                           p_region_id    IN NUMBER, 
+                           p_col_length   IN VARCHAR2 DEFAULT NULL,
+                           p_max_rows     IN NUMBER,
+                           p_autofilter   IN CHAR DEFAULT 'Y',
+                           p_export_links IN CHAR DEFAULT 'N',
+                           p_custom_width IN VARCHAR2
                           );
                           
   function convert_date_format(p_format IN VARCHAR2)
@@ -736,13 +735,15 @@ as
         <diagonal/>
       </border>
     </borders>
-    <cellStyleXfs count="1">
+    <cellStyleXfs count="2">
       <xf numFmtId="0" fontId="0" fillId="0" borderId="0" />
+      <xf numFmtId="0" fontId="2" fillId="0" borderId="0" applyNumberFormat="0" applyFill="0" applyBorder="0" applyAlignment="0" applyProtection="0" />
     </cellStyleXfs>
     #STYLES#
-    <cellStyles count="1">
-      <cellStyle name="Normal" xfId="0" builtinId="0"/>
-    </cellStyles>
+    <cellStyles count="2">
+      <cellStyle name="Link" xfId="1" builtinId="8" />
+      <cellStyle name="Standard" xfId="0" builtinId="0" />
+    </cellStyles>    
     <dxfs count="0"/>
     <tableStyles count="0" defaultTableStyle="TableStyleMedium9" defaultPivotStyle="PivotStyleLight16"/>
     <extLst>
@@ -769,7 +770,16 @@ as
       <family val="2" />
       <scheme val="minor" />
     </font>';
-  FONTS_CNT constant  binary_integer := 2;   
+  UNDERLINE_FONT constant varchar2(200) := '
+   <font>
+      <u />
+      <sz val="11" />
+      <color theme="10" />
+      <name val="Calibri" />
+      <family val="2" />
+      <scheme val="minor" />
+    </font>';    
+  FONTS_CNT constant  binary_integer := 3;   
   
   
   DEFAULT_FILL constant varchar2(200) :=  '
@@ -855,6 +865,8 @@ as
   type t_column_alignment is table of apex_application_page_ir_col.column_alignment%type index by apex_application_page_ir_col.column_alias%type;
   type t_column_types is table of apex_application_page_ir_col.column_type%type index by binary_integer;
   type t_highlight is table of cur_highlight%ROWTYPE index by binary_integer;
+  type t_column_links is table of APEX_APPLICATION_PAGE_IR_COL.COLUMN_LINK%TYPE index by apex_application_page_ir_col.column_alias%type;
+  type t_all_columns is table of binary_integer index by varchar2(32767);
   
   type ir_report is record
    (
@@ -881,7 +893,10 @@ as
     col_highlight             t_highlight,
     header_alignment          t_header_alignment,
     column_alignment          t_column_alignment,
-    column_types              t_column_types  
+    column_types              t_column_types,
+    column_link               t_column_links,
+    desc_tab                  DBMS_SQL.DESC_TAB2, -- information about columns from final sql query
+    all_columns               t_all_columns      -- list of all columns from final sql query     
    );  
    
    TYPE t_cell_data IS record
@@ -1022,19 +1037,34 @@ as
   end convert_date_format_js;
   ------------------------------------------------------------------------------
   
-  function add_font(p_font in t_color,p_bold in varchar2 default null)
+  function add_font(p_font in t_color,
+                    p_link in varchar2)
   return binary_integer 
   is  
    v_index t_font;
   begin
-    v_index := p_font||p_bold;
+    if p_link is not null then
+      v_index := p_font||'L';
+    elsif p_font is not null then
+      v_index := p_font;
+    else 
+      raise_application_error(-20001,'Font is null and Link is null!');
+    end if;
     
     if not a_font.exists(v_index) then
       a_font(v_index) := a_font.count + 1;
       v_fonts_xml := v_fonts_xml||
         '<font>'||chr(10)||
-        '   <sz val="11" />'||chr(10)||
-        '   <color rgb="'||ltrim(p_font,'#')||'" />'||chr(10)||
+        case when p_link is not null then 
+        '   <u />'||chr(10)
+        else ''||
+        '   <sz val="11" />'||chr(10)
+        end ||
+        case when p_font is not null then 
+        '   <color rgb="'||ltrim(p_font,'#')||'" />'||chr(10)
+        else -- link        
+        '   <color theme="10" />'||chr(10)
+        end ||
         '   <name val="Calibri" />'||chr(10)||
         '   <family val="2" />'||chr(10)||
         '   <scheme val="minor" />'||
@@ -1088,6 +1118,7 @@ as
     return to_clob('<fonts count="'||(a_font.count + FONTS_CNT)||'" x14ac:knownFonts="1">'||
                    DEFAULT_FONT||chr(10)||
                    BOLD_FONT||chr(10)||
+                   UNDERLINE_FONT||chr(10)||
                    v_fonts_xml||chr(10)||
                    '</fonts>'||chr(10));
   end get_font_colors_xml;  
@@ -1151,7 +1182,8 @@ as
                         p_back        in t_color,
                         p_data_type   in varchar2,
                         p_format_mask in varchar2,
-                        p_align       in varchar2)
+                        p_align       in varchar2,
+                        p_link        in varchar2)
   return binary_integer
   is
     v_style           t_style_string;
@@ -1159,19 +1191,23 @@ as
     v_back_color_id   binary_integer;
     v_style_xml       t_large_varchar2;
   begin
-    v_style := nvl(p_font,'      ')||nvl(p_back,'       ')||p_data_type||p_format_mask||p_align;
-   
+    v_style := nvl(p_font,'      ')||nvl(p_back,'       ')||p_data_type||p_format_mask||p_align||
+      case when p_link is not null then 'LINK' else '' end;
     --   
     if a_styles.exists(v_style) then
       return a_styles(v_style)   - 1 + DEFAULT_STYLES_CNT;
     else
       a_styles(v_style) := a_styles.count + 1;
       
-      v_style_xml := '<xf borderId="0" xfId="0" ';
+      if p_link is null then
+        v_style_xml := '<xf borderId="0" xfId="0" ';
+      else
+        v_style_xml := '<xf borderId="0" xfId="1" ';
+      end if;
       v_style_xml := v_style_xml||replace(' numFmtId="#FMTID#" ','#FMTID#',get_num_fmt_id(p_data_type,p_format_mask));
       
-      if p_font is not null then
-        v_font_color_id := add_font(p_font);
+      if p_font is not null or p_link is not null then
+        v_font_color_id := add_font(p_font,p_link);
         v_style_xml := v_style_xml||' fontId="'||v_font_color_id||'"  applyFont="1" ';
       else
         v_style_xml := v_style_xml||' fontId="0" '; --default font
@@ -1371,6 +1407,16 @@ as
        raise_application_error(-20001,'get_col_format_mask: p_column_alias='||p_column_alias||' '||SQLERRM);
   end get_col_format_mask;
   ------------------------------------------------------------------------------
+  function get_col_link(p_column_alias in apex_application_page_ir_col.column_alias%type)
+  return formatmask
+  is
+  begin
+    return replace(l_report.column_link(p_column_alias),'"','');
+  exception
+    when others then
+       raise_application_error(-20001,'get_col_link: p_column_alias='||p_column_alias||' '||SQLERRM);
+  end get_col_link;
+  ------------------------------------------------------------------------------
   procedure set_col_format_mask(p_column_alias in apex_application_page_ir_col.column_alias%type,
                                 p_format_mask  in formatmask)
   is
@@ -1408,7 +1454,7 @@ as
     return l_report.column_types(p_num);
   exception
     when others then
-       raise_application_error(-20001,'get_column_names: p_num='||p_num||' '||SQLERRM);
+       raise_application_error(-20001,'get_column_types: p_num='||p_num||' '||SQLERRM);
   END get_column_types;
   ------------------------------------------------------------------------------  
   function get_column_alias(p_num in binary_integer)
@@ -1609,7 +1655,7 @@ as
     v_query_targets apex_application_global.vc_arr2;
     l_new_report    ir_report; 
   begin
-    l_report := l_new_report;
+    l_report := l_new_report;    
     --get base report id    
     log('l_region_id='||p_region_id);
     
@@ -1650,7 +1696,8 @@ as
                      column_type,
                      format_mask as  computation_format_mask,
                      nvl(instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':'),0) column_order ,
-                     nvl(instr(':'||l_report.ir_data.break_enabled_on||':',':'||column_alias||':'),0) break_column_order
+                     nvl(instr(':'||l_report.ir_data.break_enabled_on||':',':'||column_alias||':'),0) break_column_order,
+                     column_link
                 from APEX_APPLICATION_PAGE_IR_COL
                where application_id = p_app_id
                  AND page_id = p_page_id
@@ -1665,7 +1712,8 @@ as
                      computation_column_type,
                      computation_format_mask,
                      nvl(instr(':'||l_report.ir_data.report_columns||':',':'||computation_column_alias||':'),0) column_order,
-                     nvl(instr(':'||l_report.ir_data.break_enabled_on||':',':'||computation_column_alias||':'),0) break_column_order
+                     nvl(instr(':'||l_report.ir_data.break_enabled_on||':',':'||computation_column_alias||':'),0) break_column_order,
+                     null as column_link
               from apex_application_page_ir_comp
               where application_id = p_app_id
                 and page_id = p_page_id
@@ -1677,6 +1725,7 @@ as
       l_report.col_format_mask(i.column_alias) := i.computation_format_mask;
       l_report.header_alignment(i.column_alias) := i.heading_alignment; 
       l_report.column_alignment(i.column_alias) := i.column_alignment; 
+      l_report.column_link(i.column_alias) := i.column_link;
       --l_report.column_types(i.column_alias) := i.column_type;
       IF i.column_order > 0 THEN
         IF i.break_column_order = 0 THEN 
@@ -1691,7 +1740,8 @@ as
       log('column='||i.column_alias||' l_report.column_names='||i.report_label);
       log('column='||i.column_alias||' l_report.col_format_mask='||i.computation_format_mask);
       log('column='||i.column_alias||' l_report.header_alignment='||i.heading_alignment);
-      log('column='||i.column_alias||' l_report.column_alignment='||i.column_alignment);      
+      log('column='||i.column_alias||' l_report.column_alignment='||i.column_alignment);    
+      log('column='||i.column_alias||' l_report.column_link='||i.column_link);    
     end loop displayed_columns;    
     
     -- calculate columns count with aggregation separately
@@ -2071,12 +2121,15 @@ as
   end prepare_col_format_mask;
   ------------------------------------------------------------------------------
     
-  procedure generate_from_report(v_clob in out nocopy clob,
-                            v_strings_clob in out nocopy clob,
-                            p_width_str in varchar2,
-                            p_coefficient  in number,
-                            p_max_rows in integer,
-                            p_autofilter in char) 
+  procedure generate_from_report(v_clob          IN OUT NOCOPY CLOB,
+                                 v_strings_clob  IN OUT NOCOPY CLOB,
+                                 v_links_clob    IN OUT NOCOPY CLOB,
+                                 p_width_str     IN VARCHAR2,
+                                 p_coefficient   IN NUMBER,
+                                 p_max_rows      IN INTEGER,
+                                 p_autofilter    IN CHAR,
+                                 p_export_links  IN CHAR DEFAULT 'N',
+                                 p_custom_width  IN VARCHAR2) 
   is
    v_cur                INTEGER; 
    v_result             INTEGER;
@@ -2089,8 +2142,7 @@ as
    v_number_dummy       number;
    v_prev_row           APEX_APPLICATION_GLOBAL.VC_ARR2;
    v_columns            APEX_APPLICATION_GLOBAL.VC_ARR2;
-   v_current_row        number default 0;
-   v_desc_tab           DBMS_SQL.DESC_TAB2;
+   v_current_row        number default 0;   
    v_inside             boolean default false;
    v_sql                largevarchar2;
    v_bind_variables     DBMS_SQL.VARCHAR2_TABLE;
@@ -2098,49 +2150,98 @@ as
    v_bind_var_name      varchar2(255);
    v_binded             boolean; 
    v_format_mask        formatmask;  
-   v_rowset_count number := 0; 
+   v_rowset_count       number := 0; 
 
-    v_column_alias    APEX_APPLICATION_PAGE_IR_COL.column_alias%TYPE;
-    v_row_color       varchar2(10); 
-    v_row_back_color  varchar2(10);
-    v_cell_color      varchar2(10);
-    v_cell_back_color VARCHAR2(10);     
-    v_column_type     columntype;
-    v_cell_data       t_cell_data;    
-    v_i number := 0;
+    v_column_alias      APEX_APPLICATION_PAGE_IR_COL.column_alias%TYPE;
+    v_row_color         varchar2(10); 
+    v_row_back_color    varchar2(10);
+    v_cell_color        varchar2(10);
+    v_cell_back_color   VARCHAR2(10);     
+    v_column_type       columntype;
+    v_cell_data         t_cell_data;    
+    v_i                 number := 0;
 
-    v_strings          apex_application_global.vc_arr2;
-    v_rownum           binary_integer default 1;
+    v_strings           apex_application_global.vc_arr2;
+    v_links             apex_application_global.vc_arr2; -- which cell has a link
+    v_links_ref         apex_application_global.vc_arr2; -- URL itself
+    v_rownum            binary_integer default 1;
     
-    v_style_id         binary_integer;         
-    v_string_buffer    t_large_varchar2; 
-    v_break_header     t_large_varchar2;
-    v_last_agg_obj     APEX_APPLICATION_GLOBAL.VC_ARR2;
+    v_style_id          binary_integer;         
+    v_string_buffer     t_large_varchar2; 
+    v_break_header      t_large_varchar2;
+    v_links_buffer      t_large_varchar2;
+    v_last_agg_obj      APEX_APPLICATION_GLOBAL.VC_ARR2;
     a_col_name_plus_width  apex_application_global.vc_arr2;    
-    v_col_width            number;
-    v_coefficient          number;
+    v_col_width         number;
+    v_coefficient       number;
+    v_link              APEX_APPLICATION_PAGE_IR_COL.COLUMN_LINK%TYPE;
+    v_cell_addr         varchar2(12);
+    v_custom_col_width  varchar2(300);
     
-    procedure print_char_cell(p_coll      in binary_integer, 
-                              p_row       in binary_integer, 
+    procedure add_link(p_cell_addr in varchar2,
+                       p_link      in varchar2,
+                       p_row       in APEX_APPLICATION_GLOBAL.VC_ARR2)
+    is
+      v_substitution   t_large_varchar2;
+      v_link           t_large_varchar2;
+      v_cnt             number default 100;
+      
+      function get_subtitution_value(p_substitution in varchar2)
+      return varchar2
+      is
+      begin
+        return p_row(l_report.all_columns(replace(p_substitution,'#','')));
+      exception
+        when others then
+          return '';
+      end get_subtitution_value;
+      
+    begin
+      if p_link is null then
+        return;
+      end if;  
+      v_link := p_link;
+      
+      v_substitution := regexp_substr(v_link,'#[^#]+#');
+      loop
+       exit when v_substitution is null;
+       v_link := replace(v_link,v_substitution,get_subtitution_value(v_substitution));
+       v_substitution := regexp_substr(v_link,'#[^#]+#');       
+      end loop;
+      if substr(v_link,1,4) = 'f?p=' then
+          v_link := OWA_UTIL.get_cgi_env ('REQUEST_PROTOCOL') || '://'  
+                 || OWA_UTIL.get_cgi_env ('HTTP_HOST')        || ':'  
+                 || OWA_UTIL.get_cgi_env ('SERVER_PORT')      || '/'  
+                 || ltrim(OWA_UTIL.get_cgi_env ('SCRIPT_NAME'),'/')|| '/'
+                 || ltrim(apex_plugin_util.replace_substitutions(v_link),'/');
+      else
+        v_link := apex_plugin_util.replace_substitutions(v_link);
+      end if;
+          
+      log('v_link='||v_link);
+      v_links(v_links.count + 1) := '<hyperlink ref="'||p_cell_addr||'" r:id="rId'||(v_links.count+1)||'" />';
+      v_links_ref(v_links_ref.count + 1) := '<Relationship Id="rId'||v_links.count||'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="'||v_link||'" TargetMode="External"/>';      
+    end add_link;
+    
+    procedure print_char_cell(p_cell_addr in varchar2,
                               p_string    in varchar2,
                               p_clob      in out nocopy CLOB,
                               p_buffer    IN OUT NOCOPY VARCHAR2,
                               p_style_id  in number default null
                              )
     is
-     v_style varchar2(20);
+     v_style     varchar2(20);     
     begin
       if p_style_id is not null then
        v_style := ' s="'||p_style_id||'" ';
-      end if;
-      add(p_clob,p_buffer,'<c r="'||get_cell_name(p_coll,p_row)||'" t="s" '||v_style||'>'||chr(10)
+      end if;      
+      add(p_clob,p_buffer,'<c r="'||p_cell_addr||'" t="s" '||v_style||'>'||chr(10)
                          ||'<v>' || to_char(v_strings.count)|| '</v>'||chr(10)                 
                          ||'</c>'||chr(10));
-      v_strings(v_strings.count + 1) := p_string;
+      v_strings(v_strings.count + 1) := p_string;      
     end print_char_cell;
     --
-    procedure print_number_cell(p_coll      in binary_integer, 
-                                p_row       in binary_integer, 
+    procedure print_number_cell(p_cell_addr in varchar2,
                                 p_value     in varchar2,
                                 p_clob      in out nocopy clob,
                                 p_buffer    IN OUT NOCOPY VARCHAR2,
@@ -2152,7 +2253,7 @@ as
       if p_style_id is not null then
        v_style := ' s="'||p_style_id||'" ';
       end if;
-      add(p_clob,p_buffer,'<c r="'||get_cell_name(p_coll,p_row)||'" '||v_style||'>'||chr(10)
+      add(p_clob,p_buffer,'<c r="'||p_cell_addr||'" '||v_style||'>'||chr(10)
                          ||'<v>'||p_value|| '</v>'||chr(10)
                          ||'</c>'||chr(10));
     
@@ -2181,11 +2282,10 @@ as
                                                     p_back         => '',
                                                     p_data_type    => 'CHAR',
                                                     p_format_mask  => '');
-                print_char_cell(p_coll       => y,
-                                p_row        => v_rownum,
+                print_char_cell(p_cell_addr  => get_cell_name(y,v_rownum),
                                 p_string     => get_xmlval( rtrim( p_agg_obj(y),chr(10))),
                                 p_clob       => v_agg_clob,
-                                p_buffer    =>  v_agg_buffer,           
+                                p_buffer     =>  v_agg_buffer,           
                                 p_style_id   => v_style_id);        
             END LOOP;
             add(p_clob,v_buffer,'<row ht="'||(v_agg_strings_cnt * STRING_HEIGHT)||'">'||chr(10),TRUE);
@@ -2223,23 +2323,30 @@ as
     end if;     
     add(v_clob,v_buffer,'<cols>'||chr(10));
     <<column_widths>>
+    log('p_custom_width='||p_custom_width);
     for i in 1..l_report.displayed_columns.count   loop
        v_column_alias := get_column_alias(i);
       -- if current column is not control break column
       if apex_plugin_util.get_position_in_list(l_report.break_on,v_column_alias) is null then 
         v_i := v_i + 1;
         begin                    
-            v_col_width  := round(to_number(a_col_name_plus_width(v_i))/ v_coefficient);
-          exception
-             when others then             
-                v_col_width := -1;  
-          end;
-          
-          if v_col_width >= 0 then
-            add(v_clob,v_buffer,'<col min="'||v_i||'" max="'||v_i||'" width="'||v_col_width||'" customWidth="1" />'||chr(10));        
-          else
-            add(v_clob,v_buffer,'<col min="'||v_i||'" max="'||v_i||'" width="10" customWidth="0" />'||chr(10));        
+          v_custom_col_width := regexp_substr(','||p_custom_width||',',','||v_column_alias||':\d+,');          
+          if v_custom_col_width is not null then            
+            v_col_width := to_number(ltrim(regexp_substr(v_custom_col_width,':\d+'),':'));
+            log('v_col_width='||v_col_width||' for column '||v_column_alias);
+          else        
+            v_col_width  := round(to_number(a_col_name_plus_width(v_i))/ v_coefficient);          
           end if;
+        exception
+          when others then             
+            v_col_width := -1;  
+        end;
+        
+        if v_col_width >= 0 then
+          add(v_clob,v_buffer,'<col min="'||v_i||'" max="'||v_i||'" width="'||v_col_width||'" customWidth="1" />'||chr(10));        
+        else
+          add(v_clob,v_buffer,'<col min="'||v_i||'" max="'||v_i||'" width="10" customWidth="0" />'||chr(10));        
+        end if;
       end if;  
     end loop column_widths;
     v_i := 0;
@@ -2253,12 +2360,12 @@ as
     v_sql := apex_plugin_util.replace_substitutions(p_value  => l_report.report.sql_query,
                                                     p_escape => false);    
     dbms_sql.parse(v_cur,v_sql,dbms_sql.native);     
-    dbms_sql.describe_columns2(v_cur,v_colls_count,v_desc_tab);    
+    dbms_sql.describe_columns2(v_cur,v_colls_count,l_report.desc_tab);    
     --skip internal primary key if need
-    for i in 1..v_desc_tab.count loop      
-      if lower(v_desc_tab(i).col_name) = 'apxws_row_pk' then
+    for i in 1..l_report.desc_tab.count loop            
+      if lower(l_report.desc_tab(i).col_name) = 'apxws_row_pk' then
         l_report.skipped_columns := 1;
-      end if;
+      end if;      
     end loop;
     
     l_report.start_with := 1 + 
@@ -2276,21 +2383,22 @@ as
     log('l_report.end_with='||l_report.end_with);
     log('l_report.skipped_columns='||l_report.skipped_columns);
     -- init column datatypes and format masks
-    for i in 1..v_desc_tab.count loop      
-      log('column_type='||v_desc_tab(i).col_type);
+    for i in 1..l_report.desc_tab.count loop      
+      log('column_type='||l_report.desc_tab(i).col_type);
       -- don't know why column types in dbms_sql.describe_columns2 do not correspond to types in dbms_types      
-      if v_desc_tab(i).col_type in (dbms_types.TYPECODE_TIMESTAMP_TZ,181,
+      if l_report.desc_tab(i).col_type in (dbms_types.TYPECODE_TIMESTAMP_TZ,181,
                                     dbms_types.TYPECODE_TIMESTAMP_LTZ,231,
                                     dbms_types.TYPECODE_TIMESTAMP,180,
                                     dbms_types.TYPECODE_DATE) 
       then
-         prepare_col_format_mask(p_col_number => i,p_data_type => v_desc_tab(i).col_type);      
-      elsif v_desc_tab(i).col_type = dbms_types.TYPECODE_NUMBER then
+         prepare_col_format_mask(p_col_number => i,p_data_type => l_report.desc_tab(i).col_type);      
+      elsif l_report.desc_tab(i).col_type = dbms_types.TYPECODE_NUMBER then
          l_report.column_types(i) := 'NUMBER';
       else
          l_report.column_types(i) := 'STRING';
-         log('column_type='||v_desc_tab(i).col_type||' STRING');
-      end if;        
+         log('column_type='||l_report.desc_tab(i).col_type||' STRING');
+      end if;     
+      l_report.all_columns(upper(l_report.desc_tab(i).col_name)) := i;
     end loop;
     
     v_bind_variables := wwv_flow_utilities.get_binds(v_sql);
@@ -2307,12 +2415,11 @@ as
         h_cell.column_type := get_column_types(i);
         h_cell.format_mask := get_col_format_mask(v_column_alias);
         h_cell.column_text := get_column_names(v_column_alias);*/        
-        print_char_cell( p_coll      => i, 
-                        p_row       => v_rownum, 
-                        p_string    =>   get_xmlval(get_column_names(v_column_alias)),
-                        p_clob      => v_clob,
-                        p_buffer    => v_buffer,
-                        p_style_id  => get_header_style_id(p_align  => get_header_alignment(v_column_alias))
+        print_char_cell(p_cell_addr  => get_cell_name(i,v_rownum),
+                        p_string     => get_xmlval(get_column_names(v_column_alias)),
+                        p_clob       => v_clob,
+                        p_buffer     => v_buffer,
+                        p_style_id   => get_header_style_id(p_align  => get_header_alignment(v_column_alias))
                       );        
       end if;  
     end loop headers;    
@@ -2353,7 +2460,7 @@ as
     log('<<define_columns>>');    
     for i in 1..v_colls_count loop
        log('define column '||i);
-       log('column type '||v_desc_tab(i).col_type);      
+       log('column type '||l_report.desc_tab(i).col_type);      
        if l_report.column_types(i) = 'DATE' then   
          dbms_sql.define_column(v_cur, i, v_date_dummy);
        elsif l_report.column_types(i) = 'NUMBER' then   
@@ -2374,7 +2481,7 @@ as
             v_current_row := v_current_row + 1;
             <<query_columns>>
             for i in 1..v_colls_count loop               
-               log('column type '||v_desc_tab(i).col_type);
+               log('column type '||l_report.desc_tab(i).col_type);
                v_row(i) := ' ';
                v_date_row(i) := NULL;
                v_number_row(i) := NULL;
@@ -2399,9 +2506,8 @@ as
                 v_break_header :=  print_control_break_header_obj(v_row);
                 if v_break_header IS NOT NULL then
                     add(v_clob,v_buffer,'<row>'||chr(10));
-                    print_char_cell(p_coll      => 1,
-                                    p_row       => v_rownum,
-                                    p_string    =>  get_xmlval(v_break_header),
+                    print_char_cell(p_cell_addr => get_cell_name(1,v_rownum),
+                                    p_string    => get_xmlval(v_break_header),
                                     p_clob      => v_clob,
                                     p_buffer    => v_buffer,
                                     p_style_id  => get_header_style_id(p_back => NULL,p_align  => 'left')
@@ -2448,7 +2554,15 @@ as
                 v_cell_data.text   := NULL; 
                 v_column_alias     := get_column_alias_sql(i);
                 v_column_type      := get_column_types(i);
-                v_format_mask      := get_col_format_mask(v_column_alias);
+                v_format_mask      := get_col_format_mask(v_column_alias);    
+                if  p_export_links = 'Y' then
+                  v_link := get_col_link(v_column_alias);
+                else
+                  v_link := '';
+                end if;
+                v_cell_addr        := get_cell_name(v_i,v_rownum);
+                add_link(p_cell_addr => v_cell_addr,p_link => v_link,p_row => v_row);
+                
                 
                 IF v_column_type = 'DATE' THEN
                     v_cell_data := get_cell(get_current_row(v_row,i),v_format_mask,get_current_row(v_date_row,i));
@@ -2480,34 +2594,33 @@ as
                 end;
                 END loop cell_highlights;
             
-                begin            
+                begin                                
                     v_style_id := get_style_id(p_font          => nvl(v_cell_color,v_row_color),
-                                                p_back         => nvl(v_cell_back_color,v_row_back_color),
-                                                p_data_type    => v_cell_data.datatype,
-                                                p_format_mask  => v_format_mask,
-                                                p_align        => lower(get_column_alignment(v_column_alias))
-                                                );
+                                               p_back         => nvl(v_cell_back_color,v_row_back_color),
+                                               p_data_type    => v_cell_data.datatype,
+                                               p_format_mask  => v_format_mask,
+                                               p_align        => lower(get_column_alignment(v_column_alias)),
+                                               p_link         => v_link
+                                               );
                     if v_cell_data.datatype in ('NUMBER') then
-                        print_number_cell(p_coll        => v_i, 
-                                            p_row       => v_rownum, 
-                                            p_value     => v_cell_data.value,
-                                            p_clob      => v_clob,
-                                            p_buffer    => v_buffer,
-                                            p_style_id  => v_style_id
+                        print_number_cell(p_cell_addr => v_cell_addr,
+                                          p_value     => v_cell_data.value,
+                                          p_clob      => v_clob,
+                                          p_buffer    => v_buffer,
+                                          p_style_id  => v_style_id
                                         );
                         
                     elsif  v_cell_data.datatype in ('DATE') then
-                        add(v_clob,v_buffer,'<c r="'||get_cell_name(v_i,v_rownum)||'"  s="'||v_style_id||'">'||chr(10)
+                        add(v_clob,v_buffer,'<c r="'||v_cell_addr||'"  s="'||v_style_id||'">'||chr(10)
                                             ||'<v>'|| v_cell_data.value|| '</v>'||chr(10)
                                             ||'</c>'||chr(10)
                             );
                     else --STRING
-                        print_char_cell(p_coll        => v_i,
-                                        p_row         => v_rownum,
-                                        p_string      => get_xmlval(v_cell_data.text),
-                                        p_clob        => v_clob,
-                                        p_buffer      => v_buffer,
-                                        p_style_id    => v_style_id
+                        print_char_cell(p_cell_addr => v_cell_addr,
+                                        p_string    => get_xmlval(v_cell_data.text),
+                                        p_clob      => v_clob,
+                                        p_buffer    => v_buffer,
+                                        p_style_id  => v_style_id
                                         );
                     END IF;       
                 exception
@@ -2533,6 +2646,15 @@ as
     if p_autofilter = 'Y' then
         add(v_clob,v_buffer,'<autoFilter ref="A1:' || get_cell_name(v_colls_count,v_rownum-1) || '"/>');
     end if;
+    -- print links
+    if v_links.count >  0 then 
+        add(v_clob,v_buffer,'<hyperlinks>'||chr(10));        
+        for p in 1..v_links.count loop     
+           add(v_clob,v_buffer,v_links(p)||chr(10));
+        end loop;
+        add(v_clob,v_buffer,'</hyperlinks>'||chr(10));
+    end if;
+    
     add(v_clob,v_buffer,'<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>'||chr(10),TRUE);
     
     add(v_strings_clob,v_string_buffer,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
@@ -2542,18 +2664,29 @@ as
     add(v_strings_clob,v_string_buffer,'<si><t>'||dbms_xmlgen.convert( substr( v_strings( i ), 1, 32000 ) ) || '</t></si>'||chr(10));
     end loop; 
     add(v_strings_clob,v_string_buffer,'</sst>'||chr(10),TRUE);
+    
+    -- print links in sheet1.xml.rels
+    add(v_links_clob,v_links_buffer,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
+    add(v_links_clob,v_links_buffer,'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'||chr(10));
+    for l in 1..v_links_ref.count loop
+      add(v_links_clob,v_links_buffer,v_links_ref(l)||chr(10));
+    end loop;
+    add(v_links_clob,v_links_buffer,'</Relationships>'||chr(10),TRUE);
   end generate_from_report;
   ------------------------------------------------------------------------------
     
-   procedure get_report(p_app_id          IN NUMBER,
-                        p_page_id         IN NUMBER,  
-                        p_region_id       IN NUMBER,
-                        p_max_rows        IN NUMBER,            -- maximum rows for export   
-                        v_clob in out nocopy CLOB,
-                        p_strings in out nocopy CLOB,
-                        p_col_length IN VARCHAR2,
-                        p_width_coefficient IN number, 
-                        p_autofilter IN CHAR DEFAULT 'Y'      
+   procedure get_report(p_app_id            IN NUMBER,
+                        p_page_id           IN NUMBER,  
+                        p_region_id         IN NUMBER,
+                        p_max_rows          IN NUMBER,            -- maximum rows for export   
+                        v_clob              IN OUT NOCOPY CLOB,
+                        p_strings           IN OUT NOCOPY CLOB,
+                        p_links             IN OUT NOCOPY CLOB,
+                        p_col_length        IN VARCHAR2,
+                        p_width_coefficient IN NUMBER, 
+                        p_autofilter        IN CHAR DEFAULT 'Y',
+                        p_export_links      IN CHAR DEFAULT 'N',
+                        p_custom_width      IN VARCHAR2
                        )                 
   is  
   begin
@@ -2565,9 +2698,10 @@ as
     log('p_max_rows='||p_max_rows);
     log('p_col_length='||p_col_length);
     log('p_autofilter='||p_autofilter);    
+    log('p_export_links='||p_export_links);
     
     init_t_report(p_app_id,p_page_id,p_region_id);
-    generate_from_report(v_clob,p_strings,p_col_length,p_width_coefficient,p_max_rows,p_autofilter);
+    generate_from_report(v_clob,p_strings,p_links,p_col_length,p_width_coefficient,p_max_rows,p_autofilter,p_export_links,p_custom_width);
   end get_report;   
   
   ------------------------------------------------------------------------------
@@ -2677,17 +2811,20 @@ as
   end download;
   ------------------------------------------------------------------------------
   
-  procedure download_debug(p_app_id      IN NUMBER,
-                           p_page_id     IN NUMBER,
-                           p_region_id   IN NUMBER, 
-                           p_col_length  IN VARCHAR2 DEFAULT NULL,
-                           p_max_rows    IN NUMBER,
-                           p_autofilter  IN CHAR DEFAULT 'Y'                           
+  procedure download_debug(p_app_id       IN NUMBER,
+                           p_page_id      IN NUMBER,
+                           p_region_id    IN NUMBER, 
+                           p_col_length   IN VARCHAR2 DEFAULT NULL,
+                           p_max_rows     IN NUMBER,
+                           p_autofilter   IN CHAR DEFAULT 'Y',
+                           p_export_links IN CHAR DEFAULT 'N',
+                           p_custom_width IN VARCHAR2
                           )
   is
     v_blob     blob;
     v_cells    clob;
     v_strings  clob;
+    v_links    clob;
     v_desc_offset PLS_INTEGER := 1;
     v_src_offset  PLS_INTEGER := 1;
     v_lang        PLS_INTEGER := 0;
@@ -2703,9 +2840,12 @@ as
                p_max_rows,            -- maximum rows for export   
                v_cells ,
                v_strings,
+               v_links,
                p_col_length,
                WIDTH_COEFFICIENT,
-               p_autofilter);     
+               p_autofilter,
+               p_export_links,
+               p_custom_width);
 
     log('LogFinish',TRUE);
     dbms_lob.converttoblob(v_blob, v_debug, dbms_lob.getlength(v_debug), v_desc_offset, v_src_offset, dbms_lob.default_csid, v_lang, v_warning);
@@ -2724,23 +2864,27 @@ as
 
   ------------------------------------------------------------------------------
   
-  procedure download_excel(p_app_id      IN NUMBER,
-                           p_page_id     IN NUMBER,
-                           p_region_id   IN NUMBER, 
-                           p_col_length  IN VARCHAR2 DEFAULT NULL,
-                           p_max_rows    IN NUMBER,
-                           p_autofilter  IN CHAR DEFAULT 'Y'                           
+  procedure download_excel(p_app_id       IN NUMBER,
+                           p_page_id      IN NUMBER,
+                           p_region_id    IN NUMBER, 
+                           p_col_length   IN VARCHAR2 DEFAULT NULL,
+                           p_max_rows     IN NUMBER,
+                           p_autofilter   IN CHAR DEFAULT 'Y',
+                           p_export_links IN CHAR DEFAULT 'N',
+                           p_custom_width IN VARCHAR2
                           )
   is
     t_template blob;
     t_excel    blob;
     v_cells    clob;
     v_strings  clob;
+    v_links  clob;
     zip_files  as_zip.file_list;
   begin        
     dbms_lob.createtemporary(t_excel,true);    
     dbms_lob.createtemporary(v_cells,true);
     dbms_lob.createtemporary(v_strings,true);
+    dbms_lob.createtemporary(v_links,true);    
 
     get_report(p_app_id,
                p_page_id ,  
@@ -2748,9 +2892,12 @@ as
                p_max_rows,            -- maximum rows for export   
                v_cells ,
                v_strings,
+               v_links,
                p_col_length,
                WIDTH_COEFFICIENT,
-               p_autofilter        
+               p_autofilter,
+               p_export_links,
+               p_custom_width
               );
               
     select file_content
@@ -2770,6 +2917,7 @@ as
     add1file( t_excel, 'xl/sharedStrings.xml',v_strings);
     add1file( t_excel, 'xl/_rels/workbook.xml.rels',t_sheet_rels);    
     add1file( t_excel, 'xl/workbook.xml',t_workbook);    
+    add1file( t_excel, 'xl/worksheets/_rels/sheet1.xml.rels',v_links);    
     
     as_zip.finish_zip( t_excel );
  
@@ -2780,6 +2928,7 @@ as
     dbms_lob.freetemporary(t_excel);
     dbms_lob.freetemporary(v_cells);
     dbms_lob.freetemporary(v_strings);    
+    dbms_lob.freetemporary(v_links);    
   end download_excel;
   
 begin
@@ -2787,7 +2936,7 @@ begin
 END IR_TO_XLSX;
 /
 
-create or replace PACKAGE  "IR_TO_MSEXCEL" 
+create or replace PACKAGE IR_TO_MSEXCEL 
   AUTHID CURRENT_USER
 as
   FUNCTION render  (p_dynamic_action in apex_plugin.t_dynamic_action,
@@ -2800,12 +2949,13 @@ as
 
   function is_ir2msexcel 
   return boolean;
-
+  
 end IR_TO_MSEXCEL;
 /
 
-create or replace PACKAGE BODY  "IR_TO_MSEXCEL" 
+create or replace PACKAGE BODY  IR_TO_MSEXCEL 
 as
+  subtype t_large_varchar2  is varchar2(32767);
   v_plugin_running boolean default false;
   
   function is_ir2msexcel 
@@ -2929,10 +3079,17 @@ as
     v_is_ig                    boolean default false;
     v_is_ir                    boolean default false;
     v_workspace                apex_applications.workspace%TYPE;
+    v_found                    boolean default false;
   BEGIN
     v_plugin_id := apex_plugin.get_ajax_identifier;
     v_affected_region_IR_selector := get_affected_region_static_id(p_dynamic_action.ID,'Interactive Report');
     v_affected_region_IG_selector := get_affected_region_static_id(p_dynamic_action.ID,'Interactive Grid');
+    
+    select workspace
+    into v_workspace
+    from apex_applications
+    where application_id =nv('APP_ID');
+    
     if nvl(p_dynamic_action.attribute_03,'Y') = 'Y' then -- add "Download XLSX" icon
       if v_affected_region_IR_selector is not null then
         -- add XLSX Icon to Affected IR Region
@@ -2944,16 +3101,11 @@ as
          APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,v_affected_region_IG_selector);
       else
         -- add XLSX Icon to all IR Regions on the page
-        select workspace
-        into v_workspace
-        from apex_applications
-        where application_id =nv('APP_ID');
-
         for i in (SELECT nvl(static_id,'R'||to_char(region_id)) as affected_region_selector,
                          r.source_type
                   FROM apex_application_page_regions r
-                  where r.page_id = v('APP_PAGE_ID')
-                    and r.application_id =v('APP_ID')
+                  where r.page_id = nv('APP_PAGE_ID')
+                    and r.application_id =nv('APP_ID')
                     and r.source_type  in ('Interactive Report','Interactive Grid')
                     and r.workspace = v_workspace
                  )
@@ -2990,7 +3142,27 @@ as
     elsif v_affected_region_IG_selector is not null then      
       v_result.javascript_function := 'function(){excel_ig_gpv.downloadXLSXfromIG('''||v_affected_region_IG_selector||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_IG_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''')}';
     else
-     v_result.javascript_function := 'function(){console.log("No Affected Region Found!");}';
+      -- try to find first IR/IG on the page
+      for i in (SELECT nvl(static_id,'R'||to_char(region_id)) as affected_region_selector,
+                         r.source_type
+                  FROM apex_application_page_regions r
+                  where r.page_id = nv('APP_PAGE_ID')
+                    and r.application_id =nv('APP_ID')
+                    and r.source_type  in ('Interactive Report','Interactive Grid')
+                    and r.workspace = v_workspace
+                    and rownum < 2
+                 )
+        loop
+          if i.source_type = 'Interactive Report' then
+            v_result.javascript_function := 'function(){excel_gpv.getExcel('''||i.affected_region_selector||''','''||v_plugin_id||''')}';
+          else
+            v_result.javascript_function := 'function(){excel_ig_gpv.downloadXLSXfromIG('''||i.affected_region_selector||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_IG_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''')}';
+          end if; 
+          v_found := true;
+        end loop;        
+        if not v_found then
+          v_result.javascript_function := 'function(){console.log("No Affected Region Found!");}';
+        end if;  
     end if;
     
     v_result.ajax_identifier := v_plugin_id;
@@ -3074,8 +3246,9 @@ as
   return apex_plugin.t_dynamic_action_ajax_result
   is
     p_download_type      varchar2(1);
-    p_custom_width       varchar2(1000);
+    p_custom_width       t_large_varchar2;
 	p_autofilter         char;
+    p_export_links       char;
     v_maximum_rows       number;
     v_dummy              apex_plugin.t_dynamic_action_ajax_result;
     v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
@@ -3084,16 +3257,18 @@ as
       --to get properties needed for export in IG
       if apex_application.g_x01 = 'G' then 
         print_column_properties_json(p_application_id => apex_application.g_x02,
-                                    p_page_id        => apex_application.g_x03);
+                                     p_page_id        => apex_application.g_x03);
         return v_dummy;
       end if;  
   
       p_download_type := nvl(p_dynamic_action.attribute_02,'E');
-      p_autofilter:= nvl(p_dynamic_action.attribute_04,'Y');
+      p_autofilter := nvl(p_dynamic_action.attribute_04,'Y');
+      p_export_links := nvl(p_dynamic_action.attribute_05,'N');
+      p_custom_width := p_dynamic_action.attribute_06;
       v_affected_region_id := get_affected_region_id(p_dynamic_action_id => p_dynamic_action.ID
                                                     ,p_html_region_id    => apex_application.g_x03);
       
-      v_maximum_rows := nvl(nvl(p_dynamic_action.attribute_01,
+      v_maximum_rows := nvl(nvl(APEX_PLUGIN_UTIL.GET_PLSQL_EXPRESSION_RESULT(p_dynamic_action.attribute_01),
                                 IR_TO_XLSX.get_max_rows (p_app_id    => apex_application.g_x01,
                                                          p_page_id   => apex_application.g_x02,
                                                          p_region_id => v_affected_region_id)
@@ -3102,18 +3277,27 @@ as
         ir_to_xlsx.download_excel(p_app_id        => apex_application.g_x01,
                                   p_page_id      => apex_application.g_x02,
                                   p_region_id    => v_affected_region_id,
-                                  p_col_length   => apex_application.g_x04||p_custom_width,
+                                  p_col_length   => apex_application.g_x04,
                                   p_max_rows     => v_maximum_rows,
-                                  p_autofilter   => p_autofilter
+                                  p_autofilter   => p_autofilter,
+                                  p_export_links => p_export_links,
+                                  p_custom_width => p_custom_width
                                   );
       elsif p_download_type = 'T' then 
         ir_to_xlsx.download_debug(p_app_id        => apex_application.g_x01,
                                   p_page_id      => apex_application.g_x02,
                                   p_region_id    => v_affected_region_id,
-                                  p_col_length   => apex_application.g_x04||p_custom_width,
+                                  p_col_length   => apex_application.g_x04,
                                   p_max_rows     => v_maximum_rows,
-                                  p_autofilter   => p_autofilter
+                                  p_autofilter   => p_autofilter,
+                                  p_export_links => p_export_links,
+                                  p_custom_width => p_custom_width
                                   );
+      elsif p_download_type = 'M' then -- use Moritz Klein engine https://github.com/commi235
+        apexir_xlsx_pkg.download( p_ir_region_id => v_affected_region_id,
+                                  p_app_id => apex_application.g_x01,
+                                  p_ir_page_id => apex_application.g_x02
+                                 );      
       else
         raise_application_error(-20001,'Unknown download_type: '||p_download_type);
       end if;

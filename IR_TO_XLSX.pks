@@ -6,14 +6,18 @@ IS
                            p_region_id    IN NUMBER,
                            p_col_length   IN VARCHAR2 DEFAULT NULL,
                            p_max_rows     IN NUMBER,
-                           p_autofilter   IN CHAR DEFAULT 'Y'
+                           p_autofilter   IN CHAR DEFAULT 'Y',
+                           p_export_links IN CHAR DEFAULT 'N',
+                           p_custom_width IN VARCHAR2
                           ); 
-  procedure download_debug(p_app_id      IN NUMBER,
-                           p_page_id     IN NUMBER,
-                           p_region_id   IN NUMBER, 
-                           p_col_length  IN VARCHAR2 DEFAULT NULL,
-                           p_max_rows    IN NUMBER,
-                           p_autofilter  IN CHAR DEFAULT 'Y'                           
+  procedure download_debug(p_app_id       IN NUMBER,
+                           p_page_id      IN NUMBER,
+                           p_region_id    IN NUMBER, 
+                           p_col_length   IN VARCHAR2 DEFAULT NULL,
+                           p_max_rows     IN NUMBER,
+                           p_autofilter   IN CHAR DEFAULT 'Y',
+                           p_export_links IN CHAR DEFAULT 'N',
+                           p_custom_width IN VARCHAR2
                           );
                           
   function convert_date_format(p_format IN VARCHAR2)
