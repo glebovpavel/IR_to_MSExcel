@@ -86,10 +86,17 @@ function getCellNumber(value,colDataType,decimalSeparator,format) {
 }
 
 function getCellChar(value,format) {
-	return  {v: value,
-					 t: 's',
-					 s :  buildFormatObj(format)
-				 };
+	if (typeof value === 'object') {
+		return  {v: value.d,
+		  			 t: 's',
+			  		 s :  buildFormatObj(format)
+				   };
+	} else {
+	  return  {v: value,
+		  			 t: 's',
+			  		 s :  buildFormatObj(format)
+				   };
+	}	
 }
 
 
@@ -339,7 +346,7 @@ function getPreparedIGProperties(columns,propertiesFromPlugin) {
 	var displayInColumnArr = columns.map(function(a) { 		
 		haveControlBreaks = (a.controlBreakIndex || haveControlBreaks) ? true : false;		
 		return  {index : a.index, 
-						 displayOrder : a.hidden ? (1000000 + (a.controlBreakIndex || 0)): a.seq, //to place hidden and control break columns at the end after sorting
+						 displayOrder : (a.hidden || a.property === "APEX$ROW_ACTION") ? (1000000 + (a.controlBreakIndex || 0)): a.seq, //to place hidden and control break columns at the end after sorting
 						 heading: a.heading,
 						 headingAlignment: a.headingAlignment,
 						 alignment : a.alignment,
@@ -412,16 +419,14 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
 	var ws;
 	var wbout;	
   var mySpinner = apex.widget.waitPopup();
-
-	var columnPropertiesFromIG = currentIGView.view$.grid("getColumns");
-	
+  var columnPropertiesFromIG = currentIGView.view$.grid("getColumns");	
 	var properties = getPreparedIGProperties(columnPropertiesFromIG,propertiesFromPlugin);  	
 	
 	properties.hasAggregates = hasAggregates(rows);
 	properties.aggregateLabels = iGrid.interactiveGrid("getViews").grid.aggregateLabels;
-	properties.moment = moment;
-  
+	properties.moment = moment;  
 	ws = getWorksheet(rows,properties); 	
+	
 	
 	//return;  
 	// add worksheet to workbook 
