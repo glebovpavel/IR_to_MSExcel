@@ -58,12 +58,12 @@ function getCellDate(value,colDataType,langCode,format,moment) {
 
 
 function getCellNumber(value,colDataType,decimalSeparator,format) {	
+	var cell = {};
 	var num; 
   var re = new RegExp("[^0123456789" + decimalSeparator +"]","g");	
 	var str = "" + value;
-	var cell = {v : str, 
-							s :  buildFormatObj(format)
-						 };
+	cell.v = str; 
+	cell.s = buildFormatObj(format);
 	
 	if(value) {
     str.replace(re, ""); //remove all symbols except digits and decimalSeparator		
@@ -142,6 +142,7 @@ function getWorksheet(data,properties) {
 	var startColumn = properties.hasAggregates ? 1 : 0; 
 	var cellFormat = {};
 	var rowColors = {};	
+	var dataIndex;
 
 	// print headers
 	for(I = 0; I < colDataTypesArr.length; I++) {
@@ -175,9 +176,10 @@ function getWorksheet(data,properties) {
 		if( isControlBreak && (!rowAdditionalnfo.agg) )  { 
 			for(C = 0; C < data[R].length; C++) {			//columns 
 				columnNum = colDataTypesArr[C].displayOrder;
+				dataIndex = colDataTypesArr[C].index;
 				if( columnNum > 1000000 ) {			//is control break
 					controlBreakArr.push({ displayOrder : columnNum,
-															   text : colDataTypesArr[C].heading + " : " + data[R][C]
+															   text : colDataTypesArr[C].heading + " : " + data[R][dataIndex]
 															 });
 				} // end column loop
 			}
@@ -192,8 +194,7 @@ function getWorksheet(data,properties) {
 			ws[cellAddr] = cell;
 			rowNum++;							
 			controlBreakArr = [];
-		} 
-		
+		} 		
 		// display regular columns		
 		for(C = 0; C < data[R].length - 1; C++) {			//columns; -1 because last record is an object with additional proprties
 		  cellFormat.align = colDataTypesArr[C].alignment;
@@ -204,6 +205,7 @@ function getWorksheet(data,properties) {
 				cellFormat.colors = {};
 			}							
 			columnNum = colDataTypesArr[C].displayOrder;
+			dataIndex = colDataTypesArr[C].index;			
 			if( columnNum < 1000000 ) {			//display visible columns	
 				cellAddr = recalculateRangeAndGetCellAddr(range,columnNum + startColumn,rowNum); 				
 				// show cell highlights
@@ -216,12 +218,12 @@ function getWorksheet(data,properties) {
 				} 
 				
 				if(colDataTypesArr[C].dataType == 'NUMBER') {
-					cell = getCellNumber(data[R][C],colDataTypesArr[C],properties.decimalSeparator,cellFormat)
+					cell = getCellNumber(data[R][dataIndex],colDataTypesArr[C],properties.decimalSeparator,cellFormat)
 				} else if(colDataTypesArr[C].dataType == 'DATE') {				
-					cell = getCellDate(data[R][C],colDataTypesArr[C],properties.langCode,cellFormat,properties.moment);
+					cell = getCellDate(data[R][dataIndex],colDataTypesArr[C],properties.langCode,cellFormat,properties.moment);
 				} else {
 					// string
-					cell = getCellChar(data[R][C],cellFormat);
+					cell = getCellChar(data[R][dataIndex],cellFormat);
 				}					
 				ws[cellAddr] = cell;
 			} 
@@ -417,8 +419,7 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
 	var	ws_name = currentIGView.model.name;
 	var wb = new Workbook(); 
 	var ws;
-	var wbout;	
-  var mySpinner = apex.widget.waitPopup();
+	var wbout;	  
   var columnPropertiesFromIG = currentIGView.view$.grid("getColumns");	
 	var properties = getPreparedIGProperties(columnPropertiesFromIG,propertiesFromPlugin);  	
 	
@@ -427,15 +428,13 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
 	properties.moment = moment;  
 	ws = getWorksheet(rows,properties); 	
 	
-	
 	//return;  
 	// add worksheet to workbook 
 	wb.SheetNames.push(ws_name);
 	wb.Sheets[ws_name] = ws;	
 	wbout = XLSX.write(wb, {bookType:'xlsx', bookSST:true, type: 'binary'});
 
-	saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), fileName  + ".xlsx");	
-	mySpinner.remove();
+	saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), fileName  + ".xlsx");		
 }
 
 function addDownloadXLSXiconToIG(vRegionID,vPluginID,fileName,path) {
@@ -467,6 +466,7 @@ function addDownloadXLSXiconToIG(vRegionID,vPluginID,fileName,path) {
 			{
 				name   : "GPVGETXLSX"
 				, action : function(event, element) {					
+					var mySpinner = apex.widget.waitPopup();
 					apex.server.plugin ( vPluginID, 
                                         {x01: "G",
                                          x02: $v("pFlowId"),
@@ -476,6 +476,7 @@ function addDownloadXLSXiconToIG(vRegionID,vPluginID,fileName,path) {
                                              getRows(vWidget$,propertiesFromPlugin,buildExcel,fileName,path);		
                                         }                                  
                                         }); 
+				 mySpinner.remove();
 				}
 				, hide : false
 				, disabled : false
@@ -493,6 +494,7 @@ function addDownloadXLSXiconToIG(vRegionID,vPluginID,fileName,path) {
 	
 function downloadXLSXfromIG(vRegionID,vPluginID,fileName,path) {
 	var vWidget$ = apex.region(vRegionID).widget();
+	var mySpinner = apex.widget.waitPopup();
 	apex.server.plugin ( vPluginID, 
 											{x01: "G",
 											 x02: $v("pFlowId"),
@@ -502,6 +504,7 @@ function downloadXLSXfromIG(vRegionID,vPluginID,fileName,path) {
 												getRows(vWidget$,propertiesFromPlugin,buildExcel,fileName,path);		
 											}                                  
 											}); 
+  mySpinner.remove();	
 }
 //end
 			
