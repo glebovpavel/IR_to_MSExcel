@@ -59,6 +59,16 @@ function getCellDate(value,colDataType,langCode,format,moment) {
 
 function getCellNumber(value,colDataType,decimalSeparator,format) {	
 	var cell = {};
+	if (typeof value === 'object') {		
+		cell.t = 's';	 
+	  cell.v = value.d;
+		return cell;
+	} else if (typeof value !== 'string') {		
+		cell.t = 's';	 
+	  cell.v = String(value);
+		return cell;
+	}
+	
 	var num; 
   var re = new RegExp("[^0123456789" + decimalSeparator +"]","g");	
 	var str = "" + value;
@@ -91,6 +101,10 @@ function getCellChar(value,format) {
 		  			 t: 's',
 			  		 s :  buildFormatObj(format)
 				   };
+	} else if (typeof value !== 'string') {		
+	  return  {v: String(value),
+	          t: 's'
+				   };		
 	} else {
 	  return  {v: value,
 		  			 t: 's',
