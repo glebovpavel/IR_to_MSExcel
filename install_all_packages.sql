@@ -2220,7 +2220,7 @@ as
           
       log('v_link='||v_link);
       v_links(v_links.count + 1) := '<hyperlink ref="'||p_cell_addr||'" r:id="rId'||(v_links.count+1)||'" />';
-      v_links_ref(v_links_ref.count + 1) := '<Relationship Id="rId'||v_links.count||'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="'||v_link||'" TargetMode="External"/>';      
+      v_links_ref(v_links_ref.count + 1) := '<Relationship Id="rId'||v_links.count||'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="'||dbms_xmlgen.convert(v_link)||'" TargetMode="External"/>';      
     end add_link;
     
     procedure print_char_cell(p_cell_addr in varchar2,
@@ -3309,4 +3309,3 @@ as
   
 end IR_TO_MSEXCEL;
 /
-
