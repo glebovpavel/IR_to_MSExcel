@@ -59,7 +59,7 @@
             var current_region_id = $dialog_window.attr('id').match(/(.+)_dialog_js/)[1];
             var re = new RegExp(p_region_static_id, 'g');
 
-            if (p_version ==="5.1") 
+            if (p_version ==="5.1" || p_version ==="5.2") 
              {
                 var html = apex.util.htmlBuilder();
                 html.markup('<li')
@@ -85,8 +85,10 @@
                 if(!p_region_static_id || current_region_id.match(re) != null)
                  {            
                   $('.a-IRR-iconList').append(html.toString());
+                  $dialog_window.find("li.a-IRR-iconList-item a[id$='_XLS']").parent('li').hide();
                  };
                 $dialog_window.parent().find("button").addClass("gpvCloseButton");
+                
              };  //5.1 
             if (p_version !=="5.1") 
              {

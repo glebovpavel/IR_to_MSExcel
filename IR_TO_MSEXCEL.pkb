@@ -1,4 +1,4 @@
-create or replace PACKAGE BODY  IR_TO_MSEXCEL 
+create or replace PACKAGE BODY IR_TO_MSEXCEL 
 as
   subtype t_large_varchar2  is varchar2(32767);
   v_plugin_running boolean default false;

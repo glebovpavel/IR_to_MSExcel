@@ -244,6 +244,65 @@ as
   v_debug                    clob;  
   v_debug_buffer             largevarchar2; 
   
+  ------------------------------------------------------------------------------
+  /**
+  * http://mk-commi.blogspot.co.at/2014/11/concatenating-varchar2-values-into-clob.html  
+  
+  * Procedure concatenates a VARCHAR2 to a CLOB.
+  * It uses another VARCHAR2 as a buffer until it reaches 32767 characters.
+  * Then it flushes the current buffer to the CLOB and resets the buffer using
+  * the actual VARCHAR2 to add.
+  * Your final call needs to be done setting p_eof to TRUE in order to
+  * flush everything to the CLOB.
+  *
+  * @param p_clob        The CLOB buffer.
+  * @param p_vc_buffer   The intermediate VARCHAR2 buffer. (must be VARCHAR2(32767))
+  * @param p_vc_addition The VARCHAR2 value you want to append.
+  * @param p_eof         Indicates if complete buffer should be flushed to CLOB.
+  */
+  PROCEDURE add( p_clob IN OUT NOCOPY CLOB
+               , p_vc_buffer IN OUT NOCOPY VARCHAR2
+               , p_vc_addition IN VARCHAR2
+               , p_eof IN BOOLEAN DEFAULT FALSE
+               )
+  AS
+  BEGIN
+     
+    -- Standard Flow
+    IF NVL(LENGTHB(p_vc_buffer), 0) + NVL(LENGTHB(p_vc_addition), 0) < (32767/2) THEN
+      -- Danke für Frank Menne wegen utf-8
+      p_vc_buffer := p_vc_buffer || convert(p_vc_addition,'utf8');
+    ELSE
+      IF p_clob IS NULL THEN
+        dbms_lob.createtemporary(p_clob, TRUE);
+      END IF;
+      dbms_lob.writeappend(p_clob, length(p_vc_buffer), p_vc_buffer);
+      p_vc_buffer := convert(p_vc_addition,'utf8');
+    END IF;
+     
+    -- Full Flush requested
+    IF p_eof THEN
+      IF p_clob IS NULL THEN
+         p_clob := p_vc_buffer;
+      ELSE
+        dbms_lob.writeappend(p_clob, length(p_vc_buffer), p_vc_buffer);
+      END IF;
+      p_vc_buffer := NULL;
+    END IF;
+   
+  END add;
+  ------------------------------------------------------------------------------
+  
+  procedure log(p_message in varchar2,p_eof IN BOOLEAN DEFAULT FALSE)
+  is
+  begin
+  /* logigging  ffrffe */
+    add(v_debug,v_debug_buffer,p_message||chr(10),p_eof);
+    apex_debug_message.log_message(p_message => substr(p_message,1,32767),
+                                   p_enabled => false,
+                                   p_level   => 4);
+  end log; 
+  ------------------------------------------------------------------------------  
  /* XLSX FUNCTIONS */
   function convert_date_format(p_format in varchar2)
   return varchar2
@@ -497,13 +556,13 @@ as
        if p_format_mask is null then
           return 0;
         else
-          return add_format_mask(convert_number_format(p_format_mask)); 
+          return add_format_mask(convert_number_format(apex_plugin_util.replace_substitutions(p_format_mask))); 
         end if;
       elsif p_data_type = 'DATE' then 
         if p_format_mask is null then
           return FORMAT_MASK_START_WITH;  -- default date format
         else
-          return add_format_mask(convert_date_format(p_format_mask)); 
+          return add_format_mask(convert_date_format(apex_plugin_util.replace_substitutions(p_format_mask))); 
         end if;
       else
         return 2;  -- default  string format
@@ -637,55 +696,9 @@ as
      v_template := replace(v_template,'#STYLES#',get_cellXfs_xml);
      
      return v_template;
-  end get_styles_xml;
+  end get_styles_xml;  
   ------------------------------------------------------------------------------
-  /**
-  * http://mk-commi.blogspot.co.at/2014/11/concatenating-varchar2-values-into-clob.html  
   
-  * Procedure concatenates a VARCHAR2 to a CLOB.
-  * It uses another VARCHAR2 as a buffer until it reaches 32767 characters.
-  * Then it flushes the current buffer to the CLOB and resets the buffer using
-  * the actual VARCHAR2 to add.
-  * Your final call needs to be done setting p_eof to TRUE in order to
-  * flush everything to the CLOB.
-  *
-  * @param p_clob        The CLOB buffer.
-  * @param p_vc_buffer   The intermediate VARCHAR2 buffer. (must be VARCHAR2(32767))
-  * @param p_vc_addition The VARCHAR2 value you want to append.
-  * @param p_eof         Indicates if complete buffer should be flushed to CLOB.
-  */
-  PROCEDURE add( p_clob IN OUT NOCOPY CLOB
-               , p_vc_buffer IN OUT NOCOPY VARCHAR2
-               , p_vc_addition IN VARCHAR2
-               , p_eof IN BOOLEAN DEFAULT FALSE
-               )
-  AS
-  BEGIN
-     
-    -- Standard Flow
-    IF NVL(LENGTHB(p_vc_buffer), 0) + NVL(LENGTHB(p_vc_addition), 0) < (32767/2) THEN
-      -- Danke f?r Frank Menne wegen utf-8
-      p_vc_buffer := p_vc_buffer || convert(p_vc_addition,'utf8');
-    ELSE
-      IF p_clob IS NULL THEN
-        dbms_lob.createtemporary(p_clob, TRUE);
-      END IF;
-      dbms_lob.writeappend(p_clob, length(p_vc_buffer), p_vc_buffer);
-      p_vc_buffer := convert(p_vc_addition,'utf8');
-    END IF;
-     
-    -- Full Flush requested
-    IF p_eof THEN
-      IF p_clob IS NULL THEN
-         p_clob := p_vc_buffer;
-      ELSE
-        dbms_lob.writeappend(p_clob, length(p_vc_buffer), p_vc_buffer);
-      END IF;
-      p_vc_buffer := NULL;
-    END IF;
-   
-  END add;
-  ------------------------------------------------------------------------------
   FUNCTION get_cell_name(p_col IN binary_integer,
                          p_row IN binary_integer)
   RETURN varchar2
@@ -708,17 +721,7 @@ as
                    CHR (64 + p_col)
              END||p_row;
   end get_cell_name;
- -----------------------------------------------------------
-  procedure log(p_message in varchar2,p_eof IN BOOLEAN DEFAULT FALSE)
-  is
-  begin
-  /* logigging  ffrffe */
-    add(v_debug,v_debug_buffer,p_message||chr(10),p_eof);
-    apex_debug_message.log_message(p_message => substr(p_message,1,32767),
-                                   p_enabled => false,
-                                   p_level   => 4);
-  end log; 
-  ------------------------------------------------------------------------------
+  ----------------------------------------------------------- 
   
   function get_column_names(p_column_alias in apex_application_page_ir_col.column_alias%type)
   return APEX_APPLICATION_PAGE_IR_COL.report_label%TYPE
@@ -876,8 +879,9 @@ as
     v_tmp := regexp_replace(v_tmp, '[^[:print:]'||chr(13)||chr(10)||chr(9)||']', ' ');
     v_tmp := UTL_I18N.UNESCAPE_REFERENCE(v_tmp); 
     -- and finally encode them
-    v_tmp := substr(v_tmp,1,2000);    
-    v_tmp := UTL_I18N.ESCAPE_REFERENCE(v_tmp,'UTF8');
+    --v_tmp := substr(v_tmp,1,32000);        
+    v_tmp := dbms_xmlgen.convert( substr( v_tmp, 1, 32000 ) );
+    
     return v_tmp;
   end get_xmlval;  
   ------------------------------------------------------------------------------
@@ -1532,7 +1536,7 @@ as
       end get_subtitution_value;
       
     begin
-      if p_link is null then
+      if p_link is null or v_links.count >= 65530 then
         return;
       end if;  
       v_link := p_link;
@@ -1996,7 +2000,7 @@ as
     add(v_strings_clob,v_string_buffer,'<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="' || v_strings.count() || '" uniqueCount="' || v_strings.count() || '">'||chr(10));
     
     for i in 1 .. v_strings.count() loop
-    add(v_strings_clob,v_string_buffer,'<si><t>'||dbms_xmlgen.convert( substr( v_strings( i ), 1, 32000 ) ) || '</t></si>'||chr(10));
+    add(v_strings_clob,v_string_buffer,'<si><t>'||v_strings(i)|| '</t></si>'||chr(10));
     end loop; 
     add(v_strings_clob,v_string_buffer,'</sst>'||chr(10),TRUE);
     

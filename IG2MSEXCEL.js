@@ -458,8 +458,16 @@ function addDownloadXLSXiconToIG(vRegionID,vPluginID,fileName,path) {
 
   // find toolbar group
   var toolbarGroup = toolbar.toolbar('findGroup', "actions4");
-	
-	toolbarGroup.controls.push({
+  var buttonExists = false;
+  for (var i=0;i<toolbarGroup.controls.length;i++) {
+   if(toolbarGroup.controls[i].action === "GPVGETXLSX")
+    {
+     buttonExists = true;
+    }
+  }
+ 	
+  if(!buttonExists) {
+  	toolbarGroup.controls.push({
 		type: 'BUTTON',
 		label: "XLSX",
 		title: "XLSX",
@@ -470,6 +478,7 @@ function addDownloadXLSXiconToIG(vRegionID,vPluginID,fileName,path) {
 		iconBeforeLabel: true,
 		hot: false
 	});
+  }	
 	// add actions
 	var vActions = vWidget$.interactiveGrid('getActions');
 
@@ -499,8 +508,10 @@ function addDownloadXLSXiconToIG(vRegionID,vPluginID,fileName,path) {
 		vAction$.hide = false;
 		vAction$.disabled = false;
 	}
-	// refresh grid
-	toolbar.toolbar('refresh');
+    
+  // refresh grid
+  toolbar.toolbar('refresh');
+
 	} catch(err) {
 		console.log(err);
 	}	
