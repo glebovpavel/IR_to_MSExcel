@@ -1441,7 +1441,7 @@ as
        v_format_mask := get_col_format_mask(v_col_alias);
        log('v_col_alias='||v_col_alias||' v_format_mask='||v_format_mask);
      exception
-       when no_data_found then 
+       when others then 
           v_format_mask := '';
      end;  
      

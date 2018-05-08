@@ -235,12 +235,12 @@ as
            name,
            case 
             when  data_type in ('DATE','TIMESTAMP_TZ','TIMESTAMP_LTZ','TIMESTAMP') then
-                  apex_common.ir_to_xlsx.convert_date_format_js(p_datatype => data_type, p_format => format_mask)
+                  ir_to_xlsx.convert_date_format_js(p_datatype => data_type, p_format => format_mask)
             else ''
            end date_format_mask_js,
            case 
             when  data_type in ('DATE','TIMESTAMP_TZ','TIMESTAMP_LTZ','TIMESTAMP') then
-                  apex_common.ir_to_xlsx.convert_date_format(p_format => nvl(format_mask,'DD.MM.YYYY'))
+                  ir_to_xlsx.convert_date_format(p_format => nvl(format_mask,'DD.MM.YYYY'))
             else ''
            end date_format_mask_excel,
            value_alignment,
