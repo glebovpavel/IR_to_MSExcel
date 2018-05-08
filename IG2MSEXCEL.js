@@ -453,6 +453,9 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
 
 function addDownloadXLSXiconToIG(vRegionID,vPluginID,fileName,path) {
   try {
+  if(!apex.region(vRegionID)) {
+    return;
+  }
 	var vWidget$ = apex.region(vRegionID).widget();
   var toolbar = vWidget$.interactiveGrid("getToolbar");
 
