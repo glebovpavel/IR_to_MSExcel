@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 01-2018
-** Version: 3.11
+** Version: 3.12
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -3194,12 +3194,12 @@ as
            name,
            case 
             when  data_type in ('DATE','TIMESTAMP_TZ','TIMESTAMP_LTZ','TIMESTAMP') then
-                  ir_to_xlsx.convert_date_format_js(p_datatype => data_type, p_format => format_mask)
+                  apex_common.ir_to_xlsx.convert_date_format_js(p_datatype => data_type, p_format => format_mask)
             else ''
            end date_format_mask_js,
            case 
             when  data_type in ('DATE','TIMESTAMP_TZ','TIMESTAMP_LTZ','TIMESTAMP') then
-                  ir_to_xlsx.convert_date_format(p_format => nvl(format_mask,'DD.MM.YYYY'))
+                  apex_common.ir_to_xlsx.convert_date_format(p_format => nvl(format_mask,'DD.MM.YYYY'))
             else ''
            end date_format_mask_excel,
            value_alignment,
@@ -3222,10 +3222,9 @@ as
     from nls_session_parameters
     where parameter = 'NLS_NUMERIC_CHARACTERS';
     
-    select case 
-              when value = 'AMERICAN' then 'en'
-              else lower(substr(value,1,2))
-            end lang_code
+    -- always use 'AMERICA' as second parameter because 
+    -- really i need only lang code (first parameter) and not the country
+    select regexp_substr(UTL_I18N.MAP_LOCALE_TO_ISO  (value, 'AMERICA'),'[^_]+')
     into v_lang_code
     from nls_session_parameters
     where parameter = 'NLS_LANGUAGE';
@@ -3240,8 +3239,12 @@ as
     sys.htp.p(APEX_JSON.get_clob_output);
     APEX_JSON.free_output;
     
-    close l_columns_cursor;
-    close l_highlihts_cursor;
+    if l_columns_cursor%ISOPEN THEN
+       close l_columns_cursor;
+    end if;
+    if l_highlihts_cursor%ISOPEN THEN
+       close l_highlihts_cursor;
+    end if;    
   end print_column_properties_json;
   ------------------------------------------------------------------------------
   
@@ -3272,7 +3275,7 @@ as
       v_affected_region_id := get_affected_region_id(p_dynamic_action_id => p_dynamic_action.ID
                                                     ,p_html_region_id    => apex_application.g_x03);
       
-      v_maximum_rows := nvl(nvl(APEX_PLUGIN_UTIL.GET_PLSQL_EXPRESSION_RESULT(p_dynamic_action.attribute_01),
+      v_maximum_rows := nvl(nvl(APEX_PLUGIN_UTIL.GET_PLSQL_EXPRESSION_RESULT(nvl(p_dynamic_action.attribute_01,' null ')),
                                 IR_TO_XLSX.get_max_rows (p_app_id    => apex_application.g_x01,
                                                          p_page_id   => apex_application.g_x02,
                                                          p_region_id => v_affected_region_id)

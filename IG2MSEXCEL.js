@@ -77,7 +77,7 @@ function getCellNumber(value,colDataType,decimalSeparator,format) {
 	
 	if(value) {
     str.replace(re, ""); //remove all symbols except digits and decimalSeparator		
-		str.replace(decimalSeparator, "."); //change decimalSeparator to JS-decimal separator
+		str = str.replace(decimalSeparator, "."); //change decimalSeparator to JS-decimal separator
 		num = parseFloat(str);			
 		if( !isNaN(num) ) {
 			cell.t = 'n';	  
@@ -299,7 +299,7 @@ function getRows(iGrid,propertiesFromPlugin,callback,fileName,pathIn) {
      localPath = localPath.replace(/f$/, '');
 		 path = localPath + path;
 	}
-	
+
 	//https://community.oracle.com/thread/4014257  
 	function loadBatchOfRecords(model, offset, count) {  
 			var i = 0;  					  
@@ -410,7 +410,7 @@ function getPreparedIGProperties(columns,propertiesFromPlugin) {
 	});
 	
 	return { columnsProperties : displayInColumnArr,
-					 decimalSeparator: propertiesFromPlugin.decimal_seperator,
+					 decimalSeparator: propertiesFromPlugin.decimal_separator,
 					 langCode : propertiesFromPlugin.lang_code,
 					 haveControlBreaks : haveControlBreaks,
 					 highlights : propertiesFromPlugin.highlights,
@@ -439,7 +439,7 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
 	
 	properties.hasAggregates = hasAggregates(rows);
 	properties.aggregateLabels = iGrid.interactiveGrid("getViews").grid.aggregateLabels;
-	properties.moment = moment;  
+	properties.moment = moment;
 	ws = getWorksheet(rows,properties); 	
 	
 	//return;  

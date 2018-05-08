@@ -24,7 +24,7 @@ Here's a link to the [main project page + demo](http://glebovpavel.github.io/Des
 
 ## Current Version
 
-Version 3.11
+Version 3.12
 
 ## Current Stable Version
 
