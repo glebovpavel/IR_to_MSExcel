@@ -3,6 +3,11 @@ GPV Interactive Report/Grid to MSExcel
 
 Getting results of your Interactive Report/Grid in Microsoft Excel. 
 
+## Important
+
+Version 3.13 was assembled with errors. It works, but sometimes you get corrupted excel files. 
+Please download the least version from [master](https://github.com/glebovpavel/IR_to_MSExcel/archive/master.zip). 
+
 ## About
 
 The "GPV Interactive Report/Grid to MSExcel v2" APEX plugin lets you get results of your Interactive Report or Interactive Grid in XLSX-format, ready to be used in Microsoft Excel.
