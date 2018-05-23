@@ -59,7 +59,7 @@
             var current_region_id = $dialog_window.attr('id').match(/(.+)_dialog_js/)[1];
             var re = new RegExp(p_region_static_id, 'g');
 
-            if (p_version > 5.1) 
+            if (p_version === '5.1' || p_version === '5.2' || p_version === '18.') 
              {
                 var html = apex.util.htmlBuilder();
                 html.markup('<li')
