@@ -41,12 +41,13 @@ function getCellDate(value,colDataType,langCode,format,moment) {
 	var langCode = langCode || 'en';		
 	var parsedDate = moment(value,formatMask,langCode,dateStrict);		
 	var epoch = new Date(1899,11,31);
-	
+        	
 	if(value) {
 		if( parsedDate.isValid()) {
+                        let dateParsed = parsedDate.toDate();
 			cell.t = 'n'; // excel recognizes date as number that have a date format string			
 			cell.z = colDataType.formatMaskExcel;						
-			cell.v = ((parsedDate.toDate() - epoch) / (24 * 60 * 60 * 1000)) + 1;			// + 1 because excel leap bug
+			cell.v = ((dateParsed - epoch + epoch.getTimezoneOffset()*60*1000 - dateParsed.getTimezoneOffset()*60*1000) / (24 * 60 * 60 * 1000)) + 1;			// + 1 because excel leap bug
 		}	
 	 else {
 		 console.log("Can't parse date <" + value + "> with format <" + formatMask + "> strict:" + dateStrict);
@@ -76,7 +77,7 @@ function getCellNumber(value,colDataType,decimalSeparator,format) {
 	cell.s = buildFormatObj(format);
 	
 	if(value) {
-    str.replace(re, ""); //remove all symbols except digits and decimalSeparator		
+                str = str.replace(re, ""); //remove all symbols except digits and decimalSeparator		
 		str = str.replace(decimalSeparator, "."); //change decimalSeparator to JS-decimal separator
 		num = parseFloat(str);			
 		if( !isNaN(num) ) {
@@ -87,7 +88,7 @@ function getCellNumber(value,colDataType,decimalSeparator,format) {
 			cell.t = 's';	 
 			cell.v = "";					 
 		} else {
-			console.log("Can't parse number <" + value + ">");
+			console.log("Can't parse number <" + value + "> str=" + str);
 			cell.t = 's';	 
 			cell.v = value;	
 		}

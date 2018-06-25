@@ -5,8 +5,8 @@ Getting results of your Interactive Report/Grid in Microsoft Excel.
 
 ## Important
 
-Version 3.13 was assembled with errors. It works, but sometimes you get corrupted excel files. 
-Please download the least version from [master](https://github.com/glebovpavel/IR_to_MSExcel/archive/master.zip). 
+Version 3.14 was assembled with errors. It works, but sometimes you get corrupted excel files. 
+Please download the least version 3.14 from [master](https://github.com/glebovpavel/IR_to_MSExcel/archive/master.zip). 
 
 ## About
 
@@ -29,11 +29,7 @@ Here's a link to the [main project page + demo](http://glebovpavel.github.io/Des
 
 ## Current Version
 
-Version 3.13
-
-## Current Stable Version
-
-Version 2.21
+Version 3.14
 
 ## License
 

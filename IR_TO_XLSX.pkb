@@ -331,6 +331,7 @@ as
     return v_str;
   end convert_date_format;
   ------------------------------------------------------------------------------
+  
   function convert_number_format(p_format in varchar2)
   return varchar2
   is
@@ -382,6 +383,31 @@ as
 
     return v_format;
   end get_current_format;
+  ------------------------------------------------------------------------------
+  
+  function convert_date_format(p_datatype in varchar2,p_format in varchar2)
+  return varchar2
+  is
+    v_str        varchar2(100);
+    v_24h_format  boolean default true;
+  begin
+    if p_format is null then
+      if p_datatype = 'TIMESTAMP_TZ' then
+        v_str := get_current_format(dbms_types.TYPECODE_TIMESTAMP_TZ);
+      elsif p_datatype = 'TIMESTAMP_LTZ' then
+        v_str := get_current_format(dbms_types.TYPECODE_TIMESTAMP_LTZ);  
+      elsif p_datatype = 'TIMESTAMP' then
+        v_str := get_current_format(dbms_types.TYPECODE_TIMESTAMP);          
+      elsif p_datatype = 'DATE' then
+       v_str := get_current_format(dbms_types.TYPECODE_DATE);
+      else
+        v_str := get_current_format('');
+      end if;
+    else
+      v_str := p_format;
+    end if;
+    return convert_date_format(p_format => v_str);
+  end convert_date_format;  
   ------------------------------------------------------------------------------
 
   function convert_date_format_js(p_datatype in varchar2, p_format in varchar2)

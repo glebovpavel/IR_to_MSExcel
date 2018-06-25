@@ -23,6 +23,8 @@ IS
   function convert_date_format(p_format IN VARCHAR2)
   return varchar2;
   function convert_number_format(p_format IN VARCHAR2)
+  return varchar2;  
+  function convert_date_format(p_datatype IN VARCHAR2,p_format IN VARCHAR2)
   return varchar2;
   function convert_date_format_js(p_datatype in varchar2, p_format in varchar2)
   return varchar2;
