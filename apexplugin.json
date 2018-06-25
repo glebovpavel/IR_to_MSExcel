@@ -21,7 +21,7 @@
   "oracle" : {
     "versions" : ["11.2.0.1", "12.1.0.1"],
     "apex" : {
-      "versions" : ["5.0.1","5.1.0","5.1.3"],
+      "versions" : ["5.1.3","5.1.4","18.1"],
       "plugin" : {
         "internalName" : "GPV_IR_TO_MSEXCEL",
         "type" : "process",
