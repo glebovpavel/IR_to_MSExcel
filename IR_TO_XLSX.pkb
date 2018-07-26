@@ -1499,6 +1499,8 @@ as
    v_cur                INTEGER; 
    v_result             INTEGER;
    v_colls_count        BINARY_INTEGER;
+   v_dummy_colls_count  BINARY_INTEGER;
+   v_dummy_desc_tab     DBMS_SQL.DESC_TAB2;
    v_row                APEX_APPLICATION_GLOBAL.VC_ARR2;
    v_date_row           t_date_table;
    v_number_row         t_number_table;
@@ -1826,6 +1828,7 @@ as
     for i in 1..v_colls_count loop
        log('define column '||i);
        log('column type '||l_report.desc_tab(i).col_type);      
+       dbms_sql.describe_columns2(v_cur, v_dummy_colls_count, v_dummy_desc_tab);
        if l_report.column_types(i) = 'DATE' then   
          dbms_sql.define_column(v_cur, i, v_date_dummy);
        elsif l_report.column_types(i) = 'NUMBER' then   
