@@ -44,7 +44,7 @@ function getCellDate(value,colDataType,langCode,format,moment) {
         	
 	if(value) {
 		if( parsedDate.isValid()) {
-                        let dateParsed = parsedDate.toDate();
+                        var dateParsed = parsedDate.toDate();
 			cell.t = 'n'; // excel recognizes date as number that have a date format string			
 			cell.z = colDataType.formatMaskExcel;						
 			cell.v = ((dateParsed - epoch + epoch.getTimezoneOffset()*60*1000 - dateParsed.getTimezoneOffset()*60*1000) / (24 * 60 * 60 * 1000)) + 1;			// + 1 because excel leap bug
@@ -286,8 +286,7 @@ function s2ab(s) {
 function getRows(iGrid,propertiesFromPlugin,callback,fileName,pathIn) {
   var rows = [];		
 	var gridView = iGrid.interactiveGrid("getViews").grid; 
-	var model = gridView.model;
-	var count = model.getOption("pageSize");  		
+	var model = gridView.model;	
 	var config; //requirejs config
 	var packages; // requirejs config.packages	
 	var path=$("script[src$='IG2MSEXCEL.js']").attr("src").replace('IG2MSEXCEL.js',''); 	
@@ -302,18 +301,24 @@ function getRows(iGrid,propertiesFromPlugin,callback,fileName,pathIn) {
 	}
 
 	//https://community.oracle.com/thread/4014257  
-	function loadBatchOfRecords(model, offset, count) {  
+	function loadBatchOfRecords(model, offset, count, maxCount) {  
 			var i = 0;  					  
-			model.forEachInPage(offset, count, function(r) {  
+			var cnt;
+			if (offset + count <= maxCount ) {
+        cnt = count;
+			}  else { 
+        cnt = Math.min(count,maxCount - offset); 
+			};
+			model.forEachInPage(offset, cnt, function(r) {  
 					i += 1;  
 				  if(r)  {						
-						rows.push(r);  				
+						rows.push(r);  									
 					}				
-					if (i === count || !r) {  						
+					if (i === cnt || !r) {  						
 							// got all the records we asked for or no more available  
-							if (r) {  								  								  								
-									// if there are more recorda available get them  
-									loadBatchOfRecords(model, offset + count, count);  
+							if (r && rows.length < maxCount) {  								  								  								
+									// if there are more records available - > get them  
+									loadBatchOfRecords(model, offset + cnt, cnt,maxCount);  
 							}  else {								
 								// load large JS-libraries dynamically using requirejs
 								config = requirejs.s.contexts._.config; //get current config
@@ -342,8 +347,7 @@ function getRows(iGrid,propertiesFromPlugin,callback,fileName,pathIn) {
 					}  
 			 });  
 	}  	
-
-	loadBatchOfRecords(model, 0, count);	
+	loadBatchOfRecords(model, 0, propertiesFromPlugin.rows_portion,propertiesFromPlugin.max_rows);	
 }
 
 function getPreparedIGProperties(columns,propertiesFromPlugin) {
@@ -416,7 +420,9 @@ function getPreparedIGProperties(columns,propertiesFromPlugin) {
 					 haveControlBreaks : haveControlBreaks,
 					 highlights : propertiesFromPlugin.highlights,
 					 hasAggregates : false,
-					 aggregateLabels : {}
+					 aggregateLabels : {},
+					 max_rows : propertiesFromPlugin.max_rows,
+					 rows_portion : propertiesFromPlugin.rows_portion
 				 };
 }
 
@@ -452,40 +458,40 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
 	saveAs(new Blob([s2ab(wbout)],{type:"application/octet-stream"}), fileName  + ".xlsx");		
 }
 
-function addDownloadXLSXiconToIG(vRegionID,vPluginID,fileName,path) {
-  try {
-  if(!apex.region(vRegionID)) {
-    return;
-  }
-	var vWidget$ = apex.region(vRegionID).widget();
-  var toolbar = vWidget$.interactiveGrid("getToolbar");
+			function addDownloadXLSXiconToIG(vRegionID, vPluginID, fileName, path) {
+				if (!apex.region(vRegionID)) {
+					return;
+				}
+				var vWidget$ = apex.region(vRegionID).widget();
+				var vActions = vWidget$.interactiveGrid('getActions');
+        
+				$('body').on('dialogopen', function (event, ui) {
+					var dialog$;					
+					// check that opened modal page is download page
+					if (event.target.id === (vRegionID + '_ig_download-dialog')) {
+						dialog$ = $(event.target);						
+						// add button to the madal page
+						// because inner html not exists at this moment
+						// only one possibility i found is add a  div with position:absolute; 
+						// to show the button on the right side
+						if (dialog$.parent("div").find('.ir-to-ms-excel-block-w-button').length == 0) {							
+							dialog$.append('<div class="ir-to-ms-excel-block-w-button"> \
+                                     <button type="button" class="ir-to-ms-excel-button ui-button--hot ui-button ui-corner-all ui-widget"> \
+                                       <div class="ir-to-ms-excel-block"> \
+                                          <span class="a-IGDialog-iconList-icon a-Icon icon-ig-dl-xls ir-to-ms-excel-block-icon" aria-hidden="true"></span> \
+                                          <span class="a-IGDialog-iconList-label ir-to-ms-excel-block-text">XLSX</span> \
+                                       </div> \
+                                     </button> \
+                                   </div>');
+							$('.ir-to-ms-excel-button').click(function () {								
+								vActions.invoke("GPVGETXLSX");
+								dialog$.dialog('close');
+							});
+						}
+					}
+				});
 
-  // find toolbar group
-  var toolbarGroup = toolbar.toolbar('findGroup', "actions4");
-  var buttonExists = false;
-  for (var i=0;i<toolbarGroup.controls.length;i++) {
-   if(toolbarGroup.controls[i].action === "GPVGETXLSX")
-    {
-     buttonExists = true;
-    }
-  }
- 	
-  if(!buttonExists) {
-  	toolbarGroup.controls.push({
-		type: 'BUTTON',
-		label: "XLSX",
-		title: "XLSX",
-		labelKey: "XLSX", // label from text messages
-		action: "GPVGETXLSX",
-		icon: "icon-ig-download",
-		iconOnly: false,
-		iconBeforeLabel: true,
-		hot: false
-	});
-  }	
 	// add actions
-	var vActions = vWidget$.interactiveGrid('getActions');
-
 	// check if action exists, then just assign it
 	var vAction$ = vActions.lookup("GPVGETXLSX");
 	if(!vAction$){
@@ -513,12 +519,6 @@ function addDownloadXLSXiconToIG(vRegionID,vPluginID,fileName,path) {
 		vAction$.disabled = false;
 	}
     
-  // refresh grid
-  toolbar.toolbar('refresh');
-
-	} catch(err) {
-		console.log(err);
-	}	
 }	
 	
 function downloadXLSXfromIG(vRegionID,vPluginID,fileName,path) {
