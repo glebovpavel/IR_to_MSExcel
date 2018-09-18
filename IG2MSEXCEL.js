@@ -308,13 +308,19 @@ function getRows(iGrid,propertiesFromPlugin,callback,fileName,pathIn) {
         cnt = count;
 			}  else { 
         cnt = Math.min(count,maxCount - offset); 
-			};
+			};			
 			model.forEachInPage(offset, cnt, function(r) {  
+				  var $spinner;
 					i += 1;  
 				  if(r)  {						
 						rows.push(r);  									
 					}				
-					if (i === cnt || !r) {  						
+					if (i === cnt || !r) {
+						$spinner = $(".u-Processing");
+						if ($spinner.find().length > 0) {
+							$(".u-Processing").append('<span class="ir-to-ms-excel-spinner"></span>');							
+						}
+						$(".u-Processing span.ir-to-ms-excel-spinner").text(rows.length);
 							// got all the records we asked for or no more available  
 							if (r && rows.length < maxCount) {  								  								  								
 									// if there are more records available - > get them  
@@ -465,30 +471,33 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
 				var vWidget$ = apex.region(vRegionID).widget();
 				var vActions = vWidget$.interactiveGrid('getActions');
         
-				$('body').on('dialogopen', function (event, ui) {
-					var dialog$;					
-					// check that opened modal page is download page
-					if (event.target.id === (vRegionID + '_ig_download-dialog')) {
-						dialog$ = $(event.target);						
-						// add button to the madal page
-						// because inner html not exists at this moment
-						// only one possibility i found is add a  div with position:absolute; 
-						// to show the button on the right side
-						if (dialog$.parent("div").find('.ir-to-ms-excel-block-w-button').length == 0) {							
-							dialog$.append('<div class="ir-to-ms-excel-block-w-button"> \
-                                     <button type="button" class="ir-to-ms-excel-button ui-button--hot ui-button ui-corner-all ui-widget"> \
-                                       <div class="ir-to-ms-excel-block"> \
-                                          <span class="a-IGDialog-iconList-icon a-Icon icon-ig-dl-xls ir-to-ms-excel-block-icon" aria-hidden="true"></span> \
-                                          <span class="a-IGDialog-iconList-label ir-to-ms-excel-block-text">XLSX</span> \
-                                       </div> \
-                                     </button> \
-                                   </div>');
-							$('.ir-to-ms-excel-button').click(function () {								
-								vActions.invoke("GPVGETXLSX");
-								dialog$.dialog('close');
-							});
-						}
+				$('body').on('dialogopen', function (event, ui) {					
+					var $dialog = $(event.target);
+					var $dialog_instance = $dialog.dialog("instance");
+					if (event.target.id !== (vRegionID + '_ig_download-dialog')) {
+						return;
 					}
+					if( $dialog_instance.options.title !== apex.lang.getMessage( "APEXIR_DOWNLOAD")) {
+						return;
+					}  
+					// add button to the modal page
+					// because inner html not exists at this moment
+					// only one possibility i found is add a  div with position:absolute; 
+					// to show the button on the right side
+					if ($dialog.parent("div").find('.ir-to-ms-excel-block-w-button').length == 0) {							
+						$dialog.append('<div class="ir-to-ms-excel-block-w-button"> \
+																		<button type="button" class="ir-to-ms-excel-button ui-button ui-corner-all ui-widget ui-state-default"> \
+																			<div class="ir-to-ms-excel-block"> \
+																				<span class="a-IGDialog-iconList-icon a-Icon icon-ig-dl-xls ir-to-ms-excel-block-icon" aria-hidden="true"></span> \
+																				<span class="a-IGDialog-iconList-label ir-to-ms-excel-block-text">XLSX</span> \
+																			</div> \
+																		</button> \
+																	</div>');
+						$('.ir-to-ms-excel-button').click(function () {								
+							vActions.invoke("GPVGETXLSX");
+							$dialog.dialog('close');
+						});
+					}					
 				});
 
 	// add actions

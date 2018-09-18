@@ -2,7 +2,7 @@ create or replace PACKAGE BODY IR_TO_MSEXCEL
 as
   subtype t_large_varchar2  is varchar2(32767);
   v_plugin_running boolean default false;
-  
+
   function is_ir2msexcel 
   return boolean
   is
@@ -10,7 +10,7 @@ as
     return nvl(v_plugin_running,false);    
   end is_ir2msexcel;
   ------------------------------------------------------------------------------
-  
+
   function get_affected_region_id(p_dynamic_action_id IN apex_application_page_da_acts.action_id%TYPE,
                                   p_html_region_id    IN VARCHAR2
                                  )
@@ -18,7 +18,7 @@ as
   is
     v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
   begin
-  
+
       SELECT affected_region_id
       INTO v_affected_region_id
       FROM apex_application_page_da_acts aapda
@@ -26,7 +26,7 @@ as
         and page_id in(nv('APP_PAGE_ID'),0)
         and application_id = nv('APP_ID')
         and rownum <2; 
-      
+
       if v_affected_region_id is null then 
         begin 
           select region_id 
@@ -51,7 +51,7 @@ as
       raise_application_error(-20001,'IR_TO_MSEXCEL.get_affected_region_id: No region found!');      
   end get_affected_region_id;
   ------------------------------------------------------------------------------
-  
+
   function get_affected_region_static_id(p_dynamic_action_id IN apex_application_page_da_acts.action_id%TYPE,
                                          p_type              IN varchar2   
                                          )
@@ -76,7 +76,7 @@ as
     when no_data_found then
       return null;
   end get_affected_region_static_id;
-  
+
   ------------------------------------------------------------------------------
   FUNCTION get_version
   return varchar2
@@ -91,7 +91,7 @@ as
      return v_version;
   end get_version;
   ------------------------------------------------------------------------------
-  
+
   function get_ig_file_name (p_region_selector IN VARCHAR2)
   return varchar2
   is
@@ -111,7 +111,7 @@ as
        return 'Excel';
   end get_ig_file_name;
   ------------------------------------------------------------------------------
-  
+
   FUNCTION render (p_dynamic_action in apex_plugin.t_dynamic_action,
                    p_plugin         in apex_plugin.t_plugin )
   return apex_plugin.t_dynamic_action_render_result
@@ -129,12 +129,12 @@ as
     v_plugin_id := apex_plugin.get_ajax_identifier;
     v_affected_region_IR_selector := get_affected_region_static_id(p_dynamic_action.ID,'Interactive Report');
     v_affected_region_IG_selector := get_affected_region_static_id(p_dynamic_action.ID,'Interactive Grid');
-    
+
     select workspace
     into v_workspace
     from apex_applications
     where application_id =nv('APP_ID');
-    
+
     if nvl(p_dynamic_action.attribute_03,'Y') = 'Y' then -- add "Download XLSX" icon
       if v_affected_region_IR_selector is not null then
         -- add XLSX Icon to Affected IR Region
@@ -166,7 +166,7 @@ as
         end loop;
       end if;
     end if;
-    
+
     if v_affected_region_IR_selector is not null or v_is_ir then
        apex_javascript.add_library (p_name      => 'IR2MSEXCEL', 
                                     p_directory => p_plugin.file_prefix); 
@@ -181,7 +181,7 @@ as
         apex_javascript.add_library (p_name      => 'FileSaver.min', 
                                      p_directory => p_plugin.file_prefix);
     end if;
-    
+
     if v_affected_region_IR_selector is not null then
       v_result.javascript_function := 'function(){excel_gpv.getExcel('''||v_affected_region_IR_selector||''','''||v_plugin_id||''')}';
     elsif v_affected_region_IG_selector is not null then      
@@ -209,16 +209,18 @@ as
           v_result.javascript_function := 'function(){console.log("No Affected Region Found!");}';
         end if;  
     end if;
-    
+
     v_result.ajax_identifier := v_plugin_id;
 
     return v_result;
   end render;
-  
+
   ------------------------------------------------------------------------------
   --used for export in IG
   procedure print_column_properties_json(p_application_id in number,
-                                         p_page_id        in number
+                                         p_page_id        in number,
+                                         p_rows_portion   in number,
+                                         p_max_rows       in number
                                         )
   is
     l_columns_cursor    SYS_REFCURSOR;
@@ -249,7 +251,7 @@ as
     where application_id = p_application_id 
       and page_id = p_page_id
     order by display_sequence;
-    
+
     open l_highlihts_cursor for 
     select highlight_id,
            background_color,
@@ -262,7 +264,7 @@ as
     into v_decimal_separator
     from nls_session_parameters
     where parameter = 'NLS_NUMERIC_CHARACTERS';
-    
+
     -- always use 'AMERICA' as second parameter because 
     -- really i need only lang code (first parameter) and not the country
     select regexp_substr(UTL_I18N.MAP_LOCALE_TO_ISO  (value, 'AMERICA'),'[^_]+')
@@ -276,10 +278,12 @@ as
     APEX_JSON.write('highlights', l_highlihts_cursor);
     APEX_JSON.write('decimal_separator', v_decimal_separator);
     APEX_JSON.write('lang_code', v_lang_code);
+    APEX_JSON.write('rows_portion',p_rows_portion);
+    APEX_JSON.write('max_rows',p_max_rows);
     APEX_JSON.close_object;
     sys.htp.p(APEX_JSON.get_clob_output);
     APEX_JSON.free_output;
-    
+
     if l_columns_cursor%ISOPEN THEN
        close l_columns_cursor;
     end if;
@@ -288,7 +292,7 @@ as
     end if;    
   end print_column_properties_json;
   ------------------------------------------------------------------------------
-  
+
   function ajax (p_dynamic_action in apex_plugin.t_dynamic_action,
                  p_plugin         in apex_plugin.t_plugin )
   return apex_plugin.t_dynamic_action_ajax_result
@@ -305,22 +309,25 @@ as
       --to get properties needed for export in IG
       if apex_application.g_x01 = 'G' then 
         print_column_properties_json(p_application_id => apex_application.g_x02,
-                                     p_page_id        => apex_application.g_x03);
+                                     p_page_id        => apex_application.g_x03,
+                                     p_rows_portion   => nvl(p_dynamic_action.attribute_07,1000),
+                                     p_max_rows       => nvl(p_dynamic_action.attribute_01,1000)
+                                     );
         return v_dummy;
       end if;  
-  
+
       p_download_type := nvl(p_dynamic_action.attribute_02,'E');
       p_autofilter := nvl(p_dynamic_action.attribute_04,'Y');
       p_export_links := nvl(p_dynamic_action.attribute_05,'N');
       p_custom_width := p_dynamic_action.attribute_06;
       v_affected_region_id := get_affected_region_id(p_dynamic_action_id => p_dynamic_action.ID
                                                     ,p_html_region_id    => apex_application.g_x03);
-      
-      v_maximum_rows := nvl(nvl(APEX_PLUGIN_UTIL.GET_PLSQL_EXPRESSION_RESULT(nvl(p_dynamic_action.attribute_01,' null ')),
-                                IR_TO_XLSX.get_max_rows (p_app_id    => apex_application.g_x01,
-                                                         p_page_id   => apex_application.g_x02,
-                                                         p_region_id => v_affected_region_id)
-                                ),1000);                                               
+
+      v_maximum_rows := nvl(apex_plugin_util.replace_substitutions(apex_plugin_util.replace_substitutions(p_dynamic_action.attribute_01)),
+                                nvl(IR_TO_XLSX.get_max_rows (p_app_id    => apex_application.g_x01,
+                                                             p_page_id   => apex_application.g_x02,
+                                                             p_region_id => v_affected_region_id)
+                                ,1000)); 
       if p_download_type = 'E' then 
         ir_to_xlsx.download_excel(p_app_id        => apex_application.g_x01,
                                   p_page_id      => apex_application.g_x02,
@@ -354,7 +361,6 @@ as
     when others then
       raise_application_error(-20001,SQLERRM||chr(10)||dbms_utility.format_error_backtrace);      
   end ajax;
-  
+
 end IR_TO_MSEXCEL;
 /
-

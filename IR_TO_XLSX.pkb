@@ -1,4 +1,4 @@
-CREATE OR REPLACE PACKAGE BODY IR_TO_XLSX
+create or replace PACKAGE BODY IR_TO_XLSX
 as    
 
   STRING_HEIGHT      constant number default 14.4; 
@@ -9,7 +9,7 @@ as
   subtype t_font  is varchar2(50);
   subtype t_large_varchar2  is varchar2(32767);
   BACK_COLOR  constant  t_color default '#C6E0B4';
-  
+
   type t_styles is table of binary_integer index by t_style_string;
   a_styles t_styles;
   type  t_color_list is table of binary_integer index by t_color;
@@ -22,7 +22,7 @@ as
   type  t_format_mask_list is table of binary_integer index by t_format_mask;
   a_format_mask_list t_format_mask_list;
   v_format_mask_xml clob;
-  
+
   ------------------------------------------------------------------------------
   t_sheet_rels clob default '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -31,7 +31,7 @@ as
     <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
     <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
   </Relationships>';
-  
+
   t_workbook clob default '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
     <fileVersion appName="xl" lastEdited="4" lowestEdited="4" rupBuild="4506"/>
@@ -46,7 +46,7 @@ as
     <calcPr calcId="125725"/>
     <fileRecoveryPr repairLoad="1"/>
   </workbook>';
-  
+
   t_style_template clob default '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac">
     #FORMAT_MASKS#
@@ -87,7 +87,7 @@ as
       </ext>
     </extLst>
   </styleSheet>';
-  
+
   DEFAULT_FONT constant varchar2(200) := '
    <font>
       <sz val="11" />
@@ -115,8 +115,8 @@ as
       <scheme val="minor" />
     </font>';    
   FONTS_CNT constant  binary_integer := 3;   
-  
-  
+
+
   DEFAULT_FILL constant varchar2(200) :=  '
     <fill>
       <patternFill patternType="none" />
@@ -125,29 +125,29 @@ as
       <patternFill patternType="gray125" />
     </fill>'; 
   DEFAULT_FILL_CNT constant  binary_integer := 2; 
-  
+
   DEFAULT_STYLE constant varchar2(200) := '
       <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>';
   AGGREGATE_STYLE constant varchar2(250) := '
       <xf numFmtId="#FMTID#" borderId="1" fillId="0" fontId="1" xfId="0" applyAlignment="1" applyFont="1" applyBorder="1">
          <alignment wrapText="1" horizontal="right"  vertical="top"/>
      </xf>';
-  
-     
+
+
   HEADER_STYLE constant varchar2(200) := '     
       <xf numFmtId="0" borderId="0" #FILL# fontId="1" xfId="0" applyAlignment="1" applyFont="1" >
          <alignment wrapText="0" horizontal="#ALIGN#"/>
      </xf>';  
-  
-  
+
+
   DEFAULT_STYLES_CNT constant  binary_integer := 1;     
   FORMAT_MASK_START_WITH  constant  binary_integer := 164;  
-  
+
   FORMAT_MASK constant varchar2(100) := '
       <numFmt numFmtId="'||FORMAT_MASK_START_WITH||'" formatCode="dd.mm.yyyy"/>';
-  
+
   FORMAT_MASK_CNT constant binary_integer default 1; 
-  
+
 /*
 ** Minor bugfixes by J.P.Lourens  9-Oct-2016
 */  
@@ -160,10 +160,10 @@ as
   PRAGMA EXCEPTION_INIT(date_format_error, -01821);
   conversion_error exception;
   PRAGMA EXCEPTION_INIT(conversion_error,-06502);
-  
+
   type t_date_table is table of date index by binary_integer;  
   type t_number_table is table of number index by binary_integer;  
-  
+
   cursor cur_highlight(p_report_id in APEX_APPLICATION_PAGE_IR_RPT.REPORT_ID%TYPE,
                        p_delimetered_column_list in varchar2) 
   IS
@@ -193,7 +193,7 @@ as
              nvl2(HIGHLIGHT_ROW_FONT_COLOR,1,0) desc,
              HIGHLIGHT_SEQUENCE 
     ) rez;
-  
+
   type t_col_names is table of apex_application_page_ir_col.report_label%type index by apex_application_page_ir_col.column_alias%type;
   type t_col_format_mask is table of APEX_APPLICATION_PAGE_IR_COMP.computation_format_mask%TYPE index by APEX_APPLICATION_PAGE_IR_COL.column_alias%TYPE;
   type t_header_alignment is table of APEX_APPLICATION_PAGE_IR_COL.heading_alignment%TYPE index by APEX_APPLICATION_PAGE_IR_COL.column_alias%TYPE;
@@ -202,7 +202,7 @@ as
   type t_highlight is table of cur_highlight%ROWTYPE index by binary_integer;
   type t_column_links is table of APEX_APPLICATION_PAGE_IR_COL.COLUMN_LINK%TYPE index by apex_application_page_ir_col.column_alias%type;
   type t_all_columns is table of binary_integer index by varchar2(32767);
-  
+
   type ir_report is record
    (
     report                    apex_ir.t_report,
@@ -233,7 +233,7 @@ as
     desc_tab                  DBMS_SQL.DESC_TAB2, -- information about columns from final sql query
     all_columns               t_all_columns      -- list of all columns from final sql query     
    );  
-   
+
    TYPE t_cell_data IS record
    (
      VALUE           VARCHAR2(100),
@@ -243,11 +243,11 @@ as
   l_report                   ir_report;   
   v_debug                    clob;  
   v_debug_buffer             largevarchar2; 
-  
+
   ------------------------------------------------------------------------------
   /**
   * http://mk-commi.blogspot.co.at/2014/11/concatenating-varchar2-values-into-clob.html  
-  
+
   * Procedure concatenates a VARCHAR2 to a CLOB.
   * It uses another VARCHAR2 as a buffer until it reaches 32767 characters.
   * Then it flushes the current buffer to the CLOB and resets the buffer using
@@ -267,10 +267,10 @@ as
                )
   AS
   BEGIN
-     
+
     -- Standard Flow
     IF NVL(LENGTHB(p_vc_buffer), 0) + NVL(LENGTHB(p_vc_addition), 0) < (32767/2) THEN
-      -- Danke fÃ¼r Frank Menne wegen utf-8
+      -- Danke für Frank Menne wegen utf-8
       p_vc_buffer := p_vc_buffer || convert(p_vc_addition,'utf8');
     ELSE
       IF p_clob IS NULL THEN
@@ -279,7 +279,7 @@ as
       dbms_lob.writeappend(p_clob, length(p_vc_buffer), p_vc_buffer);
       p_vc_buffer := convert(p_vc_addition,'utf8');
     END IF;
-     
+
     -- Full Flush requested
     IF p_eof THEN
       IF p_clob IS NULL THEN
@@ -289,10 +289,10 @@ as
       END IF;
       p_vc_buffer := NULL;
     END IF;
-   
+
   END add;
   ------------------------------------------------------------------------------
-  
+
   procedure log(p_message in varchar2,p_eof IN BOOLEAN DEFAULT FALSE)
   is
   begin
@@ -309,7 +309,7 @@ as
   is
     v_str      varchar2(100);
   begin
-    v_str := p_format;
+    v_str := apex_plugin_util.replace_substitutions(p_format);
     v_str := upper(v_str);
     --date
     v_str := replace(v_str,'DAY','DDDD');
@@ -321,23 +321,23 @@ as
     --time
     v_str := replace(v_str,'MI','mm');
     v_str := replace(v_str,'SS','ss');
-    
+
     v_str := replace(v_str,'HH24','hh');
     --v_str := regexp_replace(v_str,'(\W)','\\\1');
     v_str := regexp_replace(v_str,'HH12([^ ]+)','h\1 AM/PM');    
     v_str := replace(v_str,'AM\/PM',' AM/PM');
-    
-    
+
+
     return v_str;
   end convert_date_format;
   ------------------------------------------------------------------------------
-  
+
   function convert_number_format(p_format in varchar2)
   return varchar2
   is
     v_str      varchar2(100);
   begin
-    v_str := p_format;
+    v_str := apex_plugin_util.replace_substitutions(p_format);
     v_str := upper(v_str);
     --number
     v_str := replace(v_str,'9','#');
@@ -349,15 +349,15 @@ as
       v_str := replace(v_str,'S','');
       v_str := '+'||v_str||';-'||v_str;
     end if;
-    
+
     --currency
     v_str := replace(v_str,'L',convert('&quot;'||rtrim(to_char(0,'FML0'),'0')||'&quot;','UTF8'));    
-    
+
     v_str := regexp_substr(v_str,'.G?[^G]+$');
     return v_str;
   end convert_number_format;  
   ------------------------------------------------------------------------------
-  
+
   function get_current_format(p_data_type in binary_integer)
   return varchar2
   is
@@ -384,7 +384,7 @@ as
     return v_format;
   end get_current_format;
   ------------------------------------------------------------------------------
-  
+
   function convert_date_format(p_datatype in varchar2,p_format in varchar2)
   return varchar2
   is
@@ -431,8 +431,8 @@ as
     else
       v_str := p_format;
     end if;
-    
-    v_str := upper(v_str);
+
+    v_str := upper(apex_plugin_util.replace_substitutions(v_str));
     --date
     v_str := replace(v_str,'DAY','ddd');
     v_str := replace(v_str,'MONTH','MMMM');
@@ -452,11 +452,11 @@ as
     if not v_24h_format then
       v_str := replace(v_str,'HH','hh');
     end if;
-    
+
     return v_str;
   end convert_date_format_js;
   ------------------------------------------------------------------------------
-  
+
   function add_font(p_font in t_color,
                     p_link in varchar2)
   return binary_integer 
@@ -470,7 +470,7 @@ as
     else 
       raise_application_error(-20001,'Font is null and Link is null!');
     end if;
-    
+
     if not a_font.exists(v_index) then
       a_font(v_index) := a_font.count + 1;
       v_fonts_xml := v_fonts_xml||
@@ -489,14 +489,14 @@ as
         '   <family val="2" />'||chr(10)||
         '   <scheme val="minor" />'||
         '</font>'||chr(10);
-        
+
         return a_font.count + FONTS_CNT - 1; --start with 0
      else
        return a_font(v_index) + FONTS_CNT - 1;
      end if;
   end add_font;
   ------------------------------------------------------------------------------
-  
+
   function  add_back_color(p_back in t_color)
   return binary_integer 
   is
@@ -510,7 +510,7 @@ as
         '     <bgColor indexed="64" />'||chr(10)||
         '   </patternFill>'||
         '</fill>'||chr(10);
-        
+
         return  a_back_color.count + DEFAULT_FILL_CNT - 1; --start with 0
      else
        return a_back_color(p_back) + DEFAULT_FILL_CNT - 1;
@@ -577,23 +577,25 @@ as
                           p_format_mask in varchar2)
   return binary_integer
   is
+    v_format_mask varchar2(100);    
   begin
+      v_format_mask := apex_plugin_util.replace_substitutions(p_format_mask);
       if p_data_type = 'NUMBER' then 
-       if p_format_mask is null then
+       if v_format_mask is null then
           return 0;
         else
-          return add_format_mask(convert_number_format(apex_plugin_util.replace_substitutions(p_format_mask))); 
+          return add_format_mask(convert_number_format(v_format_mask)); 
         end if;
       elsif p_data_type = 'DATE' then 
-        if p_format_mask is null then
+        if v_format_mask is null then
           return FORMAT_MASK_START_WITH;  -- default date format
         else
-          return add_format_mask(convert_date_format(apex_plugin_util.replace_substitutions(p_format_mask))); 
+          return add_format_mask(convert_date_format(v_format_mask)); 
         end if;
       else
         return 2;  -- default  string format
       end if;  
-  
+
   end get_num_fmt_id;  
   ------------------------------------------------------------------------------  
   -- get style_id for existent styles or 
@@ -618,41 +620,41 @@ as
       return a_styles(v_style)   - 1 + DEFAULT_STYLES_CNT;
     else
       a_styles(v_style) := a_styles.count + 1;
-      
+
       if p_link is null then
         v_style_xml := '<xf borderId="0" xfId="0" ';
       else
         v_style_xml := '<xf borderId="0" xfId="1" ';
       end if;
       v_style_xml := v_style_xml||replace(' numFmtId="#FMTID#" ','#FMTID#',get_num_fmt_id(p_data_type,p_format_mask));
-      
+
       if p_font is not null or p_link is not null then
         v_font_color_id := add_font(p_font,p_link);
         v_style_xml := v_style_xml||' fontId="'||v_font_color_id||'"  applyFont="1" ';
       else
         v_style_xml := v_style_xml||' fontId="0" '; --default font
       end if;
-      
+
       if p_back is not null then
         v_back_color_id := add_back_color(p_back);
         v_style_xml := v_style_xml||' fillId="'||v_back_color_id||'"  applyFill="1" ';
       else
         v_style_xml := v_style_xml||' fillId="0" '; --default fill 
       end if;
-      
+
       v_style_xml := v_style_xml||'>'||chr(10);
       v_style_xml := v_style_xml||'<alignment wrapText="1"';
       if p_align is not null then
         v_style_xml := v_style_xml||' horizontal="'||lower(p_align)||'" ';
       end if;
       v_style_xml := v_style_xml||'/>'||chr(10);
-      
+
       v_style_xml := v_style_xml||'</xf>'||chr(10);      
       v_styles_xml := v_styles_xml||to_clob(v_style_xml);     
-       
+
       return a_styles.count  - 1 + DEFAULT_STYLES_CNT;
     end if;  
-  
+
   end get_style_id;
   ------------------------------------------------------------------------------  
   -- get style_id for existent styles or 
@@ -677,7 +679,7 @@ as
       v_styles_xml := v_styles_xml||v_style_xml;      
       return a_styles.count  - 1 + DEFAULT_STYLES_CNT;
     end if;  
-  
+
   end get_aggregate_style_id;  
   ------------------------------------------------------------------------------
   function get_header_style_id(p_back        in t_color default BACK_COLOR,
@@ -696,7 +698,7 @@ as
       return a_styles(v_style)  - 1 + DEFAULT_STYLES_CNT;
     else
       a_styles(v_style) := a_styles.count + 1;
-  
+
       if p_back is not null then
         v_back_color_id := add_back_color(p_back);
         v_style_xml := replace(HEADER_STYLE,'#FILL#',' fillId="'||v_back_color_id||'"  applyFill="1" ' );
@@ -707,10 +709,10 @@ as
       v_styles_xml := v_styles_xml||v_style_xml;      
       return a_styles.count  - 1 + DEFAULT_STYLES_CNT;
     end if;  
-  
+
   end get_header_style_id;    
   ------------------------------------------------------------------------------
-  
+
   function  get_styles_xml
   return clob
   is
@@ -720,11 +722,11 @@ as
      v_template := replace(v_template,'#FONTS#',get_font_colors_xml);
      v_template := replace(v_template,'#FILLS#',get_back_colors_xml);
      v_template := replace(v_template,'#STYLES#',get_cellXfs_xml);
-     
+
      return v_template;
   end get_styles_xml;  
   ------------------------------------------------------------------------------
-  
+
   FUNCTION get_cell_name(p_col IN binary_integer,
                          p_row IN binary_integer)
   RETURN varchar2
@@ -748,7 +750,7 @@ as
              END||p_row;
   end get_cell_name;
   ----------------------------------------------------------- 
-  
+
   function get_column_names(p_column_alias in apex_application_page_ir_col.column_alias%type)
   return APEX_APPLICATION_PAGE_IR_COL.report_label%TYPE
   is
@@ -765,7 +767,9 @@ as
   return formatmask
   is
   begin
-    return replace(l_report.col_format_mask(p_column_alias),'"','');
+    return apex_plugin_util.replace_substitutions(
+      p_value => replace(l_report.col_format_mask(p_column_alias),'"',''),
+      p_escape => false);
   exception
     when others then
        raise_application_error(-20001,'get_col_format_mask: p_column_alias='||p_column_alias||' '||SQLERRM);
@@ -891,7 +895,7 @@ as
     return ltrim(rtrim(regexp_replace(p_str,'[:]+',':'),':'),':');
   end;
   ------------------------------------------------------------------------------   
- 
+
   function get_xmlval(p_str in varchar2)
   return varchar2
   is
@@ -907,11 +911,11 @@ as
     -- and finally encode them
     --v_tmp := substr(v_tmp,1,32000);        
     v_tmp := dbms_xmlgen.convert( substr( v_tmp, 1, 32000 ) );
-    
+
     return v_tmp;
   end get_xmlval;  
   ------------------------------------------------------------------------------
-  
+
   function intersect_arrays(p_one IN APEX_APPLICATION_GLOBAL.VC_ARR2,
                             p_two IN APEX_APPLICATION_GLOBAL.VC_ARR2)
   return APEX_APPLICATION_GLOBAL.VC_ARR2
@@ -926,7 +930,7 @@ as
          end if;
        end loop;        
     end loop;
-    
+
     return v_ret;
   end intersect_arrays;
   ------------------------------------------------------------------------------
@@ -967,7 +971,7 @@ as
   begin
     return intersect_arrays(APEX_UTIL.STRING_TO_TABLE(rr(p_delimetered_column_list)),p_displayed_nonbreak_columns);
   end get_cols_as_table;
-  
+
   ------------------------------------------------------------------------------
   function get_hidden_columns_cnt(p_app_id       in number,
                                   p_page_id      in number,
@@ -980,9 +984,9 @@ as
    v_hidden_computation_columns  number default 0;
    v_get_query_column_list varchar2(32676);
   begin
-  
+
       v_get_query_column_list := apex_util.table_to_string(get_query_column_list);
-      
+
       select count(*)
       into v_hidden_columns
       from APEX_APPLICATION_PAGE_IR_COL
@@ -996,7 +1000,7 @@ as
        --                        - not included in the report, thus missing from l_report.ir_data.report_columns
           or instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') = 0)
        and instr(':'||v_get_query_column_list||':',':'||column_alias||':') > 0;
-       
+
        select count(*)
        into v_hidden_computation_columns
        from apex_application_page_ir_comp
@@ -1004,14 +1008,14 @@ as
          and page_id = p_page_id       
          and report_id = p_report_id         
          and instr(':'||l_report.ir_data.report_columns||':',':'||computation_column_alias||':') = 0;       
-      
+
       return v_hidden_columns + v_hidden_computation_columns;
   exception
     when no_data_found then
       return 0;
   end get_hidden_columns_cnt;
   ------------------------------------------------------------------------------ 
-  
+
   procedure init_t_report(p_app_id       IN NUMBER,
                           p_page_id      IN NUMBER,
                           p_region_id    IN NUMBER)
@@ -1023,12 +1027,12 @@ as
     l_report := l_new_report;    
     --get base report id    
     log('l_region_id='||p_region_id);
-    
+
     l_report_id := apex_ir.get_last_viewed_report_id (p_page_id   => p_page_id,
                                                       p_region_id => p_region_id);
-    
+
     log('l_base_report_id='||l_report_id);    
-    
+
     select r.* 
     into l_report.ir_data       
     from apex_application_page_ir_rpt r
@@ -1037,22 +1041,22 @@ as
       and session_id = nv('APP_SESSION')
       and application_user = v('APP_USER')
       and base_report_id = l_report_id;
-  
+
     log('l_report_id='||l_report_id);
     l_report_id := l_report.ir_data.report_id;                                                                 
-      
-      
+
+
     l_report.report := apex_ir.get_report (p_page_id        => p_page_id,
                                            p_region_id      => p_region_id
                                           );
     l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list));
-    
+
     -- J.P.Lourens 9-Oct-16 added p_region_id as input variable
     l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id    => p_app_id,
                                                        p_page_id   => p_page_id,
                                                        p_region_id => p_region_id,
                                                        p_report_id => l_report_id);
-    
+
     <<displayed_columns>>                                      
     for i in (select column_alias,
                      report_label,
@@ -1101,14 +1105,14 @@ as
           l_report.break_really_on(l_report.break_really_on.count + 1) := i.column_alias;
         end if;
       end if;  
-      
+
       log('column='||i.column_alias||' l_report.column_names='||i.report_label);
       log('column='||i.column_alias||' l_report.col_format_mask='||i.computation_format_mask);
       log('column='||i.column_alias||' l_report.header_alignment='||i.heading_alignment);
       log('column='||i.column_alias||' l_report.column_alignment='||i.column_alignment);    
       log('column='||i.column_alias||' l_report.column_link='||i.column_link);    
     end loop displayed_columns;    
-    
+
     -- calculate columns count with aggregation separately
     l_report.sum_columns_on_break := get_cols_as_table(l_report.ir_data.sum_columns_on_break,l_report.displayed_columns);  
     l_report.avg_columns_on_break := get_cols_as_table(l_report.ir_data.avg_columns_on_break,l_report.displayed_columns);  
@@ -1117,7 +1121,7 @@ as
     l_report.median_columns_on_break := get_cols_as_table(l_report.ir_data.median_columns_on_break,l_report.displayed_columns); 
     l_report.count_columns_on_break := get_cols_as_table(l_report.ir_data.count_columns_on_break,l_report.displayed_columns);  
     l_report.count_distnt_col_on_break := get_cols_as_table(l_report.ir_data.count_distnt_col_on_break,l_report.displayed_columns); 
-      
+
     -- calculate total count of columns with aggregation
     l_report.agg_cols_cnt := l_report.sum_columns_on_break.count + 
                              l_report.avg_columns_on_break.count +
@@ -1126,7 +1130,7 @@ as
                              l_report.median_columns_on_break.count +
                              l_report.count_columns_on_break.count +
                              l_report.count_distnt_col_on_break.count;
-    
+
     log('l_report.report_columns='||rr(l_report.ir_data.report_columns));    
     log('l_report.break_on='||rr(l_report.ir_data.break_enabled_on));
     log('l_report.sum_columns_on_break='||rr(l_report.ir_data.sum_columns_on_break));
@@ -1139,8 +1143,8 @@ as
     log('l_report.break_really_on='||APEX_UTIL.TABLE_TO_STRING(l_report.break_really_on));
     log('l_report.agg_cols_cnt='||l_report.agg_cols_cnt);
     log('l_report.hidden_cols_cnt='||l_report.hidden_cols_cnt);
-    
-    
+
+
     for c in cur_highlight(p_report_id => l_report_id,
                            p_delimetered_column_list => l_report.ir_data.report_columns
                           ) 
@@ -1153,12 +1157,14 @@ as
         end if;  
         v_query_targets(v_query_targets.count + 1) := c.condition_sql||' as HLIGHTS_'||(v_query_targets.count + 1);
     end loop;    
-        
+
     if v_query_targets.count  > 0 then
       -- uwr485kv is random name 
       l_report.report.sql_query := 'SELECT '||APEX_UTIL.TABLE_TO_STRING(v_query_targets,','||chr(10))||', uwr485kv.* from ('||l_report.report.sql_query||') uwr485kv';
     end if;
-    l_report.report.sql_query := l_report.report.sql_query;
+    if instr(l_report.report.sql_query,':APXWS_MAX_ROW_CNT') = 0 then
+      l_report.report.sql_query := 'SELECT * FROM ('|| l_report.report.sql_query ||') where rownum <= :APXWS_MAX_ROW_CNT';
+    end if;  
     log('l_report.report.sql_query='||chr(10)||l_report.report.sql_query||chr(10));
   exception
     when no_data_found then
@@ -1172,7 +1178,7 @@ as
     */ 
   end init_t_report;  
   ------------------------------------------------------------------------------
- 
+
   function is_control_break(p_curr_row  IN APEX_APPLICATION_GLOBAL.VC_ARR2,
                             p_prev_row  IN APEX_APPLICATION_GLOBAL.VC_ARR2)
   return boolean
@@ -1223,7 +1229,7 @@ as
   BEGIN     
      v_data.value := get_formatted_number(p_date - to_date('01-03-1900','DD-MM-YYYY') + 61,'9999999999999990D00000000','NLS_NUMERIC_CHARACTERS = ''.,''');     
      v_data.datatype := 'DATE';
-     
+
      -- https://github.com/glebovpavel/IR_to_MSExcel/issues/16
      -- thanks Valentine Nikitsky 
      if p_format_mask is not null then
@@ -1237,7 +1243,7 @@ as
      else
        v_data.text := p_query_value;
      end if;
-     
+
      return v_data;
   EXCEPTION
     WHEN invalid_number or format_error THEN 
@@ -1256,13 +1262,13 @@ as
   BEGIN
    v_data.datatype := 'NUMBER';   
    v_data.value := get_formatted_number(p_number,'9999999999999990D00000000','NLS_NUMERIC_CHARACTERS = ''.,''');
-   
+
    if p_format_mask is not null then
      v_data.text := get_formatted_number(p_query_value,p_format_mask);
    ELSE
      v_data.text := p_query_value;
    end if;
-   
+
    return v_data;
   EXCEPTION
     WHEN invalid_number or conversion_error THEN 
@@ -1272,8 +1278,8 @@ as
       return v_data;
   END get_cell;  
   ------------------------------------------------------------------------------
-     
-       
+
+
   function print_control_break_header_obj(p_current_row     in apex_application_global.vc_arr2) 
   return varchar2
   is
@@ -1282,7 +1288,7 @@ as
     if nvl(l_report.break_really_on.count,0) = 0  then
       return ''; --no control break
     end if;
-    
+
     <<break_columns>>
     for i in 1..nvl(l_report.break_really_on.count,0) loop
       --TODO: Add column header
@@ -1294,7 +1300,7 @@ as
                                                 l_report.col_highlight.count
                                  )||',';
     end loop visible_columns;
-    
+
     return  rtrim(v_cb_xml,',');
   end print_control_break_header_obj;
   ------------------------------------------------------------------------------
@@ -1310,7 +1316,7 @@ as
          return i;
       end if;
     end loop aggregated_rows;
-    
+
     return null;
   end find_rel_position;
   ------------------------------------------------------------------------------
@@ -1339,7 +1345,7 @@ as
         v_format_mask := nvl(p_overwrite_format_mask,v_format_mask);
         v_row_value :=  get_current_row(p_current_row,p_position + l_report.hidden_cols_cnt + v_tmp_pos);
         v_agg_value := trim(to_char(v_row_value,v_format_mask));
-        
+
         return  get_xmlval(p_agg_text||v_agg_value||' '||chr(10));
       else
         return  '';
@@ -1360,7 +1366,7 @@ as
         raise;
   end get_agg_text;
   ------------------------------------------------------------------------------
-  
+
   function get_aggregate(p_current_row     IN APEX_APPLICATION_GLOBAL.VC_ARR2) 
   return APEX_APPLICATION_GLOBAL.VC_ARR2
   is
@@ -1372,7 +1378,7 @@ as
     if l_report.agg_cols_cnt  = 0 then      
       return v_agg_obj;
     end if;    
- 
+
     <<visible_columns>>
     for i in l_report.start_with..l_report.end_with loop
       v_aggregate_xml := '';
@@ -1441,13 +1447,13 @@ as
     v_dummy varchar2(50);
   begin
     v_dummy := to_char(sysdate,p_format_string);
-    
+
     return true;
   exception
     when invalid_number or format_error or date_format_error or conversion_error then 
       return false;
   end can_show_as_date;    
-  
+
   ------------------------------------------------------------------------------
   -- excel has only DATE-format mask (no timezones etc)
   -- if format mask can be shown in excel - show column as date- type
@@ -1470,7 +1476,7 @@ as
        when others then 
           v_format_mask := '';
      end;  
-     
+
      v_final_format_mask := nvl(v_format_mask,v_default_format_mask);
      if can_show_as_date(v_final_format_mask) then
         log('Can show as date');
@@ -1485,7 +1491,7 @@ as
      end if;
   end prepare_col_format_mask;
   ------------------------------------------------------------------------------
-    
+
   procedure generate_from_report(v_clob          IN OUT NOCOPY CLOB,
                                  v_strings_clob  IN OUT NOCOPY CLOB,
                                  v_links_clob    IN OUT NOCOPY CLOB,
@@ -1499,8 +1505,6 @@ as
    v_cur                INTEGER; 
    v_result             INTEGER;
    v_colls_count        BINARY_INTEGER;
-   v_dummy_colls_count  BINARY_INTEGER;
-   v_dummy_desc_tab     DBMS_SQL.DESC_TAB2;
    v_row                APEX_APPLICATION_GLOBAL.VC_ARR2;
    v_date_row           t_date_table;
    v_number_row         t_number_table;
@@ -1532,7 +1536,7 @@ as
     v_links             apex_application_global.vc_arr2; -- which cell has a link
     v_links_ref         apex_application_global.vc_arr2; -- URL itself
     v_rownum            binary_integer default 1;
-    
+
     v_style_id          binary_integer;         
     v_string_buffer     t_large_varchar2; 
     v_break_header      t_large_varchar2;
@@ -1544,7 +1548,7 @@ as
     v_link              APEX_APPLICATION_PAGE_IR_COL.COLUMN_LINK%TYPE;
     v_cell_addr         varchar2(12);
     v_custom_col_width  varchar2(300);
-    
+
     procedure add_link(p_cell_addr in varchar2,
                        p_link      in varchar2,
                        p_row       in APEX_APPLICATION_GLOBAL.VC_ARR2)
@@ -1552,7 +1556,7 @@ as
       v_substitution   t_large_varchar2;
       v_link           t_large_varchar2;
       v_cnt             number default 100;
-      
+
       function get_subtitution_value(p_substitution in varchar2)
       return varchar2
       is
@@ -1562,13 +1566,13 @@ as
         when others then
           return '';
       end get_subtitution_value;
-      
+
     begin
       if p_link is null or v_links.count >= 65530 then
         return;
       end if;  
       v_link := p_link;
-      
+
       v_substitution := regexp_substr(v_link,'#[^#]+#');
       loop
        exit when v_substitution is null;
@@ -1584,12 +1588,12 @@ as
       else
         v_link := apex_plugin_util.replace_substitutions(v_link);
       end if;
-          
+
       log('v_link='||v_link);
       v_links(v_links.count + 1) := '<hyperlink ref="'||p_cell_addr||'" r:id="rId'||(v_links.count+1)||'" />';
       v_links_ref(v_links_ref.count + 1) := '<Relationship Id="rId'||v_links.count||'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="'||dbms_xmlgen.convert(v_link)||'" TargetMode="External"/>';      
     end add_link;
-    
+
     procedure print_char_cell(p_cell_addr in varchar2,
                               p_string    in varchar2,
                               p_clob      in out nocopy CLOB,
@@ -1623,7 +1627,7 @@ as
       add(p_clob,p_buffer,'<c r="'||p_cell_addr||'" '||v_style||'>'||chr(10)
                          ||'<v>'||p_value|| '</v>'||chr(10)
                          ||'</c>'||chr(10));
-    
+
     end print_number_cell; 
     --
     procedure print_agg(p_agg_obj APEX_APPLICATION_GLOBAL.VC_ARR2,
@@ -1641,7 +1645,7 @@ as
             DBMS_LOB.TRIM(v_agg_clob,0);
             v_agg_buffer := '';       
             v_agg_strings_cnt := 1;       
-            
+
             FOR y in p_agg_obj.FIRST..p_agg_obj.last
             LOOP
                 v_agg_strings_cnt := greatest(length(regexp_replace('[^:]','')) + 1,v_agg_strings_cnt);
@@ -1670,7 +1674,7 @@ as
   --
   begin    
     pragma inline(add,'YES');     
-    
+
     add(v_clob,v_buffer,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
     add(v_clob,v_buffer,'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
         <dimension ref="A1"/>
@@ -1681,9 +1685,9 @@ as
             </sheetView>
             </sheetViews>
         <sheetFormatPr baseColWidth="10" defaultColWidth="10" defaultRowHeight="15"/>'||chr(10),TRUE);
-    
+
     a_col_name_plus_width := APEX_UTIL.STRING_TO_TABLE(rtrim(p_width_str,','),','); 
-    
+
     v_coefficient := nvl(p_coefficient,WIDTH_COEFFICIENT);
     if v_coefficient =  0 then
       v_coefficient := WIDTH_COEFFICIENT;
@@ -1708,7 +1712,7 @@ as
           when others then             
             v_col_width := -1;  
         end;
-        
+
         if v_col_width >= 0 then
           add(v_clob,v_buffer,'<col min="'||v_i||'" max="'||v_i||'" width="'||v_col_width||'" customWidth="1" />'||chr(10));        
         else
@@ -1734,7 +1738,7 @@ as
         l_report.skipped_columns := 1;
       end if;      
     end loop;
-    
+
     l_report.start_with := 1 + 
                            l_report.skipped_columns +
                            nvl(l_report.break_really_on.count,0) + 
@@ -1745,7 +1749,7 @@ as
                            l_report.displayed_columns.count  + 
                            l_report.row_highlight.count + 
                            l_report.col_highlight.count;    
-                           
+
     log('l_report.start_with='||l_report.start_with);
     log('l_report.end_with='||l_report.end_with);
     log('l_report.skipped_columns='||l_report.skipped_columns);
@@ -1767,9 +1771,9 @@ as
       end if;     
       l_report.all_columns(upper(l_report.desc_tab(i).col_name)) := i;
     end loop;
-    
+
     v_bind_variables := wwv_flow_utilities.get_binds(v_sql);
-   
+
     <<headers>>
     for i in 1..l_report.displayed_columns.count   loop
        v_column_alias := get_column_alias(i);
@@ -1794,7 +1798,7 @@ as
     add(v_clob,v_buffer,'</row>'||chr(10)); 
 
     log('<<bind variables>>');
-    
+
     <<bind_variables>>
     for i in 1..v_bind_variables.count loop      
       v_bind_var_name := ltrim(v_bind_variables(i),':');
@@ -1823,12 +1827,11 @@ as
         end if;        
        end if; 
     end loop;          
-    
+
     log('<<define_columns>>');    
     for i in 1..v_colls_count loop
        log('define column '||i);
        log('column type '||l_report.desc_tab(i).col_type);      
-       dbms_sql.describe_columns2(v_cur, v_dummy_colls_count, v_dummy_desc_tab);
        if l_report.column_types(i) = 'DATE' then   
          dbms_sql.define_column(v_cur, i, v_date_dummy);
        elsif l_report.column_types(i) = 'NUMBER' then   
@@ -1837,9 +1840,9 @@ as
          dbms_sql.define_column(v_cur, i, v_char_dummy,32767);
        end if;         
     end loop define_columns;    
-    
+
     v_result := dbms_sql.execute(v_cur);         
-   
+
     log('<<main_cycle>>');
     <<main_cycle>>
     LOOP 
@@ -1883,14 +1886,14 @@ as
                     v_rownum := v_rownum + 1;
                     add(v_clob,v_buffer,'</row>'||chr(10));
                 end if;
-                              
+
                v_last_agg_obj := get_aggregate(v_row);                           
                v_inside := true;
             END IF;            --                        
             for i in 1..v_colls_count loop
               v_prev_row(i) := v_row(i);                           
             end loop;
-            
+
             add(v_clob,v_buffer,'<row>'||chr(10));
             /* CELLS INSIDE ROW PRINTING*/
             v_row_color := NULL;
@@ -1910,8 +1913,8 @@ as
                       log('row_highlights: ='||' end_with='||l_report.end_with||' agg_cols_cnt='||l_report.agg_cols_cnt||' COND_NUMBER='||l_report.row_highlight(h).cond_number||' h='||h);
                 end; 
             end loop row_highlights;
-            
-            
+
+
             <<visible_columns>>
             v_i := 0;
             for i in l_report.start_with..l_report.end_with loop
@@ -1930,8 +1933,8 @@ as
                 end if;
                 v_cell_addr        := get_cell_name(v_i,v_rownum);
                 add_link(p_cell_addr => v_cell_addr,p_link => v_link,p_row => v_row);
-                
-                
+
+
                 IF v_column_type = 'DATE' THEN
                     v_cell_data := get_cell(get_current_row(v_row,i),v_format_mask,get_current_row(v_date_row,i));
                 ELSIF  v_column_type = 'NUMBER' THEN      
@@ -1942,7 +1945,7 @@ as
                     v_cell_data.datatype := 'STRING';
                     v_cell_data.text   := get_current_row(v_row,i);
                 end if; 
-                
+
                 --check that cell need to be highlighted
                 <<cell_highlights>>
                 for h in 1..l_report.col_highlight.count loop
@@ -1961,7 +1964,7 @@ as
                     log('col_highlights: ='||' end_with='||l_report.end_with||' agg_cols_cnt='||l_report.agg_cols_cnt||' COND_NUMBER='||l_report.col_highlight(h).cond_number||' h='||h); 
                 end;
                 END loop cell_highlights;
-            
+
                 begin                                
                     v_style_id := get_style_id(p_font          => nvl(v_cell_color,v_row_color),
                                                p_back         => nvl(v_cell_back_color,v_row_back_color),
@@ -1977,7 +1980,7 @@ as
                                           p_buffer    => v_buffer,
                                           p_style_id  => v_style_id
                                         );
-                        
+
                     elsif  v_cell_data.datatype in ('DATE') then
                         add(v_clob,v_buffer,'<c r="'||v_cell_addr||'"  s="'||v_style_id||'">'||chr(10)
                                             ||'<v>'|| v_cell_data.value|| '</v>'||chr(10)
@@ -1995,7 +1998,7 @@ as
                 WHEN no_data_found THEN
                     null;
                 end;
-            
+
             end loop visible_columns;            
 
             add(v_clob,v_buffer,'</row>'||chr(10));         
@@ -2022,17 +2025,17 @@ as
         end loop;
         add(v_clob,v_buffer,'</hyperlinks>'||chr(10));
     end if;
-    
+
     add(v_clob,v_buffer,'<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>'||chr(10),TRUE);
-    
+
     add(v_strings_clob,v_string_buffer,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
     add(v_strings_clob,v_string_buffer,'<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="' || v_strings.count() || '" uniqueCount="' || v_strings.count() || '">'||chr(10));
-    
+
     for i in 1 .. v_strings.count() loop
     add(v_strings_clob,v_string_buffer,'<si><t>'||v_strings(i)|| '</t></si>'||chr(10));
     end loop; 
     add(v_strings_clob,v_string_buffer,'</sst>'||chr(10),TRUE);
-    
+
     -- print links in sheet1.xml.rels
     add(v_links_clob,v_links_buffer,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
     add(v_links_clob,v_links_buffer,'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'||chr(10));
@@ -2042,7 +2045,7 @@ as
     add(v_links_clob,v_links_buffer,'</Relationships>'||chr(10),TRUE);
   end generate_from_report;
   ------------------------------------------------------------------------------
-    
+
    procedure get_report(p_app_id            IN NUMBER,
                         p_page_id           IN NUMBER,  
                         p_region_id         IN NUMBER,
@@ -2059,7 +2062,7 @@ as
   is  
   begin
     dbms_lob.trim (v_debug,0);
-  
+
     log('p_app_id='||p_app_id);
     log('p_page_id='||p_page_id);
     log('p_region_id='||p_region_id);
@@ -2067,16 +2070,16 @@ as
     log('p_col_length='||p_col_length);
     log('p_autofilter='||p_autofilter);    
     log('p_export_links='||p_export_links);
-    
+
     init_t_report(p_app_id,p_page_id,p_region_id);
     generate_from_report(v_clob,p_strings,p_links,p_col_length,p_width_coefficient,p_max_rows,p_autofilter,p_export_links,p_custom_width);
   end get_report;   
-  
+
   ------------------------------------------------------------------------------
   /* 
     function to handle cases of 'in' and 'not in' conditions for highlights
        used in cursor cur_highlight
-    
+
     Author: Srihari Ravva
   */ 
   function get_highlight_in_cond_sql(p_condition_expression  in APEX_APPLICATION_PAGE_IR_COND.CONDITION_EXPRESSION%TYPE,
@@ -2091,10 +2094,10 @@ as
   begin
     v_condition_sql := REPLACE(REPLACE(p_condition_sql,'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||p_condition_column_name||'"');
       v_condition_sql_tmp := SUBSTR(v_condition_sql,INSTR(v_condition_sql,'#'),INSTR(v_condition_sql,'#',-1)-INSTR(v_condition_sql,'#')+1);
-    
+
     v_arr_cond_expr := APEX_UTIL.STRING_TO_TABLE(p_condition_expression,',');
     v_arr_cond_sql := APEX_UTIL.STRING_TO_TABLE(v_condition_sql_tmp,',');
-    
+
     for i in 1..v_arr_cond_expr.count
     loop
         -- consider everything as varchar2
@@ -2122,7 +2125,7 @@ as
     as_zip.add1file( p_zipped_blob, p_name, v_blob);
     dbms_lob.freetemporary(v_blob);
   end add1file;  
- 
+
   ------------------------------------------------------------------------------
   function get_max_rows (p_app_id      in number,
                          p_page_id     in number,
@@ -2137,7 +2140,7 @@ as
     where application_id = p_app_id
       and page_id = p_page_id
       and region_id = p_region_id;
-       
+
      return v_max_row_count;
   end get_max_rows;   
   ------------------------------------------------------------------------------  
@@ -2154,7 +2157,7 @@ as
     where application_id = p_app_id
       and page_id = p_page_id
       and region_id = p_region_id;
-     
+
      return apex_plugin_util.replace_substitutions(nvl(v_filename,'Excel'));
   end get_file_name;   
   ------------------------------------------------------------------------------
@@ -2178,7 +2181,7 @@ as
         raise_application_error(-20001,'Download (blob)'||SQLERRM);
   end download;
   ------------------------------------------------------------------------------
-  
+
   procedure download_debug(p_app_id       IN NUMBER,
                            p_page_id      IN NUMBER,
                            p_region_id    IN NUMBER, 
@@ -2201,7 +2204,7 @@ as
     dbms_lob.createtemporary(v_cells,true);
     dbms_lob.createtemporary(v_strings,true);
     dbms_lob.createtemporary(v_blob,true);
-    
+
     get_report(p_app_id,
                p_page_id ,  
                p_region_id,
@@ -2231,7 +2234,7 @@ as
   end download_debug;
 
   ------------------------------------------------------------------------------
-  
+
   procedure download_excel(p_app_id       IN NUMBER,
                            p_page_id      IN NUMBER,
                            p_region_id    IN NUMBER, 
@@ -2267,28 +2270,28 @@ as
                p_export_links,
                p_custom_width
               );
-              
+
     select file_content
     into t_template
     from apex_appl_plugin_files 
     where file_name = 'ExcelTemplate.zip'
       and application_id = p_app_id
       and plugin_name='AT.FRT.GPV_IR_TO_MSEXCEL';
-    
+
     zip_files  := as_zip.get_file_list( t_template );
     for i in zip_files.first() .. zip_files.last loop
       as_zip.add1file( t_excel, zip_files( i ), as_zip.get_file( t_template, zip_files( i ) ) );
     end loop;    
-      
+
     add1file( t_excel, 'xl/styles.xml', get_styles_xml);    
     add1file( t_excel, 'xl/worksheets/Sheet1.xml', v_cells);
     add1file( t_excel, 'xl/sharedStrings.xml',v_strings);
     add1file( t_excel, 'xl/_rels/workbook.xml.rels',t_sheet_rels);    
     add1file( t_excel, 'xl/workbook.xml',t_workbook);    
     add1file( t_excel, 'xl/worksheets/_rels/sheet1.xml.rels',v_links);    
-    
+
     as_zip.finish_zip( t_excel );
- 
+
     download(p_data      => t_excel,
              p_mime_type => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
              p_file_name => get_file_name (p_app_id,p_page_id,p_region_id)||'.xlsx;'
@@ -2298,9 +2301,8 @@ as
     dbms_lob.freetemporary(v_strings);    
     dbms_lob.freetemporary(v_links);    
   end download_excel;
-  
+
 begin
   dbms_lob.createtemporary(v_debug,true, DBMS_LOB.CALL);  
 END IR_TO_XLSX;
 /
-
