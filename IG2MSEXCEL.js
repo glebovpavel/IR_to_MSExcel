@@ -300,6 +300,23 @@ function getRows(iGrid,propertiesFromPlugin,callback,fileName,pathIn) {
 		 path = localPath + path;
 	}
 
+	function showCountInSpinner(cnt) {
+		if(cnt > 0) {
+			$("#ir-to-ms-excel-spinner").remove();
+			$("<style id='ir-to-ms-excel-spinner'>")
+			.prop("type", "text/css")
+			.html("\
+			.u-Processing::after {\
+				content: '" + cnt + "';\
+				margin-left: -" + (cnt.toString().length * 5 ) + "px; \
+			}")
+			.appendTo("head");
+		} else {
+			 $("#ir-to-ms-excel-spinner").remove();
+		}
+	}
+	
+
 	//https://community.oracle.com/thread/4014257  
 	function loadBatchOfRecords(model, offset, count, maxCount) {  
 			var i = 0;  					  
@@ -309,23 +326,21 @@ function getRows(iGrid,propertiesFromPlugin,callback,fileName,pathIn) {
 			}  else { 
         cnt = Math.min(count,maxCount - offset); 
 			};			
-			model.forEachInPage(offset, cnt, function(r) {  
-				  var $spinner;
+			model.forEachInPage(offset, cnt, function(r) {  				  
 					i += 1;  
 				  if(r)  {						
 						rows.push(r);  									
 					}				
 					if (i === cnt || !r) {
 						$spinner = $(".u-Processing");
-						if ($spinner.find().length > 0) {
-							$(".u-Processing").append('<span class="ir-to-ms-excel-spinner"></span>');							
-						}
-						$(".u-Processing span.ir-to-ms-excel-spinner").text(rows.length);
+						showCountInSpinner(rows.length);
 							// got all the records we asked for or no more available  
 							if (r && rows.length < maxCount) {  								  								  								
 									// if there are more records available - > get them  
 									loadBatchOfRecords(model, offset + cnt, cnt,maxCount);  
-							}  else {								
+							}  else {							
+								// remove count from spinner	
+								showCountInSpinner(0);
 								// load large JS-libraries dynamically using requirejs
 								config = requirejs.s.contexts._.config; //get current config
                 // add own settings for xlsx-js
@@ -478,15 +493,15 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
 						return;
 					}
 					if( $dialog_instance.options.title !== apex.lang.getMessage( "APEXIR_DOWNLOAD")) {
-						return;
+						return;	
 					}  
 					// add button to the modal page
 					// because inner html not exists at this moment
 					// only one possibility i found is add a  div with position:absolute; 
 					// to show the button on the right side
 					if ($dialog.parent("div").find('.ir-to-ms-excel-block-w-button').length == 0) {							
-						$dialog.append('<div class="ir-to-ms-excel-block-w-button"> \
-																		<button type="button" class="ir-to-ms-excel-button ui-button ui-corner-all ui-widget ui-state-default"> \
+						$dialog.parent("div").	append('<div class="ir-to-ms-excel-block-w-button"> \
+																		<button type="button" class="ir-to-ms-excel-button ui-button--hot ui-button ui-corner-all ui-widget"> \
 																			<div class="ir-to-ms-excel-block"> \
 																				<span class="a-IGDialog-iconList-icon a-Icon icon-ig-dl-xls ir-to-ms-excel-block-icon" aria-hidden="true"></span> \
 																				<span class="a-IGDialog-iconList-label ir-to-ms-excel-block-text">XLSX</span> \
