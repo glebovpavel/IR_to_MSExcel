@@ -301,6 +301,16 @@ function getRows(iGrid,propertiesFromPlugin,callback,fileName,pathIn) {
 	}
 
 	function showCountInSpinner(cnt) {
+		// concept - functionality
+		//
+		// The Spinner will automatically shown by calling 
+		// APEX forEachInPage - function.
+		// That menas i don't have control on it. 
+		// Only one way i found is to generally modify css 
+		// and add rows count as "content"
+		// Only one possibility to center the rows count i found
+		// is to assign margin-left dynamically 
+		// 5 is average brite of the character 
 		if(cnt > 0) {
 			$("#ir-to-ms-excel-spinner").remove();
 			$("<style id='ir-to-ms-excel-spinner'>")
@@ -320,7 +330,7 @@ function getRows(iGrid,propertiesFromPlugin,callback,fileName,pathIn) {
 	//https://community.oracle.com/thread/4014257  
 	function loadBatchOfRecords(model, offset, count, maxCount) {  
 			var i = 0;  					  
-			var cnt;
+			var cnt; // rows count to fetch in current step
 			if (offset + count <= maxCount ) {
         cnt = count;
 			}  else { 
@@ -341,7 +351,8 @@ function getRows(iGrid,propertiesFromPlugin,callback,fileName,pathIn) {
 							}  else {							
 								// remove count from spinner	
 								showCountInSpinner(0);
-								// load large JS-libraries dynamically using requirejs
+								// ans starting converting data into XLSX 
+								// first load large JS-libraries dynamically using requirejs
 								config = requirejs.s.contexts._.config; //get current config
                 // add own settings for xlsx-js
 								config.shim.xlsx = {
@@ -360,7 +371,8 @@ function getRows(iGrid,propertiesFromPlugin,callback,fileName,pathIn) {
                requirejs.config(config);
                require(['jszip'], function (jszip) {
                      window.JSZip = jszip;
-                     require(['xlsx','moment'], function (xlsx,moment) {											    											    
+                     require(['xlsx','moment'], function (xlsx,moment) {			
+											    // call callback function => should be "buildExcel" - function
 											    callback(rows,iGrid,propertiesFromPlugin,fileName,path,moment);		
                      });
               });								
@@ -487,12 +499,13 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
 				var vActions = vWidget$.interactiveGrid('getActions');
         
 				$('body').on('dialogopen', function (event, ui) {					
-					var $dialog = $(event.target);
-					var $dialog_instance = $dialog.dialog("instance");
+					var $dialog = $(event.target);					
+					//var $dialog_instance = $dialog.dialog("instance"); // do not work in APEX 5.2
 					if (event.target.id !== (vRegionID + '_ig_download-dialog')) {
 						return;
 					}
-					if( $dialog_instance.options.title !== apex.lang.getMessage( "APEXIR_DOWNLOAD")) {
+					if($dialog.parent().find('span.ui-dialog-title').text() !== apex.lang.getMessage( "APEXIR_DOWNLOAD")) {
+ 					//if( $dialog_instance.options.title !== apex.lang.getMessage( "APEXIR_DOWNLOAD")) { 
 						return;	
 					}  
 					// add button to the modal page
@@ -501,8 +514,8 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
 					// to show the button on the right side
 					if ($dialog.parent("div").find('.ir-to-ms-excel-block-w-button').length == 0) {							
 						$dialog.parent("div").	append('<div class="ir-to-ms-excel-block-w-button"> \
-																		<button type="button" class="ir-to-ms-excel-button ui-button--hot ui-button ui-corner-all ui-widget"> \
-																			<div class="ir-to-ms-excel-block"> \
+																		<button type="button" class="ir-to-ms-excel-button ui-button--hot ui-button ui-corner-all ui-widget  ui-state-default ui-button-text-only"> \
+																			<div class="ir-to-ms-excel-block ui-button-text"> \
 																				<span class="a-IGDialog-iconList-icon a-Icon icon-ig-dl-xls ir-to-ms-excel-block-icon" aria-hidden="true"></span> \
 																				<span class="a-IGDialog-iconList-label ir-to-ms-excel-block-text">XLSX</span> \
 																			</div> \

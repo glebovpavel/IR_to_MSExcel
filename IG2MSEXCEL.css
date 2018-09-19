@@ -10,11 +10,6 @@
     line-height: 16px;
 }
 
-div.ir-to-ms-excel-block-w-button_ button:hover {
-    background-color: #fff;
-    color: #383838;
-}    
-
 .ir-to-ms-excel-block-icon {
    margin-right: 5px;
 }
@@ -28,4 +23,8 @@ div.ir-to-ms-excel-block-w-button_ button:hover {
   margin-left: -25px;
   padding-left: 10px;  
   padding-right: 10px;    
+}
+
+.ir-to-ms-excel-button {
+    padding: 0px !important;
 }

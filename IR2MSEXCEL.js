@@ -59,17 +59,14 @@
         $('body').on( "dialogopen", function( event, ui ) {
           try {
             var $dialog_window = $(event.target);
-            var $dialog_instance = $dialog_window.dialog("instance");            
+            //var $dialog_instance = $dialog_window.dialog("instance");   // do not work in APEX 5.2         
             var html;
             
-            console.info("event.target.id",event.target.id);
-            console.info("idd",p_region_static_id + '_dialog_js');
             if (event.target.id !== (p_region_static_id + '_dialog_js')) {
-              console.log("False Region");
               return;
-            }
-            if( $dialog_instance.options.title !== apex.lang.getMessage( "APEXIR_DOWNLOAD")) {
-              console.log("False Dialog");
+            }            
+            //if( $dialog_instance.options.title !== apex.lang.getMessage( "APEXIR_DOWNLOAD")) {
+              if($dialog_window.parent().find('span.ui-dialog-title').text() !== apex.lang.getMessage( "APEXIR_DOWNLOAD"))  {
               return;
             }  
             html = apex.util.htmlBuilder();
