@@ -62,16 +62,16 @@ function getCellNumber(value,colDataType,decimalSeparator,format) {
 	var cell = {};
 	if (typeof value === 'object') {		
 		cell.t = 's';	 
-	  cell.v = value.d;
+	        cell.v = value.d;
 		return cell;
 	} else if (typeof value !== 'string') {		
 		cell.t = 's';	 
-	  cell.v = String(value);
+                cell.v = String(value);
 		return cell;
 	}
-	
+
 	var num; 
-  var re = new RegExp("[^0123456789" + decimalSeparator +"]","g");	
+  var re = new RegExp("[^-0123456789" + decimalSeparator +"]","g");	
 	var str = "" + value;
 	cell.v = str; 
 	cell.s = buildFormatObj(format);
@@ -148,7 +148,7 @@ function getWorksheet(data,properties) {
 	var cellAddr = {}; 
 	var cell = {};
 	var R,C,I,A; // iterators
-  var columnNum; 
+        var columnNum; 
 	var rowNum = 0;
 	var colDataTypesArr = properties.columnsProperties;
 	var isControlBreak = properties.haveControlBreaks;
@@ -231,9 +231,9 @@ function getWorksheet(data,properties) {
 						}	
 					}
 				} 
-				
+
 				if(colDataTypesArr[C].dataType == 'NUMBER') {
-					cell = getCellNumber(data[R][dataIndex],colDataTypesArr[C],properties.decimalSeparator,cellFormat)
+					cell = getCellNumber(data[R][dataIndex],colDataTypesArr[C],properties.decimalSeparator,cellFormat);
 				} else if(colDataTypesArr[C].dataType == 'DATE') {				
 					cell = getCellDate(data[R][dataIndex],colDataTypesArr[C],properties.langCode,cellFormat,properties.moment);
 				} else {
@@ -497,7 +497,8 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
 				}
 				var vWidget$ = apex.region(vRegionID).widget();
 				var vActions = vWidget$.interactiveGrid('getActions');
-        
+				
+				
 				$('body').on('dialogopen', function (event, ui) {					
 					var $dialog = $(event.target);					
 					//var $dialog_instance = $dialog.dialog("instance"); // do not work in APEX 5.2
@@ -512,9 +513,14 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
 					// because inner html not exists at this moment
 					// only one possibility i found is add a  div with position:absolute; 
 					// to show the button on the right side
-					if ($dialog.parent("div").find('.ir-to-ms-excel-block-w-button').length == 0) {							
-						$dialog.parent("div").	append('<div class="ir-to-ms-excel-block-w-button"> \
-																		<button type="button" class="ir-to-ms-excel-button ui-button--hot ui-button ui-corner-all ui-widget  ui-state-default ui-button-text-only"> \
+					if ($dialog.parent("div").find('.ir-to-ms-excel-block-w-button').length == 0) {		
+						if(apex.region(vRegionID).call("option").config.features.download.formats[0]==="") {
+						$dialog.append('<style> div.ui-dialog-buttonset button.ui-button--hot { \
+							display: none; \
+					  }	</style>'); }
+							/*ui-state-default*/
+						$dialog.parent("div").append('<div class="ir-to-ms-excel-block-w-button"> \
+																		<button type="button" class="ir-to-ms-excel-button ui-button--hot ui-button ui-corner-all ui-widget   ui-button-text-only"> \
 																			<div class="ir-to-ms-excel-block ui-button-text"> \
 																				<span class="a-IGDialog-iconList-icon a-Icon icon-ig-dl-xls ir-to-ms-excel-block-icon" aria-hidden="true"></span> \
 																				<span class="a-IGDialog-iconList-label ir-to-ms-excel-block-text">XLSX</span> \
