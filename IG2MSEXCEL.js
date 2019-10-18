@@ -508,9 +508,15 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
         var vWidget$ = apex.region(vRegionID).widget();
         var vActions = vWidget$.interactiveGrid('getActions');
         var APEX5_1_class = "";
+        var APEX18_1_class_exclude = " ir-to-ms-excel-block-w-button-height ";
+        var APEXVersion = getAPEXVersion();
 
-        if(getAPEXVersion() == "5.1") {
+        if(APEXVersion == "5.1") {
           APEX5_1_class = " ui-state-default ";         
+        }
+       
+        if(APEXVersion == "18.1" || APEXVersion == "18.0") {
+          APEX18_1_class_exclude = "";         
         }
         
         
@@ -535,7 +541,7 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
                               } </style>'); 
             }
             /*ui-state-default*/
-            $dialog.parent("div").append('<div class="ir-to-ms-excel-block-w-button"> \
+            $dialog.parent("div").append('<div class="ir-to-ms-excel-block-w-button ' + APEX18_1_class_exclude + '"> \
                 <button type="button" class="ir-to-ms-excel-button ui-button--hot ui-button ui-corner-all ui-widget' + APEX5_1_class +  'ui-button-text-only"> \
                   <div class="ir-to-ms-excel-block ui-button-text"> \
                     <span class="a-IGDialog-iconList-icon a-Icon icon-ig-dl-xls ir-to-ms-excel-block-icon" aria-hidden="true"></span> \

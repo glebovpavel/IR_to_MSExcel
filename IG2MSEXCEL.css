@@ -2,8 +2,12 @@
     position:absolute; 
     bottom: 13px; 
     left: 12px; 
+}
+
+.ir-to-ms-excel-block-w-button-height {
     height: 30px;
 }
+
 
 .ir-to-ms-excel-block {
     font-size: 11px;

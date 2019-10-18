@@ -1,8 +1,8 @@
 /**********************************************
 **
 ** Author: Pavel Glebov
-** Date: 09-2018
-** Version: 3.16
+** Date: 10-2019
+** Version: 3.17
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -937,7 +937,7 @@ as
 
     -- Standard Flow
     IF NVL(LENGTHB(p_vc_buffer), 0) + NVL(LENGTHB(p_vc_addition), 0) < (32767/2) THEN
-      -- Danke für Frank Menne wegen utf-8
+      -- Danke fï¿½r Frank Menne wegen utf-8
       p_vc_buffer := p_vc_buffer || convert(p_vc_addition,'utf8');
     ELSE
       IF p_clob IS NULL THEN
@@ -1707,7 +1707,8 @@ as
       and page_id = p_page_id
       and session_id = nv('APP_SESSION')
       and application_user = v('APP_USER')
-      and base_report_id = l_report_id;
+      and base_report_id = l_report_id
+      and rownum <2;
 
     log('l_report_id='||l_report_id);
     l_report_id := l_report.ir_data.report_id;                                                                 
@@ -2776,7 +2777,7 @@ as
 
   ------------------------------------------------------------------------------  
   procedure add1file
-    ( p_zipped_blob in out blob
+    ( p_zipped_blob in out nocopy blob
     , p_name in varchar2
     , p_content in clob
     )
