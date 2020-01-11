@@ -1,8 +1,8 @@
 /**********************************************
 **
 ** Author: Pavel Glebov
-** Date: 10-2019
-** Version: 3.17
+** Date: 01-2020
+** Version: 3.20
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -597,10 +597,10 @@ is
 -- 
 end;
 /
-CREATE OR REPLACE PACKAGE IR_TO_XLSX
-  AUTHID CURRENT_USER
+CREATE OR REPLACE PACKAGE ir_to_xlsx
+  AUTHID current_user
 IS
-  procedure download_excel(p_app_id       IN NUMBER,
+  PROCEDURE download_excel(p_app_id       IN NUMBER,
                            p_page_id      IN NUMBER,
                            p_region_id    IN NUMBER,
                            p_col_length   IN VARCHAR2 DEFAULT NULL,
@@ -609,40 +609,28 @@ IS
                            p_export_links IN CHAR DEFAULT 'N',
                            p_custom_width IN VARCHAR2
                           ); 
-  procedure download_debug(p_app_id       IN NUMBER,
-                           p_page_id      IN NUMBER,
-                           p_region_id    IN NUMBER, 
-                           p_col_length   IN VARCHAR2 DEFAULT NULL,
-                           p_max_rows     IN NUMBER,
-                           p_autofilter   IN CHAR DEFAULT 'Y',
-                           p_export_links IN CHAR DEFAULT 'N',
-                           p_custom_width IN VARCHAR2
-                          );
-                          
-  function convert_date_format(p_format IN VARCHAR2)
-  return varchar2;
-  function convert_number_format(p_format IN VARCHAR2)
-  return varchar2;  
-  function convert_date_format(p_datatype IN VARCHAR2,p_format IN VARCHAR2)
-  return varchar2;
-  function convert_date_format_js(p_datatype in varchar2, p_format in varchar2)
-  return varchar2;
   
-  function get_max_rows (p_app_id      IN NUMBER,
+  FUNCTION convert_date_format(p_format IN VARCHAR2)
+  RETURN VARCHAR2;
+  
+  FUNCTION convert_number_format(p_format IN VARCHAR2)
+  RETURN VARCHAR2;  
+  
+  FUNCTION convert_date_format(p_datatype IN VARCHAR2,p_format IN VARCHAR2)
+  RETURN VARCHAR2;
+  
+  FUNCTION convert_date_format_js(p_datatype IN VARCHAR2, p_format IN VARCHAR2)
+  RETURN VARCHAR2;
+  
+  FUNCTION get_max_rows (p_app_id      IN NUMBER,
                          p_page_id     IN NUMBER,
                          p_region_id   IN NUMBER)
-  return number;
+  RETURN NUMBER;
 
-   /* 
-    function to handle cases of 'in' and 'not in' conditions for highlights
-       used in cursor cur_highlight
-    
-    Author: Srihari Ravva
-  */ 
-  function get_highlight_in_cond_sql(p_condition_expression  in APEX_APPLICATION_PAGE_IR_COND.CONDITION_EXPRESSION%TYPE,
-                                     p_condition_sql         in APEX_APPLICATION_PAGE_IR_COND.CONDITION_SQL%TYPE,
-                                     p_condition_column_name in APEX_APPLICATION_PAGE_IR_COND.CONDITION_COLUMN_NAME%TYPE)
-  return varchar2;
+  FUNCTION get_highlight_in_cond_sql(p_condition_expression  IN apex_application_page_ir_cond.condition_expression%TYPE,
+                                     p_condition_sql         IN apex_application_page_ir_cond.condition_sql%TYPE,
+                                     p_condition_column_name IN apex_application_page_ir_cond.condition_column_name%TYPE)
+  RETURN VARCHAR2;
   /*
   -- format test cases
   select ir_to_xlsx.convert_date_format('dd.mm.yyyy hh24:mi:ss'),to_char(sysdate,'dd.mm.yyyy hh24:mi:ss') from dual
@@ -662,36 +650,148 @@ IS
   select ir_to_xlsx.convert_date_format('fmDay, fmDD fmMonth, YYYY'),to_char(sysdate,'fmDay, fmDD fmMonth, YYYY') from dual 
   */
                     
-end;
+END;
 /
 
 create or replace PACKAGE BODY IR_TO_XLSX
-as    
+as
 
-  STRING_HEIGHT      constant number default 14.4; 
-  WIDTH_COEFFICIENT CONSTANT NUMBER := 6;
-  subtype t_color is varchar2(7);
-  subtype t_style_string  is varchar2(300);
-  subtype t_format_mask  is varchar2(100);
-  subtype t_font  is varchar2(50);
-  subtype t_large_varchar2  is varchar2(32767);
-  BACK_COLOR  constant  t_color default '#C6E0B4';
+  CURSOR cur_highlight(
+    p_report_id in APEX_APPLICATION_PAGE_IR_RPT.REPORT_ID%TYPE,
+    p_delimetered_column_list IN VARCHAR2
+  ) 
+  IS
+  SELECT rez.* ,
+       rownum cond_number,
+       'HIGHLIGHT_'||rownum cond_name
+  FROM (
+  SELECT report_id,
+         CASE 
+           WHEN condition_operator in ('not in', 'in') THEN
+             ir_to_xlsx.get_highlight_in_cond_sql(condition_expression,condition_sql,condition_column_name)
+           ELSE 
+             REPLACE(REPLACE(REPLACE(REPLACE(condition_sql,'#APXWS_EXPR#',''''||condition_expression||''''),'#APXWS_EXPR2#',''''||condition_expression2||''''),'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||condition_column_name||'"') 
+         END condition_sql,
+         condition_column_name,
+         condition_enabled,
+         highlight_row_color,
+         highlight_row_font_color,
+         highlight_cell_color,
+         highlight_cell_font_color      
+    FROM apex_application_page_ir_cond
+    WHERE condition_type = 'Highlight'
+      AND report_id = p_report_id
+      AND instr(':'||p_delimetered_column_list||':',':'||condition_column_name||':') > 0
+      AND condition_enabled = 'Yes'
+    ORDER BY --rows highlights first 
+             nvl2(highlight_row_color,1,0) DESC, 
+             nvl2(highlight_row_font_color,1,0) DESC,
+             highlight_sequence 
+    ) rez;
+    
+  SUBTYPE t_color IS VARCHAR2(7);
+  SUBTYPE t_style_string IS VARCHAR2(300);
+  SUBTYPE t_format_mask IS VARCHAR2(100);
+  SUBTYPE t_font IS VARCHAR2(50);
+  SUBTYPE t_large_varchar2 IS VARCHAR2(32767);
+  SUBTYPE largevarchar2 IS VARCHAR2(32767);
+  SUBTYPE columntype IS VARCHAR2(15);
+  SUBTYPE t_formatmask IS VARCHAR2(100);
+  
+  TYPE t_date_table IS TABLE OF DATE INDEX BY BINARY_INTEGER;  
+  TYPE t_number_table IS TABLE OF NUMBER INDEX BY BINARY_INTEGER;  
+  TYPE t_styles IS TABLE OF BINARY_INTEGER INDEX BY t_style_string;
+  TYPE t_fill_list IS TABLE OF BINARY_INTEGER INDEX BY t_color;
+  TYPE t_font_list IS TABLE OF BINARY_INTEGER INDEX BY t_font;
+  TYPE t_format_mask_list IS TABLE OF BINARY_INTEGER INDEX BY t_format_mask;
+  
+  TYPE t_col_names IS TABLE OF apex_application_page_ir_col.report_label%TYPE INDEX BY apex_application_page_ir_col.column_alias%TYPE;
+  TYPE t_col_format_mask IS TABLE OF apex_application_page_ir_comp.computation_format_mask%TYPE INDEX BY apex_application_page_ir_col.column_alias%TYPE;
+  TYPE t_header_alignment IS TABLE OF apex_application_page_ir_col.heading_alignment%TYPE INDEX BY apex_application_page_ir_col.column_alias%TYPE;
+  TYPE t_column_alignment IS TABLE OF apex_application_page_ir_col.column_alignment%TYPE INDEX BY apex_application_page_ir_col.column_alias%TYPE;
+  TYPE t_column_data_types IS TABLE OF apex_application_page_ir_col.column_type%TYPE INDEX BY BINARY_INTEGER;
+  TYPE t_highlight IS TABLE OF cur_highlight%rowtype INDEX BY BINARY_INTEGER;
+  TYPE t_column_links IS TABLE OF apex_application_page_ir_col.column_link%TYPE INDEX BY apex_application_page_ir_col.column_alias%TYPE;
+  TYPE t_all_columns IS TABLE OF BINARY_INTEGER INDEX BY VARCHAR2(32767);
 
-  type t_styles is table of binary_integer index by t_style_string;
-  a_styles t_styles;
-  type  t_color_list is table of binary_integer index by t_color;
-  type  t_font_list is table of binary_integer index by t_font;
-  a_font       t_font_list;
-  a_back_color t_color_list;
-  v_fonts_xml  t_large_varchar2;
-  v_back_xml   t_large_varchar2;
-  v_styles_xml clob;
-  type  t_format_mask_list is table of binary_integer index by t_format_mask;
-  a_format_mask_list t_format_mask_list;
-  v_format_mask_xml clob;
+  TYPE ir_report IS RECORD
+   (
+    report                    apex_ir.t_report,
+    ir_data                   APEX_APPLICATION_PAGE_IR_RPT%ROWTYPE,
+    displayed_columns         APEX_APPLICATION_GLOBAL.VC_ARR2,
+    break_on                  APEX_APPLICATION_GLOBAL.VC_ARR2,
+    break_really_on           APEX_APPLICATION_GLOBAL.VC_ARR2, -- "break on" except hidden columns
+    sum_columns_on_break      APEX_APPLICATION_GLOBAL.VC_ARR2,
+    avg_columns_on_break      APEX_APPLICATION_GLOBAL.VC_ARR2,
+    max_columns_on_break      APEX_APPLICATION_GLOBAL.VC_ARR2,
+    min_columns_on_break      APEX_APPLICATION_GLOBAL.VC_ARR2,
+    median_columns_on_break   APEX_APPLICATION_GLOBAL.VC_ARR2,
+    count_columns_on_break    APEX_APPLICATION_GLOBAL.VC_ARR2,
+    count_distnt_col_on_break APEX_APPLICATION_GLOBAL.VC_ARR2,
+    skipped_columns           BINARY_INTEGER default 0, -- when scpecial columns like apxws_row_pk is used
+    start_with                BINARY_INTEGER default 0, -- position of first displayed column in query
+    end_with                  BINARY_INTEGER default 0, -- position of last displayed column in query    
+    agg_cols_cnt              BINARY_INTEGER default 0, 
+    hidden_cols_cnt           BINARY_INTEGER default 0, 
+    column_header_labels      t_col_names,       -- column names in report header
+    col_format_mask           t_col_format_mask, -- format like $3849,56
+    row_highlight             t_highlight,
+    col_highlight             t_highlight,
+    header_alignment          t_header_alignment,
+    column_alignment          t_column_alignment,
+    column_data_types         t_column_data_types,
+    column_link               t_column_links,
+    desc_tab                  DBMS_SQL.DESC_TAB2, -- information about columns from final sql query
+    all_columns               t_all_columns      -- list of all columns from final sql query     
+   );  
 
+   TYPE t_cell_data IS RECORD
+   (
+     VALUE           VARCHAR2(100),
+     text            largevarchar2,
+     datatype        VARCHAR2(50)
+   );  
+  
+  -- EXCEPTIONS
+  format_error EXCEPTION;
+  PRAGMA EXCEPTION_INIT(format_error, -01830);
+  date_format_error EXCEPTION;
+  PRAGMA EXCEPTION_INIT(date_format_error, -01821);
+  conversion_error EXCEPTION;
+  PRAGMA EXCEPTION_INIT(conversion_error,-06502);
+
+  l_report           ir_report;   
+
+  -- these plSQL tables are used ONLY to identify that unique entity
+  -- was already used,not to keep the XML content.
+  g_styles           t_styles;  
+  g_fills            t_fill_list;  
+  g_fonts            t_font_list;  
+  g_number_formats   t_format_mask_list;
+  -- the unique XML content is saved in these text variables 
+  g_fonts_xml        t_large_varchar2;
+  g_back_xml         t_large_varchar2;
+  v_styles_xml       CLOB;
+  v_format_mask_xml  CLOB;
+  
+  -- CONSTANT
+  STRING_HEIGHT CONSTANT NUMBER DEFAULT 14.4;
+  WIDTH_COEFFICIENT CONSTANT NUMBER DEFAULT 6;
+  LOG_PREFIX VARCHAR2(9) DEFAULT 'GPV_XLSX:';
+  BACK_COLOR CONSTANT t_color DEFAULT '#C6E0B4';  
+  -- Excel-template should have some pre-defined
+  -- fonts, format masks, fills, styles etc. to format column headers.
+  -- They are hardcoded in constants below (BOLD_FONT,UNDERLINE_FONT etc.).
+  -- One should keep this entities by adding new one. 
+  -- Constatns below define an amount of this hardcoded entities 
+  FONTS_CNT CONSTANT  BINARY_INTEGER DEFAULT 3;  
+  FORMAT_MASK_CNT CONSTANT BINARY_INTEGER DEFAULT 1; 
+  DEFAULT_FILL_CNT CONSTANT  BINARY_INTEGER DEFAULT 2; 
+  DEFAULT_STYLES_CNT CONSTANT  BINARY_INTEGER DEFAULT 1;     
+  FORMAT_MASK_START_WITH  CONSTANT  BINARY_INTEGER DEFAULT 164;  
+  
   ------------------------------------------------------------------------------
-  t_sheet_rels clob default '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  t_sheet_rels CLOB DEFAULT '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
     <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
     <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme" Target="theme/theme1.xml"/>
@@ -699,7 +799,7 @@ as
     <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
   </Relationships>';
 
-  t_workbook clob default '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  t_workbook CLOB DEFAULT '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
     <fileVersion appName="xl" lastEdited="4" lowestEdited="4" rupBuild="4506"/>
     <workbookPr filterPrivacy="1" defaultThemeVersion="124226"/>
@@ -714,7 +814,7 @@ as
     <fileRecoveryPr repairLoad="1"/>
   </workbook>';
 
-  t_style_template clob default '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+  t_style_template CLOB DEFAULT '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="x14ac" xmlns:x14ac="http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac">
     #FORMAT_MASKS#
     #FONTS#
@@ -755,7 +855,7 @@ as
     </extLst>
   </styleSheet>';
 
-  DEFAULT_FONT constant varchar2(200) := '
+  DEFAULT_FONT CONSTANT VARCHAR2(200) DEFAULT '
    <font>
       <sz val="11" />
       <color theme="1" />
@@ -763,7 +863,8 @@ as
       <family val="2" />
       <scheme val="minor" />
     </font>';
-  BOLD_FONT constant varchar2(200) := '
+    
+  BOLD_FONT CONSTANT VARCHAR2(200) DEFAULT '
    <font>
       <b />
       <sz val="11" />
@@ -772,7 +873,7 @@ as
       <family val="2" />
       <scheme val="minor" />
     </font>';
-  UNDERLINE_FONT constant varchar2(200) := '
+  UNDERLINE_FONT CONSTANT VARCHAR2(200) DEFAULT '
    <font>
       <u />
       <sz val="11" />
@@ -781,135 +882,30 @@ as
       <family val="2" />
       <scheme val="minor" />
     </font>';    
-  FONTS_CNT constant  binary_integer := 3;   
 
-
-  DEFAULT_FILL constant varchar2(200) :=  '
+  DEFAULT_FILL CONSTANT VARCHAR2(200) DEFAULT  '
     <fill>
       <patternFill patternType="none" />
     </fill>
     <fill>
       <patternFill patternType="gray125" />
     </fill>'; 
-  DEFAULT_FILL_CNT constant  binary_integer := 2; 
 
-  DEFAULT_STYLE constant varchar2(200) := '
+  DEFAULT_STYLE CONSTANT VARCHAR2(200) DEFAULT '
       <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>';
-  AGGREGATE_STYLE constant varchar2(250) := '
+      
+  AGGREGATE_STYLE CONSTANT VARCHAR2(250) DEFAULT '
       <xf numFmtId="#FMTID#" borderId="1" fillId="0" fontId="1" xfId="0" applyAlignment="1" applyFont="1" applyBorder="1">
          <alignment wrapText="1" horizontal="right"  vertical="top"/>
      </xf>';
 
-
-  HEADER_STYLE constant varchar2(200) := '     
+  HEADER_STYLE CONSTANT VARCHAR2(200) DEFAULT '     
       <xf numFmtId="0" borderId="0" #FILL# fontId="1" xfId="0" applyAlignment="1" applyFont="1" >
          <alignment wrapText="0" horizontal="#ALIGN#"/>
-     </xf>';  
+     </xf>';    
 
-
-  DEFAULT_STYLES_CNT constant  binary_integer := 1;     
-  FORMAT_MASK_START_WITH  constant  binary_integer := 164;  
-
-  FORMAT_MASK constant varchar2(100) := '
+  FORMAT_MASK CONSTANT VARCHAR2(100) DEFAULT '
       <numFmt numFmtId="'||FORMAT_MASK_START_WITH||'" formatCode="dd.mm.yyyy"/>';
-
-  FORMAT_MASK_CNT constant binary_integer default 1; 
-
-/*
-** Minor bugfixes by J.P.Lourens  9-Oct-2016
-*/  
-  subtype largevarchar2 is varchar2(32767); 
-  subtype columntype is varchar2(15); 
-  subtype formatmask is varchar2(100);  
-  format_error EXCEPTION;
-  PRAGMA EXCEPTION_INIT(format_error, -01830);
-  date_format_error EXCEPTION;
-  PRAGMA EXCEPTION_INIT(date_format_error, -01821);
-  conversion_error exception;
-  PRAGMA EXCEPTION_INIT(conversion_error,-06502);
-
-  type t_date_table is table of date index by binary_integer;  
-  type t_number_table is table of number index by binary_integer;  
-
-  cursor cur_highlight(p_report_id in APEX_APPLICATION_PAGE_IR_RPT.REPORT_ID%TYPE,
-                       p_delimetered_column_list in varchar2) 
-  IS
-  select rez.* ,
-       rownum COND_NUMBER,
-       'HIGHLIGHT_'||rownum COND_NAME
-  from (
-  select report_id,
-         case when condition_operator in ('not in', 'in') then
-                 IR_TO_XLSX.get_highlight_in_cond_sql(CONDITION_EXPRESSION,CONDITION_SQL,CONDITION_COLUMN_NAME)
-              else 
-                 replace(replace(replace(replace(condition_sql,'#APXWS_EXPR#',''''||CONDITION_EXPRESSION||''''),'#APXWS_EXPR2#',''''||CONDITION_EXPRESSION2||''''),'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||CONDITION_COLUMN_NAME||'"') 
-             end condition_sql,
-         CONDITION_COLUMN_NAME,
-         CONDITION_ENABLED,
-         HIGHLIGHT_ROW_COLOR,
-         HIGHLIGHT_ROW_FONT_COLOR,
-         HIGHLIGHT_CELL_COLOR,
-         HIGHLIGHT_CELL_FONT_COLOR      
-    from APEX_APPLICATION_PAGE_IR_COND
-    where condition_type = 'Highlight'
-      and report_id = p_report_id
-      and instr(':'||p_delimetered_column_list||':',':'||CONDITION_COLUMN_NAME||':') > 0
-      and condition_enabled = 'Yes'
-      order by --rows highlights first 
-             nvl2(HIGHLIGHT_ROW_COLOR,1,0) desc, 
-             nvl2(HIGHLIGHT_ROW_FONT_COLOR,1,0) desc,
-             HIGHLIGHT_SEQUENCE 
-    ) rez;
-
-  type t_col_names is table of apex_application_page_ir_col.report_label%type index by apex_application_page_ir_col.column_alias%type;
-  type t_col_format_mask is table of APEX_APPLICATION_PAGE_IR_COMP.computation_format_mask%TYPE index by APEX_APPLICATION_PAGE_IR_COL.column_alias%TYPE;
-  type t_header_alignment is table of APEX_APPLICATION_PAGE_IR_COL.heading_alignment%TYPE index by APEX_APPLICATION_PAGE_IR_COL.column_alias%TYPE;
-  type t_column_alignment is table of apex_application_page_ir_col.column_alignment%type index by apex_application_page_ir_col.column_alias%type;
-  type t_column_types is table of apex_application_page_ir_col.column_type%type index by binary_integer;
-  type t_highlight is table of cur_highlight%ROWTYPE index by binary_integer;
-  type t_column_links is table of APEX_APPLICATION_PAGE_IR_COL.COLUMN_LINK%TYPE index by apex_application_page_ir_col.column_alias%type;
-  type t_all_columns is table of binary_integer index by varchar2(32767);
-
-  type ir_report is record
-   (
-    report                    apex_ir.t_report,
-    ir_data                   APEX_APPLICATION_PAGE_IR_RPT%ROWTYPE,
-    displayed_columns         APEX_APPLICATION_GLOBAL.VC_ARR2,
-    break_on                  APEX_APPLICATION_GLOBAL.VC_ARR2,
-    break_really_on           APEX_APPLICATION_GLOBAL.VC_ARR2, -- "break on" except hidden columns
-    sum_columns_on_break      APEX_APPLICATION_GLOBAL.VC_ARR2,
-    avg_columns_on_break      APEX_APPLICATION_GLOBAL.VC_ARR2,
-    max_columns_on_break      APEX_APPLICATION_GLOBAL.VC_ARR2,
-    min_columns_on_break      APEX_APPLICATION_GLOBAL.VC_ARR2,
-    median_columns_on_break   APEX_APPLICATION_GLOBAL.VC_ARR2,
-    count_columns_on_break    APEX_APPLICATION_GLOBAL.VC_ARR2,
-    count_distnt_col_on_break APEX_APPLICATION_GLOBAL.VC_ARR2,
-    skipped_columns           BINARY_INTEGER default 0, -- when scpecial coluns like apxws_row_pk is used
-    start_with                BINARY_INTEGER default 0, -- position of first displayed column in query
-    end_with                  BINARY_INTEGER default 0, -- position of last displayed column in query    
-    agg_cols_cnt              BINARY_INTEGER default 0, 
-    hidden_cols_cnt           BINARY_INTEGER default 0, 
-    column_names              t_col_names,       -- column names in report header
-    col_format_mask           t_col_format_mask, -- format like $3849,56
-    row_highlight             t_highlight,
-    col_highlight             t_highlight,
-    header_alignment          t_header_alignment,
-    column_alignment          t_column_alignment,
-    column_types              t_column_types,
-    column_link               t_column_links,
-    desc_tab                  DBMS_SQL.DESC_TAB2, -- information about columns from final sql query
-    all_columns               t_all_columns      -- list of all columns from final sql query     
-   );  
-
-   TYPE t_cell_data IS record
-   (
-     VALUE           VARCHAR2(100),
-     text            largevarchar2,
-     datatype        VARCHAR2(50)
-   );  
-  l_report                   ir_report;   
-  v_debug                    clob;  
-  v_debug_buffer             largevarchar2; 
 
   ------------------------------------------------------------------------------
   /**
@@ -927,21 +923,19 @@ as
   * @param p_vc_addition The VARCHAR2 value you want to append.
   * @param p_eof         Indicates if complete buffer should be flushed to CLOB.
   */
-  PROCEDURE add( p_clob IN OUT NOCOPY CLOB
-               , p_vc_buffer IN OUT NOCOPY VARCHAR2
-               , p_vc_addition IN VARCHAR2
-               , p_eof IN BOOLEAN DEFAULT FALSE
-               )
-  AS
+  PROCEDURE add(
+   p_clob IN OUT NOCOPY CLOB
+  ,p_vc_buffer IN OUT NOCOPY VARCHAR2
+  ,p_vc_addition IN VARCHAR2
+  ,p_eof IN BOOLEAN DEFAULT false
+  ) AS
   BEGIN
-
     -- Standard Flow
-    IF NVL(LENGTHB(p_vc_buffer), 0) + NVL(LENGTHB(p_vc_addition), 0) < (32767/2) THEN
-      -- Danke f�r Frank Menne wegen utf-8
+    IF nvl(lengthb(p_vc_buffer), 0) + nvl(lengthb(p_vc_addition), 0) < (32767/2) THEN
       p_vc_buffer := p_vc_buffer || convert(p_vc_addition,'utf8');
     ELSE
       IF p_clob IS NULL THEN
-        dbms_lob.createtemporary(p_clob, TRUE);
+        dbms_lob.createtemporary(p_clob, true);
       END IF;
       dbms_lob.writeappend(p_clob, length(p_vc_buffer), p_vc_buffer);
       p_vc_buffer := convert(p_vc_addition,'utf8');
@@ -956,26 +950,22 @@ as
       END IF;
       p_vc_buffer := NULL;
     END IF;
-
   END add;
   ------------------------------------------------------------------------------
-
-  procedure log(p_message in varchar2,p_eof IN BOOLEAN DEFAULT FALSE)
-  is
-  begin
-  /* logigging  ffrffe */
-    add(v_debug,v_debug_buffer,p_message||chr(10),p_eof);
-    apex_debug_message.log_message(p_message => substr(p_message,1,32767),
+  PROCEDURE log(p_message IN VARCHAR2)
+  IS
+  BEGIN
+    apex_debug_message.log_message(p_message => log_prefix||substr(p_message,1,32758),
                                    p_enabled => false,
                                    p_level   => 4);
-  end log; 
-  ------------------------------------------------------------------------------  
- /* XLSX FUNCTIONS */
-  function convert_date_format(p_format in varchar2)
-  return varchar2
-  is
-    v_str      varchar2(100);
-  begin
+  END log; 
+  ------------------------------------------------------------------------------
+  -- convert date format string from ORACLE-style to MS Excel style
+  FUNCTION convert_date_format(p_format IN VARCHAR2)
+  RETURN VARCHAR2
+  IS
+    v_str      VARCHAR2(100);
+  BEGIN
     v_str := apex_plugin_util.replace_substitutions(p_format);
     v_str := upper(v_str);
     --date
@@ -990,20 +980,17 @@ as
     v_str := replace(v_str,'SS','ss');
 
     v_str := replace(v_str,'HH24','hh');
-    --v_str := regexp_replace(v_str,'(\W)','\\\1');
     v_str := regexp_replace(v_str,'HH12([^ ]+)','h\1 AM/PM');    
     v_str := replace(v_str,'AM\/PM',' AM/PM');
-
-
-    return v_str;
-  end convert_date_format;
+    RETURN v_str;
+  END convert_date_format;
   ------------------------------------------------------------------------------
-
-  function convert_number_format(p_format in varchar2)
-  return varchar2
-  is
-    v_str      varchar2(100);
-  begin
+  -- convert number format string from ORACLE-style to MS Excel style
+  FUNCTION convert_number_format(p_format IN VARCHAR2)
+  RETURN VARCHAR2
+  IS
+    v_str      VARCHAR2(100);
+  BEGIN
     v_str := apex_plugin_util.replace_substitutions(p_format);
     v_str := upper(v_str);
     --number
@@ -1012,92 +999,101 @@ as
     v_str := replace(v_str,'G',',');
     v_str := replace(v_str,'FM','');
     -- plus/minus sign
-    if instr(v_str,'S') > 0 then
+    IF instr(v_str,'S') > 0 THEN
       v_str := replace(v_str,'S','');
       v_str := '+'||v_str||';-'||v_str;
-    end if;
+    END IF;
 
     --currency
-    v_str := replace(v_str,'L',convert('&quot;'||rtrim(to_char(0,'FML0'),'0')||'&quot;','UTF8'));    
+    v_str := replace(v_str,'L',convert('&quot;'||rtrim(TO_CHAR(0,'FML0'),'0')||'&quot;','UTF8'));    
 
     v_str := regexp_substr(v_str,'.G?[^G]+$');
-    return v_str;
-  end convert_number_format;  
+    RETURN v_str;
+  END convert_number_format;  
   ------------------------------------------------------------------------------
-
-  function get_current_format(p_data_type in binary_integer)
-  return varchar2
-  is
-    v_format    formatmask;
-    v_parameter varchar2(50);
-  begin
-    if p_data_type in (dbms_types.TYPECODE_TIMESTAMP_TZ,181) then
+  -- get current date/time format used in DB session for given date or time type
+  -- this format is used if date/time format in APEX is not defined 
+  FUNCTION get_current_format(p_data_type IN BINARY_INTEGER)
+  RETURN VARCHAR2
+  IS
+    v_format    t_formatmask;
+    v_parameter VARCHAR2(50);
+  BEGIN
+    IF p_data_type IN (dbms_types.typecode_timestamp_tz,181) THEN
        v_parameter := 'NLS_TIMESTAMP_TZ_FORMAT';
-    elsif p_data_type in (dbms_types.TYPECODE_TIMESTAMP_LTZ,231) then
+    ELSIF p_data_type IN (dbms_types.typecode_timestamp_ltz,231) THEN
        v_parameter := 'NLS_TIMESTAMP_TZ_FORMAT';
-    elsif p_data_type in (dbms_types.TYPECODE_TIMESTAMP,180) then
+    ELSIF p_data_type IN (dbms_types.typecode_timestamp,180) THEN
        v_parameter := 'NLS_TIMESTAMP_FORMAT';
-    elsif p_data_type = dbms_types.TYPECODE_DATE then
+    ELSIF p_data_type = dbms_types.typecode_date THEN
        v_parameter := 'NLS_DATE_FORMAT';
-    else
-       return 'dd.mm.yyyy';
-    end if;
+    ELSE
+       RETURN 'dd.mm.yyyy';
+    END IF;
 
     SELECT value
-    into v_format
-    FROM V$NLS_Parameters
+    INTO v_format
+    FROM v$nls_parameters
     WHERE parameter = v_parameter;
 
-    return v_format;
-  end get_current_format;
+    RETURN v_format;
+  END get_current_format;
   ------------------------------------------------------------------------------
-
-  function convert_date_format(p_datatype in varchar2,p_format in varchar2)
-  return varchar2
-  is
-    v_str        varchar2(100);
-    v_24h_format  boolean default true;
-  begin
-    if p_format is null then
-      if p_datatype = 'TIMESTAMP_TZ' then
-        v_str := get_current_format(dbms_types.TYPECODE_TIMESTAMP_TZ);
-      elsif p_datatype = 'TIMESTAMP_LTZ' then
-        v_str := get_current_format(dbms_types.TYPECODE_TIMESTAMP_LTZ);  
-      elsif p_datatype = 'TIMESTAMP' then
-        v_str := get_current_format(dbms_types.TYPECODE_TIMESTAMP);          
-      elsif p_datatype = 'DATE' then
-       v_str := get_current_format(dbms_types.TYPECODE_DATE);
-      else
+  -- convert date format from ORACLE-style to MS Excel Style
+  -- for given date/time datatype 
+  FUNCTION convert_date_format(
+    p_datatype IN VARCHAR2,
+    p_format IN VARCHAR2
+  )
+  RETURN VARCHAR2
+  IS
+    v_str        VARCHAR2(100);
+    v_24h_format  BOOLEAN DEFAULT true;
+  BEGIN
+    IF p_format IS NULL THEN
+      IF p_datatype = 'TIMESTAMP_TZ' THEN
+        v_str := get_current_format(dbms_types.typecode_timestamp_tz);
+      ELSIF p_datatype = 'TIMESTAMP_LTZ' THEN
+        v_str := get_current_format(dbms_types.typecode_timestamp_ltz);  
+      ELSIF p_datatype = 'TIMESTAMP' THEN
+        v_str := get_current_format(dbms_types.typecode_timestamp);          
+      ELSIF p_datatype = 'DATE' THEN
+       v_str := get_current_format(dbms_types.typecode_date);
+      ELSE
         v_str := get_current_format('');
-      end if;
-    else
+      END IF;
+    ELSE
       v_str := p_format;
-    end if;
-    return convert_date_format(p_format => v_str);
-  end convert_date_format;  
+    END IF;
+    RETURN convert_date_format(p_format => v_str);
+  END convert_date_format;  
   ------------------------------------------------------------------------------
-
-  function convert_date_format_js(p_datatype in varchar2, p_format in varchar2)
-  return varchar2
-  is
-    v_str        varchar2(100);
-    v_24h_format  boolean default true;
-  begin
-    if p_format is null then
-      if p_datatype = 'TIMESTAMP_TZ' then
-        v_str := get_current_format(dbms_types.TYPECODE_TIMESTAMP_TZ);
-      elsif p_datatype = 'TIMESTAMP_LTZ' then
-        v_str := get_current_format(dbms_types.TYPECODE_TIMESTAMP_LTZ);  
-      elsif p_datatype = 'TIMESTAMP' then
-        v_str := get_current_format(dbms_types.TYPECODE_TIMESTAMP);          
-      elsif p_datatype = 'DATE' then
-       v_str := get_current_format(dbms_types.TYPECODE_DATE);
-      else
+  -- convert date format from ORACLE-style to format used in JavaScript
+  -- for given date/time datatype   
+  FUNCTION convert_date_format_js(
+    p_datatype IN VARCHAR2, 
+    p_format IN VARCHAR2
+   )
+  RETURN VARCHAR2
+  IS
+    v_str        VARCHAR2(100);
+    v_24h_format  BOOLEAN DEFAULT true;
+  BEGIN
+    IF p_format IS NULL THEN
+      IF p_datatype = 'TIMESTAMP_TZ' THEN
+        v_str := get_current_format(dbms_types.typecode_timestamp_tz);
+      ELSIF p_datatype = 'TIMESTAMP_LTZ' THEN
+        v_str := get_current_format(dbms_types.typecode_timestamp_ltz);  
+      ELSIF p_datatype = 'TIMESTAMP' THEN
+        v_str := get_current_format(dbms_types.typecode_timestamp);          
+      ELSIF p_datatype = 'DATE' THEN
+       v_str := get_current_format(dbms_types.typecode_date);
+      ELSE
         v_str := get_current_format('');
-      end if;
-    else
+      END IF;
+    ELSE
       v_str := p_format;
-    end if;
+    END IF;
 
     v_str := upper(apex_plugin_util.replace_substitutions(v_str));
     --date
@@ -1106,9 +1102,9 @@ as
     v_str := replace(v_str,'MON','MMM');
     v_str := replace(v_str,'R','Y');
     v_str := replace(v_str,'FM','');
-    if instr(v_str,'PM') > 0 then
+    IF instr(v_str,'PM') > 0 THEN
       v_24h_format := false;
-    end if;
+    END IF;
     v_str := replace(v_str,'AM/PM','');
     v_str := replace(v_str,'PM','');
     --time
@@ -1116,287 +1112,318 @@ as
     v_str := replace(v_str,'SS','ss');
     v_str := replace(v_str,'HH24','HH');
     v_str := replace(v_str,'HH12','hh');
-    if not v_24h_format then
+    IF NOT v_24h_format THEN
       v_str := replace(v_str,'HH','hh');
-    end if;
+    END IF;
 
-    return v_str;
-  end convert_date_format_js;
+    RETURN v_str;
+  END convert_date_format_js;
   ------------------------------------------------------------------------------
-
-  function add_font(p_font in t_color,
-                    p_link in varchar2)
-  return binary_integer 
-  is  
+  -- to set a font-color in Excel one need to define a Font 
+  -- add_font function:
+  -- return an index of the Font based on the combination (font-color + has link property)
+  -- create a new Font if Font not exists and return an id
+  FUNCTION add_font(
+    p_font_color IN t_color,
+    p_is_link    IN BOOLEAN 
+  )
+  RETURN BINARY_INTEGER 
+  IS  
    v_index t_font;
-  begin
-    if p_link is not null then
-      v_index := p_font||'L';
-    elsif p_font is not null then
-      v_index := p_font;
-    else 
+  BEGIN
+    IF p_is_link IS NOT NULL THEN
+      v_index := p_font_color||'L';
+    ELSIF p_font_color IS NOT NULL THEN
+      v_index := p_font_color;
+    ELSE 
       raise_application_error(-20001,'Font is null and Link is null!');
-    end if;
+    END IF;
 
-    if not a_font.exists(v_index) then
-      a_font(v_index) := a_font.count + 1;
-      v_fonts_xml := v_fonts_xml||
+    IF NOT g_fonts.EXISTS(v_index) THEN
+      g_fonts(v_index) := g_fonts.count + 1;
+      g_fonts_xml := g_fonts_xml||
         '<font>'||chr(10)||
-        case when p_link is not null then 
+        CASE WHEN p_is_link IS NOT NULL THEN 
         '   <u />'||chr(10)
-        else ''||
+        ELSE ''||
         '   <sz val="11" />'||chr(10)
-        end ||
-        case when p_font is not null then 
-        '   <color rgb="'||ltrim(p_font,'#')||'" />'||chr(10)
-        else -- link        
+        END ||
+        CASE WHEN p_font_color IS NOT NULL THEN 
+        '   <color rgb="'||ltrim(p_font_color,'#')||'" />'||chr(10)
+        ELSE -- link        
         '   <color theme="10" />'||chr(10)
-        end ||
+        END ||
         '   <name val="Calibri" />'||chr(10)||
         '   <family val="2" />'||chr(10)||
         '   <scheme val="minor" />'||
         '</font>'||chr(10);
 
-        return a_font.count + FONTS_CNT - 1; --start with 0
-     else
-       return a_font(v_index) + FONTS_CNT - 1;
-     end if;
-  end add_font;
+        RETURN g_fonts.count + FONTS_CNT - 1; --start with 0
+     ELSE
+       RETURN g_fonts(v_index) + FONTS_CNT - 1;
+     END IF;
+  END add_font;
   ------------------------------------------------------------------------------
-
-  function  add_back_color(p_back in t_color)
-  return binary_integer 
-  is
-  begin
-    if not a_back_color.exists(p_back) then
-      a_back_color(p_back) := a_back_color.count + 1;
-      v_back_xml := v_back_xml||
+  -- to set a background-color in Excel one need create a Fill 
+  -- add_fill function:
+  -- return an index of the Fill based on the background-color
+  -- create a new Fill if Fill not exists and return an id  
+  FUNCTION  add_fill(p_back_color IN t_color)
+  RETURN BINARY_INTEGER 
+  IS
+  BEGIN
+    IF NOT g_fills.EXISTS(p_back_color) THEN
+      g_fills(p_back_color) := g_fills.count + 1;
+      g_back_xml := g_back_xml||
         '<fill>'||chr(10)||
         '   <patternFill patternType="solid">'||chr(10)||
-        '     <fgColor rgb="'||ltrim(p_back,'#')||'" />'||chr(10)||
+        '     <fgColor rgb="'||ltrim(p_back_color,'#')||'" />'||chr(10)||
         '     <bgColor indexed="64" />'||chr(10)||
         '   </patternFill>'||
         '</fill>'||chr(10);
 
-        return  a_back_color.count + DEFAULT_FILL_CNT - 1; --start with 0
-     else
-       return a_back_color(p_back) + DEFAULT_FILL_CNT - 1;
-     end if;
-  end add_back_color;
-  ------------------------------------------------------------------------------
-  function  add_format_mask(p_mask in varchar2)
-  return binary_integer 
-  is
-  begin
-    if not a_format_mask_list.exists(p_mask) then
-      a_format_mask_list(p_mask) := a_format_mask_list.count + 1;
+        RETURN  g_fills.count + DEFAULT_FILL_CNT - 1; --start with 0
+     ELSE
+       RETURN g_fills(p_back_color) + DEFAULT_FILL_CNT - 1;
+     END IF;
+  END add_fill;
+  ------------------------------------------------------------------------------  
+  -- to set a Number-Format in Excel one need create them 
+  -- add_number_format function:
+  -- return an index of the Number-Format based on the format mask
+  -- create a new Number-Format if Number-Format not exists and return an id  
+  FUNCTION  add_number_format(p_mask IN VARCHAR2)
+  RETURN BINARY_INTEGER 
+  IS
+  BEGIN
+    IF NOT g_number_formats.EXISTS(p_mask) THEN
+      g_number_formats(p_mask) := g_number_formats.count + 1;
       v_format_mask_xml := v_format_mask_xml||
-        '<numFmt numFmtId="'||(FORMAT_MASK_START_WITH + a_format_mask_list.count)||'" formatCode="'||p_mask||'"/>'||chr(10);
-        return  a_format_mask_list.count + FORMAT_MASK_CNT + FORMAT_MASK_START_WITH - 1; 
-     else
-       return a_format_mask_list(p_mask) + FORMAT_MASK_CNT + FORMAT_MASK_START_WITH - 1;
-     end if;
-  end add_format_mask;  
+        '<numFmt numFmtId="'||(FORMAT_MASK_START_WITH + g_number_formats.count)||'" formatCode="'||p_mask||'"/>'||chr(10);
+        RETURN  g_number_formats.count + FORMAT_MASK_CNT + FORMAT_MASK_START_WITH - 1; 
+     ELSE
+       RETURN g_number_formats(p_mask) + FORMAT_MASK_CNT + FORMAT_MASK_START_WITH - 1;
+     END IF;
+  END add_number_format;  
   ------------------------------------------------------------------------------
-  function get_font_colors_xml 
-  return clob
-  is
-  begin
-    return to_clob('<fonts count="'||(a_font.count + FONTS_CNT)||'" x14ac:knownFonts="1">'||
+  -- build a Fonts: XML-list of Font-elements
+  FUNCTION get_fonts_xml 
+  RETURN CLOB
+  IS
+  BEGIN
+    RETURN to_clob('<fonts count="'||(g_fonts.count + FONTS_CNT)||'" x14ac:knownFonts="1">'||
                    DEFAULT_FONT||chr(10)||
                    BOLD_FONT||chr(10)||
                    UNDERLINE_FONT||chr(10)||
-                   v_fonts_xml||chr(10)||
+                   g_fonts_xml||chr(10)||
                    '</fonts>'||chr(10));
-  end get_font_colors_xml;  
+  END get_fonts_xml;  
   ------------------------------------------------------------------------------
-  function get_back_colors_xml 
-  return clob
-  is
-  begin
-    return to_clob('<fills count="'||(a_back_color.count + DEFAULT_FILL_CNT)||'">'||
-                   DEFAULT_FILL||
-                   v_back_xml||chr(10)||
+  -- build a Fills: XML-list of Fill-elements
+  FUNCTION get_fills_xml 
+  RETURN CLOB
+  IS
+  BEGIN
+    RETURN to_clob('<fills count="'||(g_fills.count + DEFAULT_FILL_CNT)||'">'||
+                   default_fill||
+                   g_back_xml||chr(10)||
                    '</fills>'||chr(10));
-  end get_back_colors_xml;  
-  ------------------------------------------------------------------------------  
-  function get_format_mask_xml 
-  return clob
-  is
-  begin
-    return to_clob('<numFmts count="'||(a_format_mask_list.count + FORMAT_MASK_CNT)||'">'||
+  END get_fills_xml;  
+  ------------------------------------------------------------------------------ 
+  -- build a numFmts: XML-list of numFmt-elements
+  FUNCTION get_numFmts_xml 
+  RETURN CLOB
+  IS
+  BEGIN
+    RETURN to_clob('<numFmts count="'||(g_number_formats.count + FORMAT_MASK_CNT)||'">'||
                    FORMAT_MASK||
                    v_format_mask_xml||chr(10)||
                    '</numFmts>'||chr(10));
-  end get_format_mask_xml;  
+  END get_numFmts_xml;  
   ------------------------------------------------------------------------------  
-  function get_cellXfs_xml
-  return clob
-  is
-  begin
-    return to_clob('<cellXfs count="'||(a_styles.count + DEFAULT_STYLES_CNT)||'">'||
+  -- build a cellXfs: XML-list of cell styles
+  FUNCTION get_cellxfs_xml
+  RETURN CLOB
+  IS
+  BEGIN
+    RETURN to_clob('<cellXfs count="'||(g_styles.count + default_styles_cnt)||'">'||
                    DEFAULT_STYLE||chr(10)||
                    v_styles_xml||chr(10)||
                    '</cellXfs>'||chr(10));
-  end get_cellXfs_xml;
-  ------------------------------------------------------------------------------  
-  function get_num_fmt_id(p_data_type   in varchar2,
-                          p_format_mask in varchar2)
-  return binary_integer
-  is
-    v_format_mask varchar2(100);    
-  begin
+  END get_cellxfs_xml;
+  ------------------------------------------------------------------------------ 
+  -- get an index of existent Numer- or Date- Format
+  -- create the new Format if not exist 
+  FUNCTION get_num_fmt_id(p_data_type   IN VARCHAR2,
+                          p_format_mask IN VARCHAR2)
+  RETURN BINARY_INTEGER
+  IS
+    v_format_mask VARCHAR2(100);    
+  BEGIN
       v_format_mask := apex_plugin_util.replace_substitutions(p_format_mask);
-      if p_data_type = 'NUMBER' then 
-       if v_format_mask is null then
-          return 0;
-        else
-          return add_format_mask(convert_number_format(v_format_mask)); 
-        end if;
-      elsif p_data_type = 'DATE' then 
-        if v_format_mask is null then
-          return FORMAT_MASK_START_WITH;  -- default date format
-        else
-          return add_format_mask(convert_date_format(v_format_mask)); 
-        end if;
-      else
-        return 2;  -- default  string format
-      end if;  
+      IF p_data_type = 'NUMBER' THEN 
+       IF v_format_mask IS NULL THEN
+          RETURN 0; -- default number format in Excel
+        ELSE
+          RETURN add_number_format(convert_number_format(v_format_mask)); 
+        END IF;
+      ELSIF p_data_type = 'DATE' THEN 
+        IF v_format_mask IS NULL THEN
+          RETURN FORMAT_MASK_START_WITH;  -- default date format
+        ELSE
+          RETURN add_number_format(convert_date_format(v_format_mask)); 
+        END IF;
+      ELSE
+        RETURN 2;  -- default string format in Excel
+      END IF;  
 
-  end get_num_fmt_id;  
+  END get_num_fmt_id;  
   ------------------------------------------------------------------------------  
   -- get style_id for existent styles or 
   -- add new style and return style_id
-  function get_style_id(p_font        in t_color,
-                        p_back        in t_color,
-                        p_data_type   in varchar2,
-                        p_format_mask in varchar2,
-                        p_align       in varchar2,
-                        p_link        in varchar2)
-  return binary_integer
-  is
+  FUNCTION get_style_id(
+    p_font_color  IN t_color,
+    p_back_color  IN t_color,
+    p_data_type   IN VARCHAR2,
+    p_format_mask IN VARCHAR2,
+    p_align       IN VARCHAR2,
+    p_is_link     IN BOOLEAN
+  )
+  RETURN BINARY_INTEGER
+  IS
     v_style           t_style_string;
-    v_font_color_id   binary_integer;
-    v_back_color_id   binary_integer;
+    v_font_color_id   BINARY_INTEGER;
+    v_back_color_id   BINARY_INTEGER;
     v_style_xml       t_large_varchar2;
-  begin
-    v_style := nvl(p_font,'      ')||nvl(p_back,'       ')||p_data_type||p_format_mask||p_align||
-      case when p_link is not null then 'LINK' else '' end;
-    --   
-    if a_styles.exists(v_style) then
-      return a_styles(v_style)   - 1 + DEFAULT_STYLES_CNT;
-    else
-      a_styles(v_style) := a_styles.count + 1;
+  BEGIN
+    -- generate unique style name based on cell format
+    v_style := nvl(p_font_color,'      ')
+       ||nvl(p_back_color,'       ')
+       ||p_data_type
+       ||p_format_mask
+       ||p_align
+       ||CASE WHEN p_is_link THEN 'LINK' ELSE '' END;
+       
+    IF g_styles.EXISTS(v_style) THEN
+      RETURN g_styles(v_style)   - 1 + default_styles_cnt;
+    ELSE
+      g_styles(v_style) := g_styles.count + 1;
 
-      if p_link is null then
+      IF p_is_link THEN
         v_style_xml := '<xf borderId="0" xfId="0" ';
-      else
+      ELSE
         v_style_xml := '<xf borderId="0" xfId="1" ';
-      end if;
+      END IF;
       v_style_xml := v_style_xml||replace(' numFmtId="#FMTID#" ','#FMTID#',get_num_fmt_id(p_data_type,p_format_mask));
 
-      if p_font is not null or p_link is not null then
-        v_font_color_id := add_font(p_font,p_link);
+      IF p_font_color IS NOT NULL OR p_is_link THEN
+        v_font_color_id := add_font(p_font_color,p_is_link);
         v_style_xml := v_style_xml||' fontId="'||v_font_color_id||'"  applyFont="1" ';
-      else
+      ELSE
         v_style_xml := v_style_xml||' fontId="0" '; --default font
-      end if;
+      END IF;
 
-      if p_back is not null then
-        v_back_color_id := add_back_color(p_back);
+      IF p_back_color IS NOT NULL THEN
+        v_back_color_id := add_fill(p_back_color);
         v_style_xml := v_style_xml||' fillId="'||v_back_color_id||'"  applyFill="1" ';
-      else
+      ELSE
         v_style_xml := v_style_xml||' fillId="0" '; --default fill 
-      end if;
+      END IF;
 
       v_style_xml := v_style_xml||'>'||chr(10);
       v_style_xml := v_style_xml||'<alignment wrapText="1"';
-      if p_align is not null then
+      IF p_align IS NOT NULL THEN
         v_style_xml := v_style_xml||' horizontal="'||lower(p_align)||'" ';
-      end if;
+      END IF;
       v_style_xml := v_style_xml||'/>'||chr(10);
 
-      v_style_xml := v_style_xml||'</xf>'||chr(10);      
+      v_style_xml := v_style_xml||'</xf>'||chr(10);    
       v_styles_xml := v_styles_xml||to_clob(v_style_xml);     
 
-      return a_styles.count  - 1 + DEFAULT_STYLES_CNT;
-    end if;  
+      RETURN g_styles.count  - 1 + DEFAULT_STYLES_CNT;
+    END IF;  
 
-  end get_style_id;
+  END get_style_id;
   ------------------------------------------------------------------------------  
-  -- get style_id for existent styles or 
-  -- add new style and return style_id
-  function get_aggregate_style_id(p_font        in t_color,                               
-                                  p_back        in t_color,
-                                  p_data_type   in varchar2,
-                                  p_format_mask in varchar2)
-  return binary_integer
-  is
+  -- analog of get_style_id for aggregate functions of Interactive Report
+  FUNCTION get_aggregate_style_id(
+    p_font        IN t_color,                               
+    p_back        IN t_color,
+    p_data_type   IN VARCHAR2,
+    p_format_mask IN VARCHAR2
+  )
+  RETURN BINARY_INTEGER
+  IS
     v_style           t_style_string;
     v_style_xml       t_large_varchar2;
-    v_num_fmt_id        binary_integer;
-  begin
+    v_num_fmt_id      BINARY_INTEGER;
+  BEGIN
+    -- generate unique style name based on cell format
     v_style := nvl(p_font,'      ')||nvl(p_back,'       ')||p_data_type||p_format_mask||'AGGREGATE';
     --   
-    if a_styles.exists(v_style) then
-      return a_styles(v_style)  - 1 + DEFAULT_STYLES_CNT;
-    else
-      a_styles(v_style) := a_styles.count + 1;
+    IF g_styles.exists(v_style) THEN
+      RETURN g_styles(v_style)  - 1 + DEFAULT_STYLES_CNT;
+    ELSE
+      g_styles(v_style) := g_styles.count + 1;
       v_style_xml  := replace(AGGREGATE_STYLE,'#FMTID#',get_num_fmt_id(p_data_type,p_format_mask)) ||chr(10);      
       v_styles_xml := v_styles_xml||v_style_xml;      
-      return a_styles.count  - 1 + DEFAULT_STYLES_CNT;
-    end if;  
-
-  end get_aggregate_style_id;  
+      RETURN g_styles.count  - 1 + DEFAULT_STYLES_CNT;
+    END IF;  
+  END get_aggregate_style_id;  
   ------------------------------------------------------------------------------
-  function get_header_style_id(p_back        in t_color default BACK_COLOR,
-                               p_align       in varchar2,
-                               p_border      in boolean default false)
-  return binary_integer
-  is
+  -- analog of get_style_id for report headers
+  FUNCTION get_header_style_id(
+    p_back        IN t_color DEFAULT BACK_COLOR,
+    p_align       IN VARCHAR2,
+    p_border      IN BOOLEAN DEFAULT FALSE
+  )
+  RETURN BINARY_INTEGER
+  IS
     v_style             t_style_string;
     v_style_xml         t_large_varchar2;
-    v_num_fmt_id        binary_integer;
-    v_back_color_id     binary_integer;
-  begin
+    v_num_fmt_id        BINARY_INTEGER;
+    v_fill_id           BINARY_INTEGER;
+  BEGIN
+    -- generate unique style name based on cell format
     v_style := '      '||nvl(p_back,'       ')||'CHARHEADER'||p_align;
     --   
-    if a_styles.exists(v_style) then
-      return a_styles(v_style)  - 1 + DEFAULT_STYLES_CNT;
-    else
-      a_styles(v_style) := a_styles.count + 1;
+    IF g_styles.exists(v_style) THEN
+      RETURN g_styles(v_style)  - 1 + DEFAULT_STYLES_CNT;
+    ELSE
+      g_styles(v_style) := g_styles.count + 1;
 
-      if p_back is not null then
-        v_back_color_id := add_back_color(p_back);
-        v_style_xml := replace(HEADER_STYLE,'#FILL#',' fillId="'||v_back_color_id||'"  applyFill="1" ' );
-      else
+      IF p_back IS NOT NULL THEN
+        v_fill_id := add_fill(p_back);
+        v_style_xml := replace(HEADER_STYLE,'#FILL#',' fillId="'||v_fill_id||'"  applyFill="1" ' );
+      ELSE
         v_style_xml := replace(HEADER_STYLE,'#FILL#',' fillId="0" '); --default fill 
-      end if;      
+      END IF;      
       v_style_xml  := replace(v_style_xml,'#ALIGN#',lower(p_align))||chr(10);
       v_styles_xml := v_styles_xml||v_style_xml;      
-      return a_styles.count  - 1 + DEFAULT_STYLES_CNT;
-    end if;  
-
-  end get_header_style_id;    
+      RETURN g_styles.count  - 1 + DEFAULT_STYLES_CNT;
+    END IF;  
+  END get_header_style_id;    
   ------------------------------------------------------------------------------
+  -- build a final XML containing all styles  
+  FUNCTION  get_styles_xml
+  RETURN CLOB
+  IS
+    v_template CLOB;
+  BEGIN
+     v_template := replace(t_style_template,'#FORMAT_MASKS#',get_numfmts_xml);     
+     v_template := replace(v_template,'#FONTS#',get_fonts_xml);
+     v_template := replace(v_template,'#FILLS#',get_fills_xml);
+     v_template := replace(v_template,'#STYLES#',get_cellxfs_xml);
 
-  function  get_styles_xml
-  return clob
-  is
-    v_template clob;
-  begin
-     v_template := replace(t_style_template,'#FORMAT_MASKS#',get_format_mask_xml);     
-     v_template := replace(v_template,'#FONTS#',get_font_colors_xml);
-     v_template := replace(v_template,'#FILLS#',get_back_colors_xml);
-     v_template := replace(v_template,'#STYLES#',get_cellXfs_xml);
-
-     return v_template;
-  end get_styles_xml;  
+     RETURN v_template;
+  END get_styles_xml;  
   ------------------------------------------------------------------------------
-
-  FUNCTION get_cell_name(p_col IN binary_integer,
-                         p_row IN binary_integer)
-  RETURN varchar2
+  -- get cell name in Excel Format (like A11 ob B5)
+  FUNCTION get_cell_name(
+    p_col IN BINARY_INTEGER,
+    p_row IN BINARY_INTEGER
+  )
+  RETURN VARCHAR2
   IS   
   BEGIN
   /*
@@ -1415,371 +1442,409 @@ as
                 ELSE
                    CHR (64 + p_col)
              END||p_row;
-  end get_cell_name;
+  END get_cell_name;
   ----------------------------------------------------------- 
-
-  function get_column_names(p_column_alias in apex_application_page_ir_col.column_alias%type)
-  return APEX_APPLICATION_PAGE_IR_COL.report_label%TYPE
-  is
-  begin
+  FUNCTION get_column_header_label(p_column_alias IN apex_application_page_ir_col.column_alias%TYPE)
+  RETURN apex_application_page_ir_col.report_label%TYPE
+  IS
+  BEGIN
     -- https://github.com/glebovpavel/IR_to_MSExcel/issues/9
     -- Thanks HeavyS 
-    return  apex_plugin_util.replace_substitutions(p_value => l_report.column_names(p_column_alias));
-  exception
-    when others then
-       raise_application_error(-20001,'get_column_names: p_column_alias='||p_column_alias||' '||SQLERRM);
-  end get_column_names;
+    RETURN  apex_plugin_util.replace_substitutions(p_value => l_report.column_header_labels(p_column_alias));
+  EXCEPTION
+    WHEN OTHERS THEN
+       raise_application_error(-20001,'get_column_header_label: p_column_alias='||p_column_alias||' '||SQLERRM);
+  END get_column_header_label;
   ------------------------------------------------------------------------------
-  function get_col_format_mask(p_column_alias in apex_application_page_ir_col.column_alias%type)
-  return formatmask
-  is
-  begin
-    return apex_plugin_util.replace_substitutions(
+  FUNCTION get_col_format_mask(p_column_alias IN apex_application_page_ir_col.column_alias%TYPE)
+  RETURN t_formatmask
+  IS
+  BEGIN
+    RETURN apex_plugin_util.replace_substitutions(
       p_value => replace(l_report.col_format_mask(p_column_alias),'"',''),
       p_escape => false);
-  exception
-    when others then
+  EXCEPTION
+    WHEN OTHERS THEN
        raise_application_error(-20001,'get_col_format_mask: p_column_alias='||p_column_alias||' '||SQLERRM);
-  end get_col_format_mask;
+  END get_col_format_mask;
   ------------------------------------------------------------------------------
-  function get_col_link(p_column_alias in apex_application_page_ir_col.column_alias%type)
-  return formatmask
-  is
-  begin
-    return replace(l_report.column_link(p_column_alias),'"','');
-  exception
-    when others then
+  FUNCTION get_col_link(p_column_alias IN apex_application_page_ir_col.column_alias%TYPE)
+  RETURN t_formatmask
+  IS
+  BEGIN
+    RETURN replace(l_report.column_link(p_column_alias),'"','');
+  EXCEPTION
+    WHEN OTHERS THEN
        raise_application_error(-20001,'get_col_link: p_column_alias='||p_column_alias||' '||SQLERRM);
-  end get_col_link;
+  END get_col_link;
   ------------------------------------------------------------------------------
-  procedure set_col_format_mask(p_column_alias in apex_application_page_ir_col.column_alias%type,
-                                p_format_mask  in formatmask)
-  is
-  begin
+  PROCEDURE set_col_format_mask(
+    p_column_alias IN apex_application_page_ir_col.column_alias%TYPE,
+    p_format_mask  IN t_formatmask
+  )
+  IS
+  BEGIN
       l_report.col_format_mask(p_column_alias) := p_format_mask;
-  exception
-    when others then
-       raise_application_error(-20001,'set_col_format_mask: p_column_alias='||p_column_alias||' '||SQLERRM);
-  end set_col_format_mask;
+  EXCEPTION
+    WHEN OTHERS THEN
+       raise_application_error(-20001,'set_col_format_mask: p_column_alias='||p_column_alias||' '||sqlerrm);
+  END set_col_format_mask;
   ------------------------------------------------------------------------------
-  function get_header_alignment(p_column_alias in apex_application_page_ir_col.column_alias%type)
-  return APEX_APPLICATION_PAGE_IR_COL.heading_alignment%TYPE
-  is
-  begin
-    return l_report.header_alignment(p_column_alias);
-  exception
-    when others then
-       raise_application_error(-20001,'get_header_alignment: p_column_alias='||p_column_alias||' '||SQLERRM);
-  end get_header_alignment;
+  FUNCTION get_header_alignment(p_column_alias IN apex_application_page_ir_col.column_alias%TYPE)
+  RETURN apex_application_page_ir_col.heading_alignment%TYPE
+  IS
+  BEGIN
+    RETURN l_report.header_alignment(p_column_alias);
+  EXCEPTION
+    WHEN OTHERS THEN
+       raise_application_error(-20001,'get_header_alignment: p_column_alias='||p_column_alias||' '||sqlerrm);
+  END get_header_alignment;
   ------------------------------------------------------------------------------
-  function get_column_alignment(p_column_alias in apex_application_page_ir_col.column_alias%type)
-  return apex_application_page_ir_col.column_alignment%type
-  is
-  begin
-    return l_report.column_alignment(p_column_alias);
-  exception
-    when others then
-       raise_application_error(-20001,'get_column_alignment: p_column_alias='||p_column_alias||' '||SQLERRM);
-  end get_column_alignment;
+  FUNCTION get_column_alignment(p_column_alias IN apex_application_page_ir_col.column_alias%TYPE)
+  RETURN apex_application_page_ir_col.column_alignment%TYPE
+  IS
+  BEGIN
+    RETURN l_report.column_alignment(p_column_alias);
+  EXCEPTION
+    WHEN OTHERS THEN
+       raise_application_error(-20001,'get_column_alignment: p_column_alias='||p_column_alias||' '||sqlerrm);
+  END get_column_alignment;
   ------------------------------------------------------------------------------
-  function get_column_types(p_num in binary_integer)
-  return apex_application_page_ir_col.column_type%type
-  is
-  begin
-    return l_report.column_types(p_num);
-  exception
-    when others then
-       raise_application_error(-20001,'get_column_types: p_num='||p_num||' '||SQLERRM);
-  END get_column_types;
+  FUNCTION get_column_data_type(p_num IN BINARY_INTEGER)
+  RETURN apex_application_page_ir_col.column_type%TYPE
+  IS
+  BEGIN
+    RETURN l_report.column_data_types(p_num);
+  EXCEPTION
+    WHEN OTHERS THEN
+       raise_application_error(-20001,'get_column_data_type: p_num='||p_num||' '||sqlerrm);
+  END get_column_data_type;
   ------------------------------------------------------------------------------  
-  function get_column_alias(p_num in binary_integer)
-  return varchar2
-  is
-  begin
-    return l_report.displayed_columns(p_num);
-  exception
-    when others then
-       raise_application_error(-20001,'get_column_alias: p_num='||p_num||' '||SQLERRM);
+  FUNCTION get_column_alias(p_num IN BINARY_INTEGER)
+  RETURN VARCHAR2
+  IS
+  BEGIN
+    RETURN l_report.displayed_columns(p_num);
+  EXCEPTION
+    WHEN OTHERS THEN
+       raise_application_error(-20001,'get_column_alias: p_num='||p_num||' '||sqlerrm);
   END get_column_alias;
   ------------------------------------------------------------------------------
-  FUNCTION get_column_alias_sql(p_num IN binary_integer -- column number in sql-query
-                               )
-  return varchar2
-  is
+  -- get column  alias by column number from SQL-Query 
+  FUNCTION get_column_alias_sql(p_num IN BINARY_INTEGER) -- column number in sql-query                               
+  RETURN VARCHAR2
+  IS
   BEGIN
-    return l_report.displayed_columns(p_num - l_report.start_with + 1);
-  exception
-    WHEN others THEN
-       raise_application_error(-20001,'get_column_alias_sql: p_num='||p_num||' '||SQLERRM);
+    RETURN l_report.displayed_columns(p_num - l_report.start_with + 1);
+  EXCEPTION
+    WHEN OTHERS THEN
+       raise_application_error(-20001,'get_column_alias_sql: p_num='||p_num||' '||sqlerrm);
   END get_column_alias_sql;
   ------------------------------------------------------------------------------
-  function get_current_row(p_current_row in apex_application_global.vc_arr2,
-                           p_id          in binary_integer)
-  return largevarchar2
-  is
-  begin
-    return p_current_row(p_id);
-  exception
-    when others then
-       raise_application_error(-20001,'get_current_row: string: p_id='||p_id||' '||SQLERRM);
-  end get_current_row; 
+  -- get value from varchar2-table by position 
+  FUNCTION get_current_row(
+    p_current_row    IN apex_application_global.vc_arr2,
+    p_position       IN BINARY_INTEGER
+  )
+  RETURN largevarchar2
+  IS
+  BEGIN
+    RETURN p_current_row(p_position);
+  EXCEPTION
+    WHEN OTHERS THEN
+       raise_application_error(-20001,'get_current_row: string: p_id='||p_position||' '||sqlerrm);
+  END get_current_row; 
   ------------------------------------------------------------------------------
-  function get_current_row(p_current_row in t_date_table,
-                           p_id          in binary_integer)
-  return date
-  is
-  begin
-    if p_current_row.exists(p_id) then
-      return p_current_row(p_id);
-    else
-      return null;
-    end if;
-  exception
-    when others then
-       raise_application_error(-20001,'get_current_row:date: p_id='||p_id||' '||SQLERRM);
-  end get_current_row;   
+  -- get value from date2-table by position 
+  FUNCTION get_current_row(
+    p_current_row IN t_date_table,
+    p_position    IN BINARY_INTEGER
+  )
+  RETURN DATE
+  IS
+  BEGIN
+    IF p_current_row.EXISTS(p_position) THEN
+      RETURN p_current_row(p_position);
+    ELSE
+      RETURN NULL;
+    END IF;
+  EXCEPTION
+    WHEN OTHERS THEN
+       raise_application_error(-20001,'get_current_row:date: p_id='||p_position||' '||sqlerrm);
+  END get_current_row;   
   ------------------------------------------------------------------------------
-  function get_current_row(p_current_row in t_number_table,
-                           p_id          in binary_integer)
-  return number
-  is
-  begin
-    if p_current_row.exists(p_id) then
-      return p_current_row(p_id);
-    else
-      return null;
-    end if;
-  exception
-    when others then
-       raise_application_error(-20001,'get_current_row:number: p_id='||p_id||' '||SQLERRM);
-  end get_current_row;   
+  -- get value from numbers-table by position 
+  FUNCTION get_current_row(
+    p_current_row IN t_number_table,
+    p_position    IN BINARY_INTEGER
+  )
+  RETURN NUMBER
+  IS
+  BEGIN
+    IF p_current_row.EXISTS(p_position) THEN
+      RETURN p_current_row(p_position);
+    ELSE
+      RETURN NULL;
+    END IF;
+  EXCEPTION
+    WHEN OTHERS THEN
+       raise_application_error(-20001,'get_current_row:number: p_id='||p_position||' '||sqlerrm);
+  END get_current_row;   
   ------------------------------------------------------------------------------
+  -- replace multiple occurences of ":" to the one
   -- :::: -> :
-  function rr(p_str in varchar2)
-  return varchar2
-  is 
-  begin
-    return ltrim(rtrim(regexp_replace(p_str,'[:]+',':'),':'),':');
-  end;
+  FUNCTION rr(p_str IN VARCHAR2)
+  RETURN VARCHAR2
+  IS 
+  BEGIN
+    RETURN ltrim(rtrim(regexp_replace(p_str,'[:]+',':'),':'),':');
+  END rr;
   ------------------------------------------------------------------------------   
-
-  function get_xmlval(p_str in varchar2)
-  return varchar2
-  is
+  -- remove HTML-tags (only simple cases are supported),
+  -- special invisible characters like \t, \n ets
+  -- and conver them to the xml
+  FUNCTION get_xmlval(p_str IN VARCHAR2)
+  RETURN VARCHAR2
+  IS
     v_tmp largevarchar2;
-  begin
+  BEGIN
     -- p_str can be encoded html-string 
     -- wee need first convert to text
-    v_tmp := REGEXP_REPLACE(p_str,'<(BR)\s*/*>',chr(13)||chr(10),1,0,'i');
-    v_tmp := REGEXP_REPLACE(v_tmp,'<[^<>]+>',' ',1,0,'i');
+    v_tmp := regexp_replace(p_str,'<(BR)\s*/*>',chr(13)||chr(10),1,0,'i');
+    v_tmp := regexp_replace(v_tmp,'<[^<>]+>',' ',1,0,'i');
     -- https://community.oracle.com/message/14074217#14074217
     v_tmp := regexp_replace(v_tmp, '[^[:print:]'||chr(13)||chr(10)||chr(9)||']', ' ');
-    v_tmp := UTL_I18N.UNESCAPE_REFERENCE(v_tmp); 
+    v_tmp := utl_i18n.unescape_reference(v_tmp); 
     -- and finally encode them
     --v_tmp := substr(v_tmp,1,32000);        
     v_tmp := dbms_xmlgen.convert( substr( v_tmp, 1, 32000 ) );
 
-    return v_tmp;
-  end get_xmlval;  
+    RETURN v_tmp;
+  END get_xmlval;  
   ------------------------------------------------------------------------------
-
-  function intersect_arrays(p_one IN APEX_APPLICATION_GLOBAL.VC_ARR2,
-                            p_two IN APEX_APPLICATION_GLOBAL.VC_ARR2)
-  return APEX_APPLICATION_GLOBAL.VC_ARR2
-  is    
-    v_ret APEX_APPLICATION_GLOBAL.VC_ARR2;
-  begin    
-    for i in 1..p_one.count loop
-       for b in 1..p_two.count loop
-         if p_one(i) = p_two(b) then
+  FUNCTION intersect_arrays(p_one IN apex_application_global.vc_arr2,
+                            p_two IN apex_application_global.vc_arr2)
+  RETURN apex_application_global.vc_arr2
+  IS    
+    v_ret apex_application_global.vc_arr2;
+  BEGIN    
+    FOR i IN 1..p_one.count LOOP
+       FOR b IN 1..p_two.count LOOP
+         IF p_one(i) = p_two(b) THEN
             v_ret(v_ret.count + 1) := p_one(i);
-           exit;
-         end if;
-       end loop;        
-    end loop;
+           EXIT;
+         END IF;
+       END LOOP;        
+    END LOOP;
 
-    return v_ret;
-  end intersect_arrays;
+    RETURN v_ret;
+  END intersect_arrays;
   ------------------------------------------------------------------------------
-  function get_query_column_list
-  return APEX_APPLICATION_GLOBAL.VC_ARR2
-  is
+  -- get list of column-aliases from 
+  -- report's SQL-Query
+  FUNCTION get_query_column_list
+  RETURN apex_application_global.vc_arr2
+  IS
    v_cur         INTEGER; 
    v_colls_count BINARY_INTEGER; 
-   v_columns     APEX_APPLICATION_GLOBAL.VC_ARR2;
-   v_desc_tab    DBMS_SQL.DESC_TAB2;
+   v_columns     apex_application_global.vc_arr2;
+   v_desc_tab    dbms_sql.desc_tab2;
    v_sql         largevarchar2;   
-  begin
+  BEGIN
     v_cur := dbms_sql.open_cursor(2);     
     v_sql := apex_plugin_util.replace_substitutions(p_value => l_report.report.sql_query,p_escape => false);
     log(v_sql);
     dbms_sql.parse(v_cur,v_sql,dbms_sql.native);     
     dbms_sql.describe_columns2(v_cur,v_colls_count,v_desc_tab);    
-    for i in 1..v_colls_count loop
-         if upper(v_desc_tab(i).col_name) != 'APXWS_ROW_PK' then --skip internal primary key if need
+    FOR i IN 1..v_colls_count LOOP
+         IF upper(v_desc_tab(i).col_name) != 'APXWS_ROW_PK' THEN --skip internal primary key if need
            v_columns(v_columns.count + 1) := v_desc_tab(i).col_name;
            log('Query column = '||v_desc_tab(i).col_name);
-         end if;
-    end loop;                 
+         END IF;
+    END LOOP;                 
    dbms_sql.close_cursor(v_cur);   
-   return v_columns;
-  exception
-    when others then
-      if dbms_sql.is_open(v_cur) then
+   RETURN v_columns;
+  EXCEPTION
+    WHEN OTHERS THEN
+      IF dbms_sql.is_open(v_cur) THEN
         dbms_sql.close_cursor(v_cur);
-      end if;  
-      raise_application_error(-20001,'get_query_column_list: '||SQLERRM);
-  end get_query_column_list;  
+      END IF;  
+      raise_application_error(-20001,'get_query_column_list: '||sqlerrm);
+  END get_query_column_list;  
   ------------------------------------------------------------------------------
-  function get_cols_as_table(p_delimetered_column_list     in varchar2,
-                             p_displayed_nonbreak_columns  in apex_application_global.vc_arr2)
-  return apex_application_global.vc_arr2
-  is
-  begin
-    return intersect_arrays(APEX_UTIL.STRING_TO_TABLE(rr(p_delimetered_column_list)),p_displayed_nonbreak_columns);
-  end get_cols_as_table;
-
+  -- filter p_delimetered_column_list column list: leave only displayed nonbreak columns here
+  -- convert the result to pl/sql table
+  FUNCTION get_cols_as_table(
+    p_delimetered_column_list     IN VARCHAR2,
+    p_displayed_nonbreak_columns  IN apex_application_global.vc_arr2
+  )
+  RETURN apex_application_global.vc_arr2
+  IS
+  BEGIN
+    RETURN intersect_arrays(apex_util.string_to_table(rr(p_delimetered_column_list)),p_displayed_nonbreak_columns);
+  END get_cols_as_table;
   ------------------------------------------------------------------------------
-  function get_hidden_columns_cnt(p_app_id       in number,
-                                  p_page_id      in number,
-                                  p_region_id    in number,
-                                  p_report_id    in number)
-  return number
+  --get amount of hidden colmns
+  FUNCTION get_hidden_columns_cnt(
+    p_app_id       IN NUMBER,
+    p_page_id      IN NUMBER,
+    p_region_id    IN NUMBER,
+    p_report_id    IN NUMBER
+  )
+  RETURN NUMBER
   -- J.P.Lourens 9-Oct-16 added p_region_id as input variable, and added v_get_query_column_list
-  is 
-   v_hidden_columns  number default 0;
-   v_hidden_computation_columns  number default 0;
-   v_get_query_column_list varchar2(32676);
-  begin
+  IS 
+   v_hidden_columns  NUMBER DEFAULT 0;
+   v_hidden_computation_columns  NUMBER DEFAULT 0;
+   v_get_query_column_list VARCHAR2(32676);
+  BEGIN
 
       v_get_query_column_list := apex_util.table_to_string(get_query_column_list);
 
-      select count(*)
-      into v_hidden_columns
-      from APEX_APPLICATION_PAGE_IR_COL
-     where application_id = p_app_id
+      SELECT COUNT(*)
+      INTO v_hidden_columns
+      FROM apex_application_page_ir_col
+     WHERE application_id = p_app_id
        AND page_id = p_page_id
        -- J.P.Lourens 9-Oct-16 added p_region_id to ensure correct results when having multiple IR on a page
-       and region_id = p_region_id
-       and (display_text_as = 'HIDDEN'
+       AND region_id = p_region_id
+       AND (display_text_as = 'HIDDEN'
        -- J.P.Lourens 9-Oct-2016 modified get_hidden_columns_cnt to INCLUDE columns which are
-       --                        - selected in the IR query, and thus included in v_get_query_column_list
-       --                        - not included in the report, thus missing from l_report.ir_data.report_columns
-          or instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') = 0)
-       and instr(':'||v_get_query_column_list||':',':'||column_alias||':') > 0;
+       -- * selected in the IR query, and thus included in v_get_query_column_list
+       -- * not included in the report, thus missing from l_report.ir_data.report_columns
+          OR instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') = 0)
+       AND instr(':'||v_get_query_column_list||':',':'||column_alias||':') > 0;
 
-       select count(*)
-       into v_hidden_computation_columns
-       from apex_application_page_ir_comp
-       where application_id = p_app_id
-         and page_id = p_page_id       
-         and report_id = p_report_id         
-         and instr(':'||l_report.ir_data.report_columns||':',':'||computation_column_alias||':') = 0;       
+       SELECT COUNT(*)
+       INTO v_hidden_computation_columns
+       FROM apex_application_page_ir_comp
+       WHERE application_id = p_app_id
+         AND page_id = p_page_id       
+         AND report_id = p_report_id         
+         AND instr(':'||l_report.ir_data.report_columns||':',':'||computation_column_alias||':') = 0;       
 
-      return v_hidden_columns + v_hidden_computation_columns;
-  exception
-    when no_data_found then
-      return 0;
-  end get_hidden_columns_cnt;
+      RETURN v_hidden_columns + v_hidden_computation_columns;
+  EXCEPTION
+    WHEN no_data_found THEN
+      RETURN 0;
+  END get_hidden_columns_cnt;
   ------------------------------------------------------------------------------ 
-
-  procedure init_t_report(p_app_id       IN NUMBER,
+  -- fill all report metadata
+  PROCEDURE init_t_report(p_app_id       IN NUMBER,
                           p_page_id      IN NUMBER,
                           p_region_id    IN NUMBER)
-  is
-    l_report_id     number;
+  IS
+    l_report_id     NUMBER;
     v_query_targets apex_application_global.vc_arr2;
     l_new_report    ir_report; 
-  begin
+  BEGIN
     l_report := l_new_report;    
     --get base report id    
     log('l_region_id='||p_region_id);
 
-    l_report_id := apex_ir.get_last_viewed_report_id (p_page_id   => p_page_id,
-                                                      p_region_id => p_region_id);
+    l_report_id := apex_ir.get_last_viewed_report_id (
+      p_page_id   => p_page_id,
+      p_region_id => p_region_id
+    );
 
     log('l_base_report_id='||l_report_id);    
-
-    select r.* 
-    into l_report.ir_data       
-    from apex_application_page_ir_rpt r
-    where application_id = p_app_id 
-      and page_id = p_page_id
-      and session_id = nv('APP_SESSION')
-      and application_user = v('APP_USER')
-      and base_report_id = l_report_id
-      and rownum <2;
+    
+    -- get ddata from table
+    SELECT r.* 
+    INTO l_report.ir_data       
+    FROM apex_application_page_ir_rpt r
+    WHERE application_id = p_app_id 
+      AND page_id = p_page_id
+      AND session_id = nv('APP_SESSION')
+      AND application_user = v('APP_USER')
+      AND base_report_id = l_report_id
+      AND ROWNUM <2;
 
     log('l_report_id='||l_report_id);
     l_report_id := l_report.ir_data.report_id;                                                                 
 
 
-    l_report.report := apex_ir.get_report (p_page_id        => p_page_id,
-                                           p_region_id      => p_region_id
-                                          );
-    l_report.ir_data.report_columns := APEX_UTIL.TABLE_TO_STRING(get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list));
+    l_report.report := apex_ir.get_report(
+      p_page_id        => p_page_id,
+      p_region_id      => p_region_id
+    );
+   -- Some users have cases where apex_ir.get_report returned SQL queries
+   -- does not 100% reflect the current status of the report.
+   -- For such special cases, a list of columns will be filtered:
+   -- Only columns that are really represented in SQL query are permitted.
+    l_report.ir_data.report_columns := apex_util.table_to_string(get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list));
 
     -- J.P.Lourens 9-Oct-16 added p_region_id as input variable
-    l_report.hidden_cols_cnt := get_hidden_columns_cnt(p_app_id    => p_app_id,
-                                                       p_page_id   => p_page_id,
-                                                       p_region_id => p_region_id,
-                                                       p_report_id => l_report_id);
-
-    <<displayed_columns>>                                      
-    for i in (select column_alias,
+    -- count of all columns presented in report's SQL-query
+    -- but not displayed in Excel: hidden columns (also hidden computation columns),
+    -- additionall hidden columns added by APEX etc..
+    l_report.hidden_cols_cnt := get_hidden_columns_cnt(
+      p_app_id    => p_app_id,
+      p_page_id   => p_page_id,
+      p_region_id => p_region_id,
+      p_report_id => l_report_id
+    );
+    
+    -- here 2 plSQL tables wll be filled:
+    -- l_report.displayed_columns - columns to display as Excel-columns
+    -- l_report.break_really_on   - colums for control breaks, 
+    -- values from these columns will be dislayed in Excel as contol-break row 
+    -- l_report.break_really_on can differ from l_report.ir_data.break_enabled_on
+    -- because some control-break columns can be hidden 
+    <<displayed_columns>>   -- include calculation columns                                   
+    FOR i IN (SELECT column_alias,
                      report_label,
                      heading_alignment,
                      column_alignment,
                      column_type,
-                     format_mask as  computation_format_mask,
+                     format_mask AS  computation_format_mask,
                      nvl(instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':'),0) column_order ,
                      nvl(instr(':'||l_report.ir_data.break_enabled_on||':',':'||column_alias||':'),0) break_column_order,
                      column_link
-                from APEX_APPLICATION_PAGE_IR_COL
-               where application_id = p_app_id
+                FROM apex_application_page_ir_col
+               WHERE application_id = p_app_id
                  AND page_id = p_page_id
-                 and region_id = p_region_id
-                 and display_text_as != 'HIDDEN' --l_report.ir_data.report_columns can include HIDDEN columns
-                 and instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') > 0
+                 AND region_id = p_region_id
+                 AND display_text_as != 'HIDDEN' --l_report.ir_data.report_columns can include HIDDEN columns
+                 AND instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') > 0
               UNION
-              select computation_column_alias,
+              SELECT computation_column_alias,
                      computation_report_label,
-                     'center' as heading_alignment,
+                     'center' AS heading_alignment,
                      'right' AS column_alignment,
                      computation_column_type,
                      computation_format_mask,
                      nvl(instr(':'||l_report.ir_data.report_columns||':',':'||computation_column_alias||':'),0) column_order,
                      nvl(instr(':'||l_report.ir_data.break_enabled_on||':',':'||computation_column_alias||':'),0) break_column_order,
-                     null as column_link
-              from apex_application_page_ir_comp
-              where application_id = p_app_id
-                and page_id = p_page_id
-                and report_id = l_report_id
+                     NULL AS column_link
+              FROM apex_application_page_ir_comp
+              WHERE application_id = p_app_id
+                AND page_id = p_page_id
+                AND report_id = l_report_id
                 AND instr(':'||l_report.ir_data.report_columns||':',':'||computation_column_alias||':') > 0
-              order by  break_column_order asc,column_order asc)
-    loop                 
-      l_report.column_names(i.column_alias) := i.report_label; 
+              ORDER BY  break_column_order ASC,column_order ASC)
+    LOOP                 
+      l_report.column_header_labels(i.column_alias) := i.report_label; 
       l_report.col_format_mask(i.column_alias) := i.computation_format_mask;
       l_report.header_alignment(i.column_alias) := i.heading_alignment; 
       l_report.column_alignment(i.column_alias) := i.column_alignment; 
       l_report.column_link(i.column_alias) := i.column_link;
-      --l_report.column_types(i.column_alias) := i.column_type;
-      IF i.column_order > 0 THEN
+     IF i.column_order > 0 THEN
         IF i.break_column_order = 0 THEN 
           --displayed column
           l_report.displayed_columns(l_report.displayed_columns.count + 1) := i.column_alias;
         ELSE  
           --break column
           l_report.break_really_on(l_report.break_really_on.count + 1) := i.column_alias;
-        end if;
-      end if;  
+        END IF;
+      END IF;  
 
-      log('column='||i.column_alias||' l_report.column_names='||i.report_label);
+      log('column='||i.column_alias||' l_report.column_header_labels='||i.report_label);
       log('column='||i.column_alias||' l_report.col_format_mask='||i.computation_format_mask);
       log('column='||i.column_alias||' l_report.header_alignment='||i.heading_alignment);
       log('column='||i.column_alias||' l_report.column_alignment='||i.column_alignment);    
       log('column='||i.column_alias||' l_report.column_link='||i.column_link);    
-    end loop displayed_columns;    
+    END LOOP displayed_columns;    
 
     -- calculate columns count with aggregation separately
     l_report.sum_columns_on_break := get_cols_as_table(l_report.ir_data.sum_columns_on_break,l_report.displayed_columns);  
@@ -1804,59 +1869,79 @@ as
     log('l_report.sum_columns_on_break='||rr(l_report.ir_data.sum_columns_on_break));
     log('l_report.avg_columns_on_break='||rr(l_report.ir_data.avg_columns_on_break));
     log('l_report.max_columns_on_break='||rr(l_report.ir_data.max_columns_on_break));
-    LOG('l_report.min_columns_on_break='||rr(l_report.ir_data.min_columns_on_break));
+    log('l_report.min_columns_on_break='||rr(l_report.ir_data.min_columns_on_break));
     log('l_report.median_columns_on_break='||rr(l_report.ir_data.median_columns_on_break));
     log('l_report.count_columns_on_break='||rr(l_report.ir_data.count_columns_on_break));    
     log('l_report.count_distnt_col_on_break='||rr(l_report.ir_data.count_distnt_col_on_break));
-    log('l_report.break_really_on='||APEX_UTIL.TABLE_TO_STRING(l_report.break_really_on));
+    log('l_report.break_really_on='||apex_util.table_to_string(l_report.break_really_on));
     log('l_report.agg_cols_cnt='||l_report.agg_cols_cnt);
     log('l_report.hidden_cols_cnt='||l_report.hidden_cols_cnt);
 
-
-    for c in cur_highlight(p_report_id => l_report_id,
-                           p_delimetered_column_list => l_report.ir_data.report_columns
-                          ) 
-    loop
-        if c.HIGHLIGHT_ROW_COLOR is not null or c.HIGHLIGHT_ROW_FONT_COLOR is not null then
+    -- fill data for highlights
+    -- v_query_targets is a list of columns needed to be added to calculate highlight
+    
+    FOR c IN cur_highlight(
+      p_report_id => l_report_id,
+      p_delimetered_column_list => l_report.ir_data.report_columns
+    ) 
+    LOOP
+        IF c.highlight_row_color IS NOT NULL OR c.highlight_row_font_color IS NOT NULL THEN
           --is row highlight
           l_report.row_highlight(l_report.row_highlight.count + 1) := c;        
-        else
+        ELSE
           l_report.col_highlight(l_report.col_highlight.count + 1) := c;           
-        end if;  
+        END IF;  
         v_query_targets(v_query_targets.count + 1) := c.condition_sql||' as HLIGHTS_'||(v_query_targets.count + 1);
-    end loop;    
-
-    if v_query_targets.count  > 0 then
-      -- uwr485kv is random name 
-      l_report.report.sql_query := 'SELECT '||APEX_UTIL.TABLE_TO_STRING(v_query_targets,','||chr(10))||', uwr485kv.* from ('||l_report.report.sql_query||') uwr485kv';
-    end if;
-    if instr(l_report.report.sql_query,':APXWS_MAX_ROW_CNT') = 0 then
+    END LOOP;    
+    
+    -- original APEX Intractive Report calculates highlights by displaying,
+    -- not by querying the data
+    -- for me it was to difficult and I have decided to modify
+    -- original SQL-query by adding highlights-columns
+    
+    IF v_query_targets.count  > 0 THEN
+      -- uwr485kv is a random name 
+      l_report.report.sql_query := 'SELECT '||apex_util.table_to_string(v_query_targets,','||chr(10))||', uwr485kv.* from ('||l_report.report.sql_query||') uwr485kv';
+    END IF;
+    -- plugin is always using the  restriction by maximal rows count
+    IF instr(l_report.report.sql_query,':APXWS_MAX_ROW_CNT') = 0 THEN
       l_report.report.sql_query := 'SELECT * FROM ('|| l_report.report.sql_query ||') where rownum <= :APXWS_MAX_ROW_CNT';
-    end if;  
+    END IF;  
+    
+    -- the final LIST OF SQL-QUERY-COLUMNS:
+    -- [columns for row/column-highlighting],      -- l_report.row_highlight.count + l_report.col_highlight.count
+    -- [apxws_row_pk],                             -- l_report.skipped_columns, optional
+    -- [columns for control break],                -- l_report.break_really_on.count
+    -- [normal columns displayed as Excel-columns, 
+    --  including computation-columns]             -- l_report.displayed_columns.count
+    -- [aggregation results: sum]                  -- l_report.sum_columns_on_break.count
+    -- [aggregation results: avg]                  -- l_report.avg_columns_on_break.count
+    -- [aggregation results: max]                  -- l_report.max_columns_on_break.count
+    -- [aggregation results: min]                  -- l_report.min_columns_on_break.count
+    -- [aggregation results: median]               -- l_report.median_columns_on_break.count
+    -- [aggregation results: count]                -- l_report.count_columns_on_break.count
+    -- [aggregation results: count distinct]       -- l_report.count_distnt_col_on_break.count
+ 
     log('l_report.report.sql_query='||chr(10)||l_report.report.sql_query||chr(10));
-  exception
-    when no_data_found then
+  EXCEPTION
+    WHEN no_data_found THEN
       raise_application_error(-20001,'No Interactive Report found on Page='||p_page_id||' Application='||p_app_id||' Please make sure that the report was running at least once by this session.');
-    /*
-    when others then 
-     log('Exception in init_t_report');
-     log('Page='||p_page_id);
-     log('Application='||p_app_id);
-     raise;
-    */ 
-  end init_t_report;  
+  END init_t_report;  
   ------------------------------------------------------------------------------
-
-  function is_control_break(p_curr_row  IN APEX_APPLICATION_GLOBAL.VC_ARR2,
-                            p_prev_row  IN APEX_APPLICATION_GLOBAL.VC_ARR2)
-  return boolean
-  is
+  -- compare two rows to identify a case of contol-break
+  FUNCTION is_control_break(
+    p_curr_row  IN apex_application_global.vc_arr2,
+    p_prev_row  IN apex_application_global.vc_arr2
+  )
+  RETURN BOOLEAN
+  IS
     v_start_with      BINARY_INTEGER;
     v_end_with        BINARY_INTEGER;    
-  begin
-    if nvl(l_report.break_really_on.count,0) = 0  then
-      return false; --no control break
-    end if;
+  BEGIN
+    IF nvl(l_report.break_really_on.count,0) = 0  THEN
+      RETURN false; --no control break
+    END IF;
+    -- see strucure of SQL-query in init_t_report-procedure
     v_start_with := 1 + 
                     l_report.skipped_columns + 
                     l_report.row_highlight.count + 
@@ -1865,190 +1950,240 @@ as
                     l_report.row_highlight.count + 
                     l_report.col_highlight.count +
                     nvl(l_report.break_really_on.count,0);
-    for i in v_start_with..v_end_with loop
-      if p_curr_row(i) != p_prev_row(i) then
-        return true;
-      end if;
-    end loop;
-    return false;
-  end is_control_break;
+    FOR i IN v_start_with..v_end_with LOOP
+      IF p_curr_row(i) != p_prev_row(i) THEN
+        RETURN true;
+      END IF;
+    END LOOP;
+    RETURN false;
+  END is_control_break;
   ------------------------------------------------------------------------------
-  function get_formatted_number(p_number         IN number,
-                                p_format_string  IN varchar2,
-                                p_nls            IN varchar2 default null)
-  return varchar2
-  is
-    v_str varchar2(100);
-  begin
-    v_str := trim(to_char(p_number,p_format_string,p_nls));
-    if instr(v_str,'#') > 0 and ltrim(v_str,'#') is null then --format fail
-      raise invalid_number;
-    else
-      return v_str;
-    end if;    
-  end get_formatted_number;  
+  -- like to_char but with additional checking
+  FUNCTION get_formatted_number(
+    p_number         IN NUMBER,
+    p_format_string  IN VARCHAR2,
+    p_nls            IN VARCHAR2 DEFAULT NULL
+  )
+  RETURN VARCHAR2
+  IS
+    v_str VARCHAR2(100);
+  BEGIN
+    v_str := trim(TO_CHAR(p_number,p_format_string,p_nls));
+    IF instr(v_str,'#') > 0 AND ltrim(v_str,'#') IS NULL THEN --format fail
+      RAISE invalid_number;
+    ELSE
+      RETURN v_str;
+    END IF;    
+  END get_formatted_number;  
   ------------------------------------------------------------------------------
-  FUNCTION get_cell(p_query_value IN varchar2,
-                    p_format_mask IN varchar2,
-                    p_date        IN date)
+  -- t_cell_data saves information about Excel-cell
+  --
+  -- get_cell[date] tries to convert p_date_value
+  -- as Excel-Date-Cell
+  -- if not possible p_text_value is used to 
+  -- convert as Excel-Text-Cell 
+  FUNCTION get_cell(
+    p_text_value  IN VARCHAR2,
+    p_format_mask IN VARCHAR2,
+    p_date_value  IN DATE
+  )
   RETURN t_cell_data
   IS
     v_data t_cell_data;
   BEGIN     
-     v_data.value := get_formatted_number(p_date - to_date('01-03-1900','DD-MM-YYYY') + 61,'9999999999999990D00000000','NLS_NUMERIC_CHARACTERS = ''.,''');     
+     v_data.value := get_formatted_number(p_date_value - TO_DATE('01-03-1900','DD-MM-YYYY') + 61,'9999999999999990D00000000','NLS_NUMERIC_CHARACTERS = ''.,''');     
      v_data.datatype := 'DATE';
 
      -- https://github.com/glebovpavel/IR_to_MSExcel/issues/16
      -- thanks Valentine Nikitsky 
-     if p_format_mask is not null then
-       if upper(p_format_mask)='SINCE' then
-            v_data.text := apex_util.get_since(p_date);
-            v_data.value := null;
+     IF p_format_mask IS NOT NULL THEN
+       IF upper(p_format_mask)='SINCE' THEN
+            v_data.text := apex_util.get_since(p_date_value);
+            v_data.value := NULL;
             v_data.datatype := 'STRING';
-       else
-          v_data.text := to_char(p_date,p_format_mask);  -- normally v_data.text used in XML only
-       end if;
-     else
-       v_data.text := p_query_value;
-     end if;
+       ELSE
+          v_data.text := to_char(p_date_value,p_format_mask);  -- normally v_data.text used in XML only
+       END IF;
+     ELSE
+       v_data.text := p_text_value;
+     END IF;
 
-     return v_data;
+     RETURN v_data;
   EXCEPTION
-    WHEN invalid_number or format_error THEN 
+    WHEN invalid_number OR format_error THEN 
       v_data.value := NULL;          
       v_data.datatype := 'STRING';
-      v_data.text := p_query_value;
-      return v_data;
+      v_data.text := p_text_value;
+      RETURN v_data;
   END get_cell;  
   ------------------------------------------------------------------------------
-  FUNCTION get_cell(p_query_value IN varchar2,
-                    p_format_mask IN varchar2,
-                    p_number      IN number)
+  -- t_cell_data saves information about Excel-cell
+  --
+  -- get_cell[number] tries to convert p_number_value
+  -- as Excel-Number-Cell
+  -- if not possible p_text_value is used to 
+  -- convert as Excel-Text-Cell 
+  FUNCTION get_cell(
+    p_text_value   IN VARCHAR2,
+    p_format_mask  IN VARCHAR2,
+    p_number_value IN NUMBER
+  )
   RETURN t_cell_data
   IS
     v_data t_cell_data;
   BEGIN
    v_data.datatype := 'NUMBER';   
-   v_data.value := get_formatted_number(p_number,'9999999999999990D00000000','NLS_NUMERIC_CHARACTERS = ''.,''');
+   v_data.value := get_formatted_number(p_number_value,'9999999999999990D00000000','NLS_NUMERIC_CHARACTERS = ''.,''');
 
-   if p_format_mask is not null then
-     v_data.text := get_formatted_number(p_query_value,p_format_mask);
+   IF p_format_mask IS NOT NULL THEN
+     v_data.text := get_formatted_number(p_text_value,p_format_mask);
    ELSE
-     v_data.text := p_query_value;
-   end if;
+     v_data.text := p_text_value;
+   END IF;
 
-   return v_data;
+   RETURN v_data;
   EXCEPTION
-    WHEN invalid_number or conversion_error THEN 
+    WHEN invalid_number OR conversion_error THEN 
       v_data.value := NULL;          
       v_data.datatype := 'STRING';
-      v_data.text := p_query_value;
-      return v_data;
+      v_data.text := p_text_value;
+      RETURN v_data;
   END get_cell;  
   ------------------------------------------------------------------------------
-
-
-  function print_control_break_header_obj(p_current_row     in apex_application_global.vc_arr2) 
-  return varchar2
-  is
+  -- create a string with a list of all Contol-Break Headers.
+  -- This string will be displayed as a row in Excel
+  FUNCTION print_control_break_header_obj(p_current_row IN apex_application_global.vc_arr2) 
+  RETURN VARCHAR2
+  IS
     v_cb_xml  largevarchar2;
-  begin
-    if nvl(l_report.break_really_on.count,0) = 0  then
-      return ''; --no control break
-    end if;
+  BEGIN
+    IF nvl(l_report.break_really_on.count,0) = 0  THEN
+      RETURN ''; --no control break
+    END IF;
 
+    -- see strucure of SQL-query in init_t_report-procedure
     <<break_columns>>
-    for i in 1..nvl(l_report.break_really_on.count,0) loop
+    FOR i IN 1..nvl(l_report.break_really_on.count,0) LOOP
       --TODO: Add column header
       v_cb_xml := v_cb_xml ||
-                  get_column_names(l_report.break_really_on(i))||': '||
+                  get_column_header_label(l_report.break_really_on(i))||': '||
                   get_current_row(p_current_row,i + 
                                                 l_report.skipped_columns + 
                                                 l_report.row_highlight.count + 
                                                 l_report.col_highlight.count
                                  )||',';
-    end loop visible_columns;
+    END LOOP visible_columns;
 
-    return  rtrim(v_cb_xml,',');
-  end print_control_break_header_obj;
+    RETURN  rtrim(v_cb_xml,',');
+  END print_control_break_header_obj;
   ------------------------------------------------------------------------------
-  function find_rel_position (p_curr_col_name    IN varchar2,
-                              p_agg_rows         IN APEX_APPLICATION_GLOBAL.VC_ARR2)
-  return BINARY_INTEGER
-  is
+  -- find a position of given column in the list columns
+  FUNCTION find_rel_position (
+    p_curr_col_name    IN VARCHAR2,
+    p_agg_rows         IN apex_application_global.vc_arr2
+  )
+  RETURN BINARY_INTEGER
+  IS
     v_relative_position BINARY_INTEGER;
-  begin
+  BEGIN
     <<aggregated_rows>>
-    for i in 1..p_agg_rows.count loop
-      if p_curr_col_name = p_agg_rows(i) then        
-         return i;
-      end if;
-    end loop aggregated_rows;
+    FOR i IN 1..p_agg_rows.count LOOP
+      IF p_curr_col_name = p_agg_rows(i) THEN        
+         RETURN i;
+      END IF;
+    END LOOP aggregated_rows;
 
-    return null;
-  end find_rel_position;
+    RETURN NULL;
+  END find_rel_position;
   ------------------------------------------------------------------------------
-  function get_agg_text(p_curr_col_name          IN VARCHAR2,
-                        p_agg_rows               IN APEX_APPLICATION_GLOBAL.VC_ARR2,
-                        p_current_row            IN APEX_APPLICATION_GLOBAL.VC_ARR2,
-                        p_agg_text               IN VARCHAR2,
-                        p_position               IN BINARY_INTEGER, --start position in sql-query
-                        p_col_number             IN BINARY_INTEGER, --column position when displayed
-                        p_default_format_mask    IN VARCHAR2 DEFAULT NULL,
-                        p_overwrite_format_mask   IN varchar2 default null) --should be used forcibly 
-  return varchar2
-  is
-    v_tmp_pos       BINARY_INTEGER;  -- current column position in sql-query 
-    v_format_mask   apex_application_page_ir_comp.computation_format_mask%type;
+  FUNCTION get_agg_text(
+    p_curr_col_name          IN VARCHAR2,
+    p_agg_rows               IN apex_application_global.vc_arr2,
+    p_current_row            IN apex_application_global.vc_arr2,
+    p_agg_text               IN VARCHAR2,
+    p_start_position_sql     IN BINARY_INTEGER, --start position in sql-query
+    p_col_number             IN BINARY_INTEGER, --column position when displayed
+    p_default_format_mask    IN VARCHAR2 DEFAULT NULL,
+    p_overwrite_format_mask  IN VARCHAR2 DEFAULT NULL
+  ) --should be used forcibly 
+  RETURN VARCHAR2
+  IS
+    v_relative_position_sql  BINARY_INTEGER;   
+    v_format_mask   apex_application_page_ir_comp.computation_format_mask%TYPE;
     v_agg_value     largevarchar2;
     v_row_value     largevarchar2;
-    v_g_format_mask varchar2(100);  
-    v_col_alias     varchar2(255);
-  begin
-      v_tmp_pos := find_rel_position (p_curr_col_name,p_agg_rows); 
-      if v_tmp_pos is not null then
+    v_g_format_mask VARCHAR2(100);  
+    v_col_alias     VARCHAR2(255);
+  BEGIN
+      -- see strucure of SQL-query in init_t_report-procedure
+      --
+      -- the SQL-Query generated by APEX does not provide aliases for
+      -- aggregate columns (at least for all supported APEX-Versions)
+      -- The aggregate values can see like 
+      -- SELECT COL1,
+      --        COL2,
+      --        COL3,
+      --        COL4,
+      --        COL5,
+      --       ,SUM(COL1) OVER() 
+      --       ,SUM(COL2) OVER()
+      --       ,SUM(COL3) OVER()
+      --       ,MIN(COL1) OVER()
+      --       ,MAX(COL5) OVER()
+             
+      -- aggregate(s) of each type can be defined for many columns.
+      -- v_relative_position shows the column position inside aggregate of each type
+      -- for example above, 
+      --              for SUM and COL1 v_relative_position will be 1, p_start_position_sql should be 5
+      --              for SUM and COL2 v_relative_position will be 2  p_start_position_sql should be 5                
+      --              for SUM and COL3 v_relative_position will be 3  p_start_position_sql should be 5
+      -- after get_agg_text will be called for MIN
+      --              for MIN and COL1 v_relative_position will be 1 p_start_position_sql should be 8
+      -- p_start_position_sql should be   
+      v_relative_position_sql := find_rel_position (p_curr_col_name,p_agg_rows); 
+      IF v_relative_position_sql IS NOT NULL THEN
         v_col_alias := get_column_alias_sql(p_col_number);
         v_g_format_mask :=  get_col_format_mask(v_col_alias);   
         v_format_mask := nvl(v_g_format_mask,p_default_format_mask);
         v_format_mask := nvl(p_overwrite_format_mask,v_format_mask);
-        v_row_value :=  get_current_row(p_current_row,p_position + l_report.hidden_cols_cnt + v_tmp_pos);
-        v_agg_value := trim(to_char(v_row_value,v_format_mask));
+        v_row_value :=  get_current_row(p_current_row,p_start_position_sql + l_report.hidden_cols_cnt + v_relative_position_sql);
+        v_agg_value := trim(TO_CHAR(v_row_value,v_format_mask));
 
-        return  get_xmlval(p_agg_text||v_agg_value||' '||chr(10));
-      else
-        return  '';
-      end if;    
-  exception
-     when others then
+        RETURN  get_xmlval(p_agg_text||v_agg_value||' '||chr(10));
+      ELSE
+        RETURN  '';
+      END IF;    
+  EXCEPTION
+     WHEN OTHERS THEN
         log('!Exception in get_agg_text');
         log('p_col_number='||p_col_number);
         log('v_col_alias='||v_col_alias);
         log('v_g_format_mask='||v_g_format_mask);
         log('p_default_format_mask='||p_default_format_mask);
-        log('v_tmp_pos='||v_tmp_pos);
-        log('p_position='||p_position);
+        log('v_relative_position_sql='||v_relative_position_sql);
+        log('p_start_position_sql='||p_start_position_sql);
         -- J.P.Lourens 9-Oct-16 added to log     
         log('l_report.hidden_cols_cnt='||l_report.hidden_cols_cnt);    
         log('v_row_value='||v_row_value);
         log('v_format_mask='||v_format_mask);
-        raise;
-  end get_agg_text;
+        RAISE;
+  END get_agg_text;
   ------------------------------------------------------------------------------
-
-  function get_aggregate(p_current_row     IN APEX_APPLICATION_GLOBAL.VC_ARR2) 
-  return APEX_APPLICATION_GLOBAL.VC_ARR2
-  is
+  -- Show all aggregates in Excel
+  FUNCTION get_aggregate(p_current_row IN apex_application_global.vc_arr2) 
+  RETURN apex_application_global.vc_arr2
+  IS
     v_aggregate_xml   largevarchar2;
-    v_agg_obj  APEX_APPLICATION_GLOBAL.VC_ARR2;
+    v_agg_obj  apex_application_global.vc_arr2;
     v_position        BINARY_INTEGER;    
     v_i NUMBER := 0;
-  begin
-    if l_report.agg_cols_cnt  = 0 then      
-      return v_agg_obj;
-    end if;    
+  BEGIN
+    IF l_report.agg_cols_cnt  = 0 THEN      
+      RETURN v_agg_obj;
+    END IF;    
 
     <<visible_columns>>
-    for i in l_report.start_with..l_report.end_with loop
+    FOR i IN l_report.start_with..l_report.end_with LOOP
       v_aggregate_xml := '';
       v_i := v_i + 1;
       v_position := l_report.end_with; --aggregate are placed after displayed columns and computations      
@@ -2056,14 +2191,14 @@ as
                                        p_agg_rows      => l_report.sum_columns_on_break,
                                        p_current_row   => p_current_row,
                                        p_agg_text      => ' ',
-                                       p_position      => v_position,
+                                       p_start_position_sql      => v_position,
                                        p_col_number    => i);
       v_position := v_position + l_report.sum_columns_on_break.count;
       v_aggregate_xml := v_aggregate_xml || get_agg_text(p_curr_col_name => get_column_alias_sql(i),
                                        p_agg_rows      => l_report.avg_columns_on_break,
                                        p_current_row   => p_current_row,
                                        p_agg_text      => 'Avgerage:',
-                                       p_position      => v_position,
+                                       p_start_position_sql      => v_position,
                                        p_col_number    => i,
                                        p_default_format_mask   => '999G999G999G999G990D000');
       v_position := v_position + l_report.avg_columns_on_break.count;                                       
@@ -2071,21 +2206,21 @@ as
                                        p_agg_rows      => l_report.max_columns_on_break,
                                        p_current_row   => p_current_row,
                                        p_agg_text      => 'Max:',
-                                       p_position      => v_position,
+                                       p_start_position_sql      => v_position,
                                        p_col_number    => i);
       v_position := v_position + l_report.max_columns_on_break.count;                                 
       v_aggregate_xml := v_aggregate_xml || get_agg_text(p_curr_col_name => get_column_alias_sql(i),
                                        p_agg_rows      => l_report.min_columns_on_break,
                                        p_current_row   => p_current_row,
                                        p_agg_text      => 'Min:',
-                                       p_position      => v_position,
+                                       p_start_position_sql      => v_position,
                                        p_col_number    => i);
       v_position := v_position + l_report.min_columns_on_break.count;                                 
       v_aggregate_xml := v_aggregate_xml || get_agg_text(p_curr_col_name => get_column_alias_sql(i),
                                        p_agg_rows      => l_report.median_columns_on_break,
                                        p_current_row   => p_current_row,
                                        p_agg_text      => 'Median:',
-                                       p_position      => v_position,
+                                       p_start_position_sql      => v_position,
                                        p_col_number    => i,
                                        p_default_format_mask   => '999G999G999G999G990D000');
       v_position := v_position + l_report.median_columns_on_break.count;                                 
@@ -2093,7 +2228,7 @@ as
                                        p_agg_rows      => l_report.count_columns_on_break,
                                        p_current_row   => p_current_row,
                                        p_agg_text      => 'Count:',
-                                       p_position      => v_position,
+                                       p_start_position_sql      => v_position,
                                        p_col_number    => i,
                                        p_overwrite_format_mask   => '999G999G999G999G990');
       v_position := v_position + l_report.count_columns_on_break.count;                                 
@@ -2101,220 +2236,299 @@ as
                                        p_agg_rows      => l_report.count_distnt_col_on_break,
                                        p_current_row   => p_current_row,
                                        p_agg_text      => 'Count distinct:',
-                                       p_position      => v_position,
+                                       p_start_position_sql      => v_position,
                                        p_col_number    => i,
                                        p_overwrite_format_mask   => '999G999G999G999G990');
       v_agg_obj(v_i) := v_aggregate_xml;
-    end loop visible_columns;
-    return  v_agg_obj;
-  end get_aggregate;        
+    END LOOP visible_columns;
+    RETURN  v_agg_obj;
+  END get_aggregate;        
   ------------------------------------------------------------------------------
-  function can_show_as_date(p_format_string in varchar2)
-  return boolean
-  is 
-    v_dummy varchar2(50);
-  begin
-    v_dummy := to_char(sysdate,p_format_string);
-
-    return true;
-  exception
-    when invalid_number or format_error or date_format_error or conversion_error then 
-      return false;
-  end can_show_as_date;    
+  -- chech that format string is valid
+  FUNCTION can_show_as_date(p_format_string IN VARCHAR2)
+  RETURN BOOLEAN
+  IS 
+    v_dummy VARCHAR2(50);
+  BEGIN
+    v_dummy := TO_CHAR(SYSDATE,p_format_string);
+    RETURN true;
+  EXCEPTION
+    WHEN invalid_number OR format_error OR date_format_error OR conversion_error THEN 
+      RETURN false;
+  END can_show_as_date;    
 
   ------------------------------------------------------------------------------
-  -- excel has only DATE-format mask (no timezones etc)
+  -- Excel has only DATE-format mask (no timezones etc)
   -- if format mask can be shown in excel - show column as date- type
   -- else - as string 
-  procedure prepare_col_format_mask(p_col_number in binary_integer,
-                                    p_data_type  in binary_integer )
-  is
-    v_format_mask          formatmask;
-    v_default_format_mask  formatmask;
-    v_final_format_mask    formatmask;
-    v_col_alias            varchar2(255);    
-  begin
+  PROCEDURE prepare_col_format_mask(
+    p_col_number IN BINARY_INTEGER,
+    p_data_type  IN BINARY_INTEGER
+  )
+  IS
+    v_format_mask          t_formatmask;
+    v_default_format_mask  t_formatmask;
+    v_final_format_mask    t_formatmask;
+    v_col_alias            VARCHAR2(255);    
+  BEGIN
      v_default_format_mask := get_current_format(p_data_type);
      log('v_default_format_mask='||v_default_format_mask);
-     begin
+     BEGIN
        v_col_alias   := get_column_alias_sql(p_col_number);
        v_format_mask := get_col_format_mask(v_col_alias);
        log('v_col_alias='||v_col_alias||' v_format_mask='||v_format_mask);
-     exception
-       when others then 
+     EXCEPTION
+       WHEN OTHERS THEN 
           v_format_mask := '';
-     end;  
+     END;  
 
      v_final_format_mask := nvl(v_format_mask,v_default_format_mask);
-     if can_show_as_date(v_final_format_mask) then
+     IF can_show_as_date(v_final_format_mask) THEN
         log('Can show as date');
-        if v_col_alias is not null then 
+        IF v_col_alias IS NOT NULL THEN 
            set_col_format_mask(p_column_alias => v_col_alias,
                                p_format_mask  => v_final_format_mask);
-        end if;                       
-        l_report.column_types(p_col_number) := 'DATE';
-     else
+        END IF;                       
+        l_report.column_data_types(p_col_number) := 'DATE';
+     ELSE
         log('Can not show as date');
-        l_report.column_types(p_col_number) := 'STRING';
-     end if;
-  end prepare_col_format_mask;
+        l_report.column_data_types(p_col_number) := 'STRING';
+     END IF;
+  END prepare_col_format_mask;
   ------------------------------------------------------------------------------
+  -- Plugin tries to set column width 
+  -- it measures the column width in html in the browser
+  -- and send it to the plugin -- in p_width_str - parameter.
+  -- p_coefficient is used to convert width in px (HTML) to the
+  -- with used by Excel
+  PROCEDURE print_column_widths(
+      p_clob          IN OUT NOCOPY CLOB,
+      p_buffer        IN OUT NOCOPY VARCHAR2,
+      p_width_str     IN VARCHAR2,
+      p_coefficient   IN NUMBER,
+      p_custom_width  IN VARCHAR2
+  )
+  IS
+    v_column_alias         apex_application_page_ir_col.column_alias%TYPE;
+    v_i                    NUMBER := 0;
+    v_col_width            NUMBER;
+    v_custom_col_width     VARCHAR2(300);
+    a_col_name_plus_width  apex_application_global.vc_arr2;    
+    v_coefficient          NUMBER;    
+  BEGIN  
+    log('p_custom_width='||p_custom_width);
+    add(p_clob,p_buffer,'<cols>'||chr(10));    
+    -- save custom column widhts as pl/sql table    
+    a_col_name_plus_width := apex_util.string_to_table(rtrim(p_width_str,','),',');    
+    
+    v_coefficient := nvl(p_coefficient,width_coefficient);
+    IF v_coefficient = 0 THEN
+      v_coefficient := width_coefficient;
+    END IF;     
+    
+    FOR i IN 1..l_report.displayed_columns.count   LOOP
+       v_column_alias := get_column_alias(i);
+      -- if current column is not control break column
+      -- !!ToDo: clear, why  why break_on is used instead of break_really_on ???
+      IF apex_plugin_util.get_position_in_list(l_report.break_on,v_column_alias) IS NULL THEN 
+        v_i := v_i + 1;
+        BEGIN             
+          -- check that column has custom width defined in plugin settings
+          v_custom_col_width := regexp_substr(','||p_custom_width||',',','||v_column_alias||':\d+,');          
+          IF v_custom_col_width IS NOT NULL THEN            
+            v_col_width := to_number(ltrim(regexp_substr(v_custom_col_width,':\d+'),':'));
+            log('v_col_width='||v_col_width||' for column '||v_column_alias);
+          ELSE        
+            v_col_width  := round(to_number(a_col_name_plus_width(v_i))/ v_coefficient);          
+          END IF;
+        EXCEPTION
+          WHEN OTHERS THEN             
+            v_col_width := -1;  
+        END;
 
-  procedure generate_from_report(v_clob          IN OUT NOCOPY CLOB,
-                                 v_strings_clob  IN OUT NOCOPY CLOB,
-                                 v_links_clob    IN OUT NOCOPY CLOB,
-                                 p_width_str     IN VARCHAR2,
-                                 p_coefficient   IN NUMBER,
-                                 p_max_rows      IN INTEGER,
-                                 p_autofilter    IN CHAR,
-                                 p_export_links  IN CHAR DEFAULT 'N',
-                                 p_custom_width  IN VARCHAR2) 
-  is
-   v_cur                INTEGER; 
-   v_result             INTEGER;
-   v_colls_count        BINARY_INTEGER;
-   v_row                APEX_APPLICATION_GLOBAL.VC_ARR2;
-   v_date_row           t_date_table;
-   v_number_row         t_number_table;
-   v_char_dummy         varchar2(1);
-   v_date_dummy         date;
-   v_number_dummy       number;
-   v_prev_row           APEX_APPLICATION_GLOBAL.VC_ARR2;
-   v_columns            APEX_APPLICATION_GLOBAL.VC_ARR2;
-   v_current_row        number default 0;   
-   v_inside             boolean default false;
-   v_sql                largevarchar2;
-   v_bind_variables     DBMS_SQL.VARCHAR2_TABLE;
-   v_buffer             largevarchar2;
-   v_bind_var_name      varchar2(255);
-   v_binded             boolean; 
-   v_format_mask        formatmask;  
-   v_rowset_count       number := 0; 
+        IF v_col_width >= 0 THEN
+          add(p_clob,p_buffer,'<col min="'||v_i||'" max="'||v_i||'" width="'||v_col_width||'" customWidth="1" />'||chr(10));        
+        ELSE
+          add(p_clob,p_buffer,'<col min="'||v_i||'" max="'||v_i||'" width="10" customWidth="0" />'||chr(10));        
+        END IF;
+      END IF;  
+    END LOOP column_widths;
+    v_i := 0;
+    add(p_clob,p_buffer,'</cols>'||chr(10));
+  END print_column_widths;
+  
+  ------------------------------------------------------------------------------
+  -- links in Excel are saved in separate structure 
+  -- and are linked with Excel cells
+  -- this procedure add link information
+  -- to there structures
+  PROCEDURE add_link(
+    p_cell_addr IN VARCHAR2,
+    p_link      IN VARCHAR2,
+    p_row       IN apex_application_global.vc_arr2,
+    p_links     IN OUT NOCOPY  apex_application_global.vc_arr2,
+    p_links_ref IN OUT NOCOPY  apex_application_global.vc_arr2
+  )
+  IS
+    v_substitution   t_large_varchar2;
+    v_link           t_large_varchar2;
+    v_cnt             NUMBER DEFAULT 100;
 
-    v_column_alias      APEX_APPLICATION_PAGE_IR_COL.column_alias%TYPE;
-    v_row_color         varchar2(10); 
-    v_row_back_color    varchar2(10);
-    v_cell_color        varchar2(10);
+    FUNCTION get_subtitution_value(p_substitution IN VARCHAR2)
+    RETURN VARCHAR2
+    IS
+    BEGIN
+      RETURN p_row(l_report.all_columns(replace(p_substitution,'#','')));
+    EXCEPTION
+      WHEN OTHERS THEN
+        RETURN '';
+    END get_subtitution_value;
+
+  BEGIN
+    IF p_link IS NULL OR p_links.count >= 65530 THEN
+      return; --EXCEL LINKS LIMIT
+    END IF;  
+    v_link := p_link;
+
+    v_substitution := regexp_substr(v_link,'#[^#]+#');
+    LOOP
+     EXIT WHEN v_substitution IS NULL;
+     v_link := replace(v_link,v_substitution,get_subtitution_value(v_substitution));
+     v_substitution := regexp_substr(v_link,'#[^#]+#');       
+    END LOOP;
+    IF substr(v_link,1,4) = 'f?p=' THEN
+        v_link := owa_util.get_cgi_env ('REQUEST_PROTOCOL') || '://'  
+               || owa_util.get_cgi_env ('HTTP_HOST')        || ':'  
+               || owa_util.get_cgi_env ('SERVER_PORT')      || '/'  
+               || ltrim(owa_util.get_cgi_env ('SCRIPT_NAME'),'/')|| '/'
+               || ltrim(apex_plugin_util.replace_substitutions(v_link),'/');
+    ELSE
+      v_link := apex_plugin_util.replace_substitutions(v_link);
+    END IF;
+
+    log('v_link='||v_link);
+    p_links(p_links.count + 1) := '<hyperlink ref="'||p_cell_addr||'" r:id="rId'||(p_links.count+1)||'" />';
+    p_links_ref(p_links_ref.count + 1) := '<Relationship Id="rId'||p_links.count||'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="'||dbms_xmlgen.convert(v_link)||'" TargetMode="External"/>';      
+  END add_link;
+  ------------------------------------------------------------------------------
+  -- generate all XML-CLOBS needed tobuild an Excle-file
+  -- from report-data
+  PROCEDURE generate_from_report(
+    v_clob          IN OUT NOCOPY CLOB,
+    v_strings_clob  IN OUT NOCOPY CLOB,
+    v_links_clob    IN OUT NOCOPY CLOB,
+    p_width_str     IN VARCHAR2,
+    p_coefficient   IN NUMBER,
+    p_max_rows      IN INTEGER,
+    p_autofilter    IN CHAR,
+    p_export_links  IN CHAR DEFAULT 'N',
+    p_custom_width  IN VARCHAR2
+  ) 
+  IS
+    v_cur                INTEGER; 
+    v_result             INTEGER;
+    v_colls_count        BINARY_INTEGER;
+    v_row                apex_application_global.vc_arr2;
+    v_date_row           t_date_table;
+    v_number_row         t_number_table;
+    v_char_dummy         VARCHAR2(1);
+    v_date_dummy         DATE;
+    v_number_dummy       NUMBER;
+    v_prev_row           apex_application_global.vc_arr2;
+    v_columns            apex_application_global.vc_arr2;
+    v_current_row        NUMBER DEFAULT 0;   
+    v_inside             BOOLEAN DEFAULT false;
+    v_sql                largevarchar2;
+    v_bind_variables     dbms_sql.varchar2_table;
+    v_buffer             largevarchar2;
+    v_bind_var_name      VARCHAR2(255);
+    v_binded             BOOLEAN; 
+    v_format_mask        t_formatmask;  
+    v_rowset_count       NUMBER := 0; 
+    v_i                 NUMBER := 0;
+    v_column_alias      apex_application_page_ir_col.column_alias%TYPE;
+    v_row_color         VARCHAR2(10); 
+    v_row_back_color    VARCHAR2(10);
+    v_cell_color        VARCHAR2(10);
     v_cell_back_color   VARCHAR2(10);     
-    v_column_type       columntype;
+    v_column_data_type       columntype;
     v_cell_data         t_cell_data;    
-    v_i                 number := 0;
+   
 
     v_strings           apex_application_global.vc_arr2;
     v_links             apex_application_global.vc_arr2; -- which cell has a link
     v_links_ref         apex_application_global.vc_arr2; -- URL itself
-    v_rownum            binary_integer default 1;
+    v_rownum            BINARY_INTEGER DEFAULT 1;
 
-    v_style_id          binary_integer;         
+    v_style_id          BINARY_INTEGER;         
     v_string_buffer     t_large_varchar2; 
     v_break_header      t_large_varchar2;
     v_links_buffer      t_large_varchar2;
-    v_last_agg_obj      APEX_APPLICATION_GLOBAL.VC_ARR2;
-    a_col_name_plus_width  apex_application_global.vc_arr2;    
-    v_col_width         number;
-    v_coefficient       number;
-    v_link              APEX_APPLICATION_PAGE_IR_COL.COLUMN_LINK%TYPE;
-    v_cell_addr         varchar2(12);
-    v_custom_col_width  varchar2(300);
+    v_last_agg_obj      apex_application_global.vc_arr2;
+    
+    v_link              apex_application_page_ir_col.column_link%TYPE;
+    v_cell_addr         VARCHAR2(12);
 
-    procedure add_link(p_cell_addr in varchar2,
-                       p_link      in varchar2,
-                       p_row       in APEX_APPLICATION_GLOBAL.VC_ARR2)
-    is
-      v_substitution   t_large_varchar2;
-      v_link           t_large_varchar2;
-      v_cnt             number default 100;
-
-      function get_subtitution_value(p_substitution in varchar2)
-      return varchar2
-      is
-      begin
-        return p_row(l_report.all_columns(replace(p_substitution,'#','')));
-      exception
-        when others then
-          return '';
-      end get_subtitution_value;
-
-    begin
-      if p_link is null or v_links.count >= 65530 then
-        return;
-      end if;  
-      v_link := p_link;
-
-      v_substitution := regexp_substr(v_link,'#[^#]+#');
-      loop
-       exit when v_substitution is null;
-       v_link := replace(v_link,v_substitution,get_subtitution_value(v_substitution));
-       v_substitution := regexp_substr(v_link,'#[^#]+#');       
-      end loop;
-      if substr(v_link,1,4) = 'f?p=' then
-          v_link := OWA_UTIL.get_cgi_env ('REQUEST_PROTOCOL') || '://'  
-                 || OWA_UTIL.get_cgi_env ('HTTP_HOST')        || ':'  
-                 || OWA_UTIL.get_cgi_env ('SERVER_PORT')      || '/'  
-                 || ltrim(OWA_UTIL.get_cgi_env ('SCRIPT_NAME'),'/')|| '/'
-                 || ltrim(apex_plugin_util.replace_substitutions(v_link),'/');
-      else
-        v_link := apex_plugin_util.replace_substitutions(v_link);
-      end if;
-
-      log('v_link='||v_link);
-      v_links(v_links.count + 1) := '<hyperlink ref="'||p_cell_addr||'" r:id="rId'||(v_links.count+1)||'" />';
-      v_links_ref(v_links_ref.count + 1) := '<Relationship Id="rId'||v_links.count||'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="'||dbms_xmlgen.convert(v_link)||'" TargetMode="External"/>';      
-    end add_link;
-
-    procedure print_char_cell(p_cell_addr in varchar2,
-                              p_string    in varchar2,
-                              p_clob      in out nocopy CLOB,
-                              p_buffer    IN OUT NOCOPY VARCHAR2,
-                              p_style_id  in number default null
-                             )
-    is
-     v_style     varchar2(20);     
-    begin
-      if p_style_id is not null then
+    -- print Excel-cell containing text - data into XML-CLOB (using buffer)
+    PROCEDURE print_char_cell(
+      p_cell_addr IN VARCHAR2,
+      p_string    IN VARCHAR2,
+      p_clob      IN OUT NOCOPY CLOB,
+      p_buffer    IN OUT NOCOPY VARCHAR2,
+      p_style_id  IN NUMBER DEFAULT NULL
+     )
+    IS
+     v_style     VARCHAR2(20);     
+    BEGIN
+      IF p_style_id IS NOT NULL THEN
        v_style := ' s="'||p_style_id||'" ';
-      end if;      
+      END IF;      
       add(p_clob,p_buffer,'<c r="'||p_cell_addr||'" t="s" '||v_style||'>'||chr(10)
-                         ||'<v>' || to_char(v_strings.count)|| '</v>'||chr(10)                 
+                         ||'<v>' || TO_CHAR(v_strings.count)|| '</v>'||chr(10)                 
                          ||'</c>'||chr(10));
       v_strings(v_strings.count + 1) := p_string;      
-    end print_char_cell;
-    --
-    procedure print_number_cell(p_cell_addr in varchar2,
-                                p_value     in varchar2,
-                                p_clob      in out nocopy clob,
-                                p_buffer    IN OUT NOCOPY VARCHAR2,
-                                p_style_id  in number default null
-                               )
-    is
-      v_style varchar2(20);
-    begin
-      if p_style_id is not null then
+    END print_char_cell;
+    
+    -- print Excel-cell containing number into XML-CLOB (using buffer)
+    PROCEDURE print_number_cell(
+      p_cell_addr IN VARCHAR2,
+      p_value     IN VARCHAR2,
+      p_clob      IN OUT NOCOPY CLOB,
+      p_buffer    IN OUT NOCOPY VARCHAR2,
+      p_style_id  IN NUMBER DEFAULT NULL
+     )
+    IS
+      v_style VARCHAR2(20);
+    BEGIN
+      IF p_style_id IS NOT NULL THEN
        v_style := ' s="'||p_style_id||'" ';
-      end if;
+      END IF;
       add(p_clob,p_buffer,'<c r="'||p_cell_addr||'" '||v_style||'>'||chr(10)
                          ||'<v>'||p_value|| '</v>'||chr(10)
                          ||'</c>'||chr(10));
 
-    end print_number_cell; 
-    --
-    procedure print_agg(p_agg_obj APEX_APPLICATION_GLOBAL.VC_ARR2,
-                        p_rownum    in out binary_integer,
-                        p_clob      in out nocopy clob,
-                        p_buffer    IN OUT NOCOPY VARCHAR2)
-    is
-        v_agg_clob         clob;
+    END print_number_cell; 
+    
+    -- print Excel-cell containing aggregates - as text -  into XML-CLOB (using buffer)
+    PROCEDURE print_agg(
+      p_agg_obj apex_application_global.vc_arr2,
+      p_rownum    IN OUT BINARY_INTEGER,
+      p_clob      IN OUT NOCOPY CLOB,
+      p_buffer    IN OUT NOCOPY VARCHAR2
+    )
+    IS
+        v_agg_clob         CLOB;
         v_agg_buffer       t_large_varchar2;
-        v_agg_strings_cnt  binary_integer default 1; 
-    begin
+        v_agg_strings_cnt  BINARY_INTEGER DEFAULT 1; 
+    BEGIN
         dbms_lob.createtemporary(v_agg_clob,true);
         /*PRINTAGG*/
-        if p_agg_obj.last IS NOT NULL THEN
-            DBMS_LOB.TRIM(v_agg_clob,0);
+        IF p_agg_obj.last IS NOT NULL THEN
+            dbms_lob.trim(v_agg_clob,0);
             v_agg_buffer := '';       
             v_agg_strings_cnt := 1;       
 
-            FOR y in p_agg_obj.FIRST..p_agg_obj.last
+            FOR y IN p_agg_obj.first..p_agg_obj.last
             LOOP
                 v_agg_strings_cnt := greatest(length(regexp_replace('[^:]','')) + 1,v_agg_strings_cnt);
                 v_style_id := get_aggregate_style_id(p_font         => '',
@@ -2327,8 +2541,8 @@ as
                                 p_buffer     =>  v_agg_buffer,           
                                 p_style_id   => v_style_id);        
             END LOOP;
-            add(p_clob,v_buffer,'<row ht="'||(v_agg_strings_cnt * STRING_HEIGHT)||'">'||chr(10),TRUE);
-            add(v_agg_clob,v_agg_buffer,' ',TRUE);
+            add(p_clob,v_buffer,'<row ht="'||(v_agg_strings_cnt * string_height)||'">'||chr(10),true);
+            add(v_agg_clob,v_agg_buffer,' ',true);
             dbms_lob.copy( dest_lob => p_clob,
                             src_lob => v_agg_clob,
                             amount => dbms_lob.getlength(v_agg_clob),
@@ -2336,13 +2550,23 @@ as
                             src_offset => 1);
             add(p_clob,v_buffer,'</row>'||chr(10));
             p_rownum := p_rownum + 1;
-        end if;
+        END IF;
         dbms_lob.freetemporary(v_agg_clob);
-  end print_agg;
+  END print_agg;
   --
-  begin    
-    pragma inline(add,'YES');     
-
+  
+  
+  --
+  BEGIN  -- BEGIN of the MAIN-function generate_from_report   
+     -- inline often used functions
+     PRAGMA inline(add,'YES');
+     PRAGMA inline(log,'YES');  
+     -- In earlier versions code to get data from the report
+     -- was splitted from the code to generate Excel.
+     -- But it was too slow, after combining it
+     -- the readability was worsened
+     -- but performance was increased up to x10
+  
     add(v_clob,v_buffer,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
     add(v_clob,v_buffer,'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
         <dimension ref="A1"/>
@@ -2352,61 +2576,34 @@ as
             <selection pane="bottomLeft" activeCell="A2" sqref="A2"/>
             </sheetView>
             </sheetViews>
-        <sheetFormatPr baseColWidth="10" defaultColWidth="10" defaultRowHeight="15"/>'||chr(10),TRUE);
-
-    a_col_name_plus_width := APEX_UTIL.STRING_TO_TABLE(rtrim(p_width_str,','),','); 
-
-    v_coefficient := nvl(p_coefficient,WIDTH_COEFFICIENT);
-    if v_coefficient =  0 then
-      v_coefficient := WIDTH_COEFFICIENT;
-    end if;     
-    add(v_clob,v_buffer,'<cols>'||chr(10));
-    <<column_widths>>
-    log('p_custom_width='||p_custom_width);
-    for i in 1..l_report.displayed_columns.count   loop
-       v_column_alias := get_column_alias(i);
-      -- if current column is not control break column
-      if apex_plugin_util.get_position_in_list(l_report.break_on,v_column_alias) is null then 
-        v_i := v_i + 1;
-        begin                    
-          v_custom_col_width := regexp_substr(','||p_custom_width||',',','||v_column_alias||':\d+,');          
-          if v_custom_col_width is not null then            
-            v_col_width := to_number(ltrim(regexp_substr(v_custom_col_width,':\d+'),':'));
-            log('v_col_width='||v_col_width||' for column '||v_column_alias);
-          else        
-            v_col_width  := round(to_number(a_col_name_plus_width(v_i))/ v_coefficient);          
-          end if;
-        exception
-          when others then             
-            v_col_width := -1;  
-        end;
-
-        if v_col_width >= 0 then
-          add(v_clob,v_buffer,'<col min="'||v_i||'" max="'||v_i||'" width="'||v_col_width||'" customWidth="1" />'||chr(10));        
-        else
-          add(v_clob,v_buffer,'<col min="'||v_i||'" max="'||v_i||'" width="10" customWidth="0" />'||chr(10));        
-        end if;
-      end if;  
-    end loop column_widths;
-    v_i := 0;
-    add(v_clob,v_buffer,'</cols>'||chr(10));
-     --!
+        <sheetFormatPr baseColWidth="10" defaultColWidth="10" defaultRowHeight="15"/>'||chr(10),true);
+    
+    print_column_widths(
+      p_clob          => v_clob,
+      p_buffer        => v_buffer,
+      p_width_str     => p_width_str,
+      p_coefficient   => p_coefficient,
+      p_custom_width  => p_custom_width
+    );    
+   
     add(v_clob,v_buffer,'<sheetData>'||chr(10));
      --column header
     add(v_clob,v_buffer,'<row>'||chr(10));      
 
     v_cur := dbms_sql.open_cursor(2); 
-    v_sql := apex_plugin_util.replace_substitutions(p_value  => l_report.report.sql_query,
-                                                    p_escape => false);    
+    v_sql := apex_plugin_util.replace_substitutions(
+      p_value  => l_report.report.sql_query,
+      p_escape => false
+    );    
     dbms_sql.parse(v_cur,v_sql,dbms_sql.native);     
     dbms_sql.describe_columns2(v_cur,v_colls_count,l_report.desc_tab);    
     --skip internal primary key if need
-    for i in 1..l_report.desc_tab.count loop            
-      if lower(l_report.desc_tab(i).col_name) = 'apxws_row_pk' then
+    FOR i IN 1..l_report.desc_tab.count LOOP            
+      IF lower(l_report.desc_tab(i).col_name) = 'apxws_row_pk' THEN
         l_report.skipped_columns := 1;
-      end if;      
-    end loop;
-
+      END IF;      
+    END LOOP;
+    -- see strucure of SQL-query in init_t_report-procedure
     l_report.start_with := 1 + 
                            l_report.skipped_columns +
                            nvl(l_report.break_really_on.count,0) + 
@@ -2414,260 +2611,255 @@ as
                            l_report.col_highlight.count;
     l_report.end_with   := l_report.skipped_columns + 
                            nvl(l_report.break_really_on.count,0) + 
-                           l_report.displayed_columns.count  + 
                            l_report.row_highlight.count + 
-                           l_report.col_highlight.count;    
+                           l_report.col_highlight.count +
+                           l_report.displayed_columns.count;    
 
     log('l_report.start_with='||l_report.start_with);
     log('l_report.end_with='||l_report.end_with);
     log('l_report.skipped_columns='||l_report.skipped_columns);
     -- init column datatypes and format masks
-    for i in 1..l_report.desc_tab.count loop      
+    FOR i IN 1..l_report.desc_tab.count LOOP      
       log('column_type='||l_report.desc_tab(i).col_type);
       -- don't know why column types in dbms_sql.describe_columns2 do not correspond to types in dbms_types      
-      if l_report.desc_tab(i).col_type in (dbms_types.TYPECODE_TIMESTAMP_TZ,181,
-                                    dbms_types.TYPECODE_TIMESTAMP_LTZ,231,
-                                    dbms_types.TYPECODE_TIMESTAMP,180,
-                                    dbms_types.TYPECODE_DATE) 
-      then
-         prepare_col_format_mask(p_col_number => i,p_data_type => l_report.desc_tab(i).col_type);      
-      elsif l_report.desc_tab(i).col_type = dbms_types.TYPECODE_NUMBER then
-         l_report.column_types(i) := 'NUMBER';
-      else
-         l_report.column_types(i) := 'STRING';
+      IF l_report.desc_tab(i).col_type IN (dbms_types.typecode_timestamp_tz,181,
+                                           dbms_types.typecode_timestamp_ltz,231,
+                                           dbms_types.typecode_timestamp,180,
+                                           dbms_types.typecode_date) 
+      THEN
+         prepare_col_format_mask(
+           p_col_number => i,
+           p_data_type => l_report.desc_tab(i).col_type
+         );      
+      ELSIF l_report.desc_tab(i).col_type = dbms_types.typecode_number THEN
+         l_report.column_data_types(i) := 'NUMBER';
+      ELSE
+         l_report.column_data_types(i) := 'STRING';
          log('column_type='||l_report.desc_tab(i).col_type||' STRING');
-      end if;     
+      END IF;     
       l_report.all_columns(upper(l_report.desc_tab(i).col_name)) := i;
-    end loop;
+    END LOOP;
 
     v_bind_variables := wwv_flow_utilities.get_binds(v_sql);
 
     <<headers>>
-    for i in 1..l_report.displayed_columns.count   loop
+    FOR i IN 1..l_report.displayed_columns.count   LOOP
        v_column_alias := get_column_alias(i);
       -- if current column is not control break column
-      if apex_plugin_util.get_position_in_list(l_report.break_on,v_column_alias) is null then       
-       /* 
-        h_cell.column_alias := v_column_alias;
-        h_cell.header_align :=  get_header_alignment(v_column_alias);
-        h_cell.align :=  get_column_alignment(v_column_alias);
-        h_cell.column_type := get_column_types(i);
-        h_cell.format_mask := get_col_format_mask(v_column_alias);
-        h_cell.column_text := get_column_names(v_column_alias);*/        
-        print_char_cell(p_cell_addr  => get_cell_name(i,v_rownum),
-                        p_string     => get_xmlval(get_column_names(v_column_alias)),
-                        p_clob       => v_clob,
-                        p_buffer     => v_buffer,
-                        p_style_id   => get_header_style_id(p_align  => get_header_alignment(v_column_alias))
-                      );        
-      end if;  
-    end loop headers;    
+      -- !! to do check why break_on is used
+      IF apex_plugin_util.get_position_in_list(l_report.break_on,v_column_alias) IS NULL THEN       
+        print_char_cell(
+          p_cell_addr  => get_cell_name(i,v_rownum),
+          p_string     => get_xmlval(get_column_header_label(v_column_alias)),
+          p_clob       => v_clob,
+          p_buffer     => v_buffer,
+          p_style_id   => get_header_style_id(p_align  => get_header_alignment(v_column_alias))
+        );        
+      END IF;  
+    END LOOP headers;    
     v_rownum := v_rownum + 1;
     add(v_clob,v_buffer,'</row>'||chr(10)); 
 
     log('<<bind variables>>');
-
     <<bind_variables>>
-    for i in 1..v_bind_variables.count loop      
+    FOR i IN 1..v_bind_variables.count LOOP      
       v_bind_var_name := ltrim(v_bind_variables(i),':');
-      if v_bind_var_name = 'APXWS_MAX_ROW_CNT' then      
+      IF v_bind_var_name = 'APXWS_MAX_ROW_CNT' THEN      
          -- remove max_rows
-         DBMS_SQL.BIND_VARIABLE (v_cur,'APXWS_MAX_ROW_CNT',p_max_rows);    
+         dbms_sql.bind_variable (v_cur,'APXWS_MAX_ROW_CNT',p_max_rows);    
          log('Bind variable ('||i||')'||v_bind_var_name||'<'||p_max_rows||'>');
-      else
+      ELSE
         v_binded := false; 
         --first look report bind variables (filtering, search etc)
         <<bind_report_variables>>
-        for a in 1..l_report.report.binds.count loop
-          if v_bind_var_name = l_report.report.binds(a).name then
-             DBMS_SQL.BIND_VARIABLE (v_cur,v_bind_var_name,l_report.report.binds(a).value);
+        FOR a IN 1..l_report.report.binds.count LOOP
+          IF v_bind_var_name = l_report.report.binds(a).name THEN
+             dbms_sql.bind_variable (v_cur,v_bind_var_name,l_report.report.binds(a).value);
              log('Bind variable as report variable ('||i||')'||v_bind_var_name||'<'||l_report.report.binds(a).value||'>');
              v_binded := true;
-             exit;
-          end if;
-        end loop bind_report_variables;
+             EXIT;
+          END IF;
+        END LOOP bind_report_variables;
         -- substantive strings in sql-queries can have bind variables too
         -- these variables are not in v_report.binds
         -- and need to be binded separately
-        if not v_binded then
-          DBMS_SQL.BIND_VARIABLE (v_cur,v_bind_var_name,v(v_bind_var_name));
+        IF NOT v_binded THEN
+          dbms_sql.bind_variable (v_cur,v_bind_var_name,v(v_bind_var_name));
           log('Bind variable ('||i||')'||v_bind_var_name||'<'||v(v_bind_var_name)||'>');          
-        end if;        
-       end if; 
-    end loop;          
+        END IF;        
+       END IF; 
+    END LOOP;          
 
     log('<<define_columns>>');    
-    for i in 1..v_colls_count loop
+    FOR i IN 1..v_colls_count LOOP
        log('define column '||i);
        log('column type '||l_report.desc_tab(i).col_type);      
-       if l_report.column_types(i) = 'DATE' then   
+       IF l_report.column_data_types(i) = 'DATE' THEN   
          dbms_sql.define_column(v_cur, i, v_date_dummy);
-       elsif l_report.column_types(i) = 'NUMBER' then   
+       ELSIF l_report.column_data_types(i) = 'NUMBER' THEN   
          dbms_sql.define_column(v_cur, i, v_number_dummy);
-       else --STRING
+       ELSE --STRING
          dbms_sql.define_column(v_cur, i, v_char_dummy,32767);
-       end if;         
-    end loop define_columns;    
+       END IF;         
+    END LOOP define_columns;    
 
     v_result := dbms_sql.execute(v_cur);         
 
     log('<<main_cycle>>');
     <<main_cycle>>
     LOOP 
-         IF DBMS_SQL.FETCH_ROWS(v_cur)>0 THEN          
+         IF dbms_sql.fetch_rows(v_cur)>0 THEN          
          log('<<fetch>>');
            -- get column values of the row 
             v_current_row := v_current_row + 1;
             <<query_columns>>
-            for i in 1..v_colls_count loop               
+            FOR i IN 1..v_colls_count LOOP               
                log('column type '||l_report.desc_tab(i).col_type);
                v_row(i) := ' ';
                v_date_row(i) := NULL;
                v_number_row(i) := NULL;
-               if l_report.column_types(i) = 'DATE' then
+               IF l_report.column_data_types(i) = 'DATE' THEN
                  dbms_sql.column_value(v_cur, i,v_date_row(i));
-                 v_row(i) := to_char(v_date_row(i));
-               elsif l_report.column_types(i) = 'NUMBER' then
+                 v_row(i) := TO_CHAR(v_date_row(i));
+               ELSIF l_report.column_data_types(i) = 'NUMBER' THEN
                 dbms_sql.column_value(v_cur, i,v_number_row(i));
-                v_row(i) := to_char(v_number_row(i));
-               else 
+                v_row(i) := TO_CHAR(v_number_row(i));
+               ELSE 
                  dbms_sql.column_value(v_cur, i,v_row(i));                 
-               end if;  
-            end loop query_columns;     
+               END IF;  
+            END LOOP query_columns;     
             --check control break
-            if v_current_row > 1 then
-             if is_control_break(v_row,v_prev_row) then
+            IF v_current_row > 1 THEN
+             IF is_control_break(v_row,v_prev_row) THEN
                 v_inside := false;                                                         
                 print_agg(v_last_agg_obj,v_rownum,v_clob,v_buffer);                
-             end if;
-            end if;
-            if not v_inside then
+             END IF;
+            END IF;
+            IF NOT v_inside THEN
                 v_break_header :=  print_control_break_header_obj(v_row);
-                if v_break_header IS NOT NULL then
+                IF v_break_header IS NOT NULL THEN
                     add(v_clob,v_buffer,'<row>'||chr(10));
-                    print_char_cell(p_cell_addr => get_cell_name(1,v_rownum),
-                                    p_string    => get_xmlval(v_break_header),
-                                    p_clob      => v_clob,
-                                    p_buffer    => v_buffer,
-                                    p_style_id  => get_header_style_id(p_back => NULL,p_align  => 'left')
-                                    );         
+                    print_char_cell(
+                      p_cell_addr => get_cell_name(1,v_rownum),
+                      p_string    => get_xmlval(v_break_header),
+                      p_clob      => v_clob,
+                      p_buffer    => v_buffer,
+                      p_style_id  => get_header_style_id(p_back => NULL,p_align  => 'left')
+                    );         
                     v_rownum := v_rownum + 1;
                     add(v_clob,v_buffer,'</row>'||chr(10));
-                end if;
-
+                END IF;
                v_last_agg_obj := get_aggregate(v_row);                           
                v_inside := true;
             END IF;            --                        
-            for i in 1..v_colls_count loop
+            FOR i IN 1..v_colls_count LOOP
               v_prev_row(i) := v_row(i);                           
-            end loop;
+            END LOOP;
 
             add(v_clob,v_buffer,'<row>'||chr(10));
             /* CELLS INSIDE ROW PRINTING*/
             v_row_color := NULL;
             v_row_back_color  := NULL;
             <<row_highlights>>
-            for h in 1..l_report.row_highlight.count loop
-            begin 
-                -- J.P.Lourens 9-Oct-16 
-                -- current_row is based on report_sql which starts with the highlight columns, then the skipped columns and then the rest
-                -- So to capture the highlight values the value for l_report.skipped_columns should NOT be taken into account
-                if get_current_row(v_row,/*l_report.skipped_columns + */l_report.row_highlight(h).cond_number) IS NOT NULL THEN
+            FOR h IN 1..l_report.row_highlight.count LOOP
+              BEGIN 
+                IF get_current_row(v_row,l_report.row_highlight(h).cond_number) IS NOT NULL THEN
                     v_row_color       := l_report.row_highlight(h).highlight_row_font_color;
                     v_row_back_color  := l_report.row_highlight(h).highlight_row_color;
-                end if;
-                exception       
-                  when no_data_found then
-                      log('row_highlights: ='||' end_with='||l_report.end_with||' agg_cols_cnt='||l_report.agg_cols_cnt||' COND_NUMBER='||l_report.row_highlight(h).cond_number||' h='||h);
-                end; 
-            end loop row_highlights;
-
+                END IF;
+              EXCEPTION       
+                WHEN no_data_found THEN
+                    log('row_highlights: ='||' end_with='||l_report.end_with||' agg_cols_cnt='||l_report.agg_cols_cnt||' COND_NUMBER='||l_report.row_highlight(h).cond_number||' h='||h);
+              END; 
+            END LOOP row_highlights;
 
             <<visible_columns>>
             v_i := 0;
-            for i in l_report.start_with..l_report.end_with loop
+            FOR i IN l_report.start_with..l_report.end_with LOOP
                 v_i := v_i + 1;
                 v_cell_color       := NULL;
                 v_cell_back_color  := NULL;
                 v_cell_data.value  := NULL;  
                 v_cell_data.text   := NULL; 
                 v_column_alias     := get_column_alias_sql(i);
-                v_column_type      := get_column_types(i);
+                v_column_data_type := get_column_data_type(i);
                 v_format_mask      := get_col_format_mask(v_column_alias);    
-                if  p_export_links = 'Y' then
+                IF  p_export_links = 'Y' THEN
                   v_link := get_col_link(v_column_alias);
-                else
+                ELSE
                   v_link := '';
-                end if;
-                v_cell_addr        := get_cell_name(v_i,v_rownum);
-                add_link(p_cell_addr => v_cell_addr,p_link => v_link,p_row => v_row);
+                END IF;
+                v_cell_addr := get_cell_name(v_i,v_rownum);
+                add_link(
+                  p_cell_addr => v_cell_addr,
+                  p_link => v_link,
+                  p_row => v_row,
+                  p_links => v_links,
+                  p_links_ref => v_links_ref
+                );
 
-
-                IF v_column_type = 'DATE' THEN
+                IF v_column_data_type = 'DATE' THEN
                     v_cell_data := get_cell(get_current_row(v_row,i),v_format_mask,get_current_row(v_date_row,i));
-                ELSIF  v_column_type = 'NUMBER' THEN      
+                ELSIF  v_column_data_type = 'NUMBER' THEN      
                     v_cell_data := get_cell(get_current_row(v_row,i),v_format_mask,get_current_row(v_number_row,i));
                 ELSE --STRING
                     v_format_mask := NULL;
-                    v_cell_data.VALUE  := NULL;  
+                    v_cell_data.value  := NULL;  
                     v_cell_data.datatype := 'STRING';
                     v_cell_data.text   := get_current_row(v_row,i);
-                end if; 
+                END IF; 
 
                 --check that cell need to be highlighted
                 <<cell_highlights>>
-                for h in 1..l_report.col_highlight.count loop
-                    begin
-                    -- J.P.Lourens 9-Oct-16 
-                    -- current_row is based on report_sql which starts with the highlight columns, then the skipped columns and then the rest
-                    -- So to capture the highlight values the value for l_report.skipped_columns should NOT be taken into account
-                    if get_current_row(v_row,/*l_report.skipped_columns + */l_report.col_highlight(h).cond_number) is not null 
-                        and v_column_alias = l_report.col_highlight(h).condition_column_name 
-                    then
+                FOR h IN 1..l_report.col_highlight.count LOOP
+                  BEGIN
+                    IF get_current_row(v_row,l_report.col_highlight(h).cond_number) IS NOT NULL 
+                        AND v_column_alias = l_report.col_highlight(h).condition_column_name 
+                    THEN
                         v_cell_color       := l_report.col_highlight(h).highlight_cell_font_color;
                         v_cell_back_color  := l_report.col_highlight(h).highlight_cell_color;
-                    end if;
-                    exception
-                when no_data_found then
-                    log('col_highlights: ='||' end_with='||l_report.end_with||' agg_cols_cnt='||l_report.agg_cols_cnt||' COND_NUMBER='||l_report.col_highlight(h).cond_number||' h='||h); 
-                end;
-                END loop cell_highlights;
+                    END IF;
+                  EXCEPTION
+                    WHEN no_data_found THEN
+                        log('col_highlights: ='||' end_with='||l_report.end_with||' agg_cols_cnt='||l_report.agg_cols_cnt||' COND_NUMBER='||l_report.col_highlight(h).cond_number||' h='||h); 
+                  END;
+                END LOOP cell_highlights;
 
-                begin                                
-                    v_style_id := get_style_id(p_font          => nvl(v_cell_color,v_row_color),
-                                               p_back         => nvl(v_cell_back_color,v_row_back_color),
-                                               p_data_type    => v_cell_data.datatype,
-                                               p_format_mask  => v_format_mask,
-                                               p_align        => lower(get_column_alignment(v_column_alias)),
-                                               p_link         => v_link
-                                               );
-                    if v_cell_data.datatype in ('NUMBER') then
-                        print_number_cell(p_cell_addr => v_cell_addr,
-                                          p_value     => v_cell_data.value,
-                                          p_clob      => v_clob,
-                                          p_buffer    => v_buffer,
-                                          p_style_id  => v_style_id
-                                        );
-
-                    elsif  v_cell_data.datatype in ('DATE') then
-                        add(v_clob,v_buffer,'<c r="'||v_cell_addr||'"  s="'||v_style_id||'">'||chr(10)
-                                            ||'<v>'|| v_cell_data.value|| '</v>'||chr(10)
-                                            ||'</c>'||chr(10)
-                            );
-                    else --STRING
-                        print_char_cell(p_cell_addr => v_cell_addr,
-                                        p_string    => get_xmlval(v_cell_data.text),
+                BEGIN                                
+                  v_style_id := get_style_id(
+                    p_font_color   => nvl(v_cell_color,v_row_color), -- cell highlight owerwrites row highlight 
+                    p_back_color   => nvl(v_cell_back_color,v_row_back_color), -- cell highlight owerwrites row highlight 
+                    p_data_type    => v_cell_data.datatype,
+                    p_format_mask  => v_format_mask,
+                    p_align        => lower(get_column_alignment(v_column_alias)),
+                    p_is_link      => (v_link IS NULL)
+                  );
+                  IF v_cell_data.datatype IN ('NUMBER') THEN
+                      print_number_cell(p_cell_addr => v_cell_addr,
+                                        p_value     => v_cell_data.value,
                                         p_clob      => v_clob,
                                         p_buffer    => v_buffer,
                                         p_style_id  => v_style_id
-                                        );
-                    END IF;       
-                exception
-                WHEN no_data_found THEN
-                    null;
-                end;
+                                      );
 
-            end loop visible_columns;            
+                  ELSIF  v_cell_data.datatype IN ('DATE') THEN
+                      add(v_clob,v_buffer,'<c r="'||v_cell_addr||'"  s="'||v_style_id||'">'||chr(10)
+                                          ||'<v>'|| v_cell_data.value|| '</v>'||chr(10)
+                                          ||'</c>'||chr(10)
+                          );
+                  ELSE --STRING
+                      print_char_cell(p_cell_addr => v_cell_addr,
+                                      p_string    => get_xmlval(v_cell_data.text),
+                                      p_clob      => v_clob,
+                                      p_buffer    => v_buffer,
+                                      p_style_id  => v_style_id
+                                      );
+                  END IF;       
+                EXCEPTION
+                  WHEN no_data_found THEN
+                    NULL;
+                END;
+            END LOOP visible_columns;            
 
             add(v_clob,v_buffer,'</row>'||chr(10));         
             v_rownum := v_rownum + 1;
@@ -2675,62 +2867,61 @@ as
            EXIT; 
          END IF;
     END LOOP main_cycle;    
-    if v_inside then       
+    IF v_inside THEN       
        v_inside := false;
        print_agg(v_last_agg_obj,v_rownum,v_clob,v_buffer);
-    end if;  
+    END IF;  
     dbms_sql.close_cursor(v_cur);  
 
     add(v_clob,v_buffer,'</sheetData>'||chr(10));
-    if p_autofilter = 'Y' then
+    IF p_autofilter = 'Y' THEN
         add(v_clob,v_buffer,'<autoFilter ref="A1:' || get_cell_name(v_colls_count,v_rownum-1) || '"/>');
-    end if;
+    END IF;
     -- print links
-    if v_links.count >  0 then 
+    IF v_links.count >  0 THEN 
         add(v_clob,v_buffer,'<hyperlinks>'||chr(10));        
-        for p in 1..v_links.count loop     
+        FOR p IN 1..v_links.count LOOP     
            add(v_clob,v_buffer,v_links(p)||chr(10));
-        end loop;
+        END LOOP;
         add(v_clob,v_buffer,'</hyperlinks>'||chr(10));
-    end if;
+    END IF;
 
-    add(v_clob,v_buffer,'<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>'||chr(10),TRUE);
+    add(v_clob,v_buffer,'<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/></worksheet>'||chr(10),true);
 
     add(v_strings_clob,v_string_buffer,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
     add(v_strings_clob,v_string_buffer,'<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="' || v_strings.count() || '" uniqueCount="' || v_strings.count() || '">'||chr(10));
 
-    for i in 1 .. v_strings.count() loop
-    add(v_strings_clob,v_string_buffer,'<si><t>'||v_strings(i)|| '</t></si>'||chr(10));
-    end loop; 
-    add(v_strings_clob,v_string_buffer,'</sst>'||chr(10),TRUE);
+    FOR i IN 1 .. v_strings.count() LOOP
+      add(v_strings_clob,v_string_buffer,'<si><t>'||v_strings(i)|| '</t></si>'||chr(10));
+    END LOOP; 
+    add(v_strings_clob,v_string_buffer,'</sst>'||chr(10),true);
 
     -- print links in sheet1.xml.rels
     add(v_links_clob,v_links_buffer,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
     add(v_links_clob,v_links_buffer,'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'||chr(10));
-    for l in 1..v_links_ref.count loop
+    FOR l IN 1..v_links_ref.count LOOP
       add(v_links_clob,v_links_buffer,v_links_ref(l)||chr(10));
-    end loop;
-    add(v_links_clob,v_links_buffer,'</Relationships>'||chr(10),TRUE);
-  end generate_from_report;
+    END LOOP;
+    add(v_links_clob,v_links_buffer,'</Relationships>'||chr(10),true);
+  END generate_from_report;
   ------------------------------------------------------------------------------
 
-   procedure get_report(p_app_id            IN NUMBER,
-                        p_page_id           IN NUMBER,  
-                        p_region_id         IN NUMBER,
-                        p_max_rows          IN NUMBER,            -- maximum rows for export   
-                        v_clob              IN OUT NOCOPY CLOB,
-                        p_strings           IN OUT NOCOPY CLOB,
-                        p_links             IN OUT NOCOPY CLOB,
-                        p_col_length        IN VARCHAR2,
-                        p_width_coefficient IN NUMBER, 
-                        p_autofilter        IN CHAR DEFAULT 'Y',
-                        p_export_links      IN CHAR DEFAULT 'N',
-                        p_custom_width      IN VARCHAR2
-                       )                 
-  is  
-  begin
-    dbms_lob.trim (v_debug,0);
-
+  PROCEDURE get_report(
+     p_app_id            IN NUMBER,
+     p_page_id           IN NUMBER,  
+     p_region_id         IN NUMBER,
+     p_max_rows          IN NUMBER,            -- maximum rows for export   
+     v_clob              IN OUT NOCOPY CLOB,
+     p_strings           IN OUT NOCOPY CLOB,
+     p_links             IN OUT NOCOPY CLOB,
+     p_col_length        IN VARCHAR2,
+     p_width_coefficient IN NUMBER, 
+     p_autofilter        IN CHAR DEFAULT 'Y',
+     p_export_links      IN CHAR DEFAULT 'N',
+     p_custom_width      IN VARCHAR2
+  )                 
+  IS  
+  BEGIN
     log('p_app_id='||p_app_id);
     log('p_page_id='||p_page_id);
     log('p_region_id='||p_region_id);
@@ -2741,7 +2932,7 @@ as
 
     init_t_report(p_app_id,p_page_id,p_region_id);
     generate_from_report(v_clob,p_strings,p_links,p_col_length,p_width_coefficient,p_max_rows,p_autofilter,p_export_links,p_custom_width);
-  end get_report;   
+  END get_report;   
 
   ------------------------------------------------------------------------------
   /* 
@@ -2750,93 +2941,99 @@ as
 
     Author: Srihari Ravva
   */ 
-  function get_highlight_in_cond_sql(p_condition_expression  in APEX_APPLICATION_PAGE_IR_COND.CONDITION_EXPRESSION%TYPE,
-                                     p_condition_sql         in APEX_APPLICATION_PAGE_IR_COND.CONDITION_SQL%TYPE,
-                                     p_condition_column_name in APEX_APPLICATION_PAGE_IR_COND.CONDITION_COLUMN_NAME%TYPE)
-  return varchar2 
-  is
-    v_condition_sql_tmp     varchar2(32767);
-      v_condition_sql            varchar2(32767);
-      v_arr_cond_expr APEX_APPLICATION_GLOBAL.VC_ARR2;
-      v_arr_cond_sql APEX_APPLICATION_GLOBAL.VC_ARR2;    
-  begin
-    v_condition_sql := REPLACE(REPLACE(p_condition_sql,'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||p_condition_column_name||'"');
-      v_condition_sql_tmp := SUBSTR(v_condition_sql,INSTR(v_condition_sql,'#'),INSTR(v_condition_sql,'#',-1)-INSTR(v_condition_sql,'#')+1);
+  FUNCTION get_highlight_in_cond_sql(
+    p_condition_expression  IN apex_application_page_ir_cond.condition_expression%TYPE,
+    p_condition_sql         IN apex_application_page_ir_cond.condition_sql%TYPE,
+    p_condition_column_name IN apex_application_page_ir_cond.condition_column_name%TYPE
+  )
+  RETURN VARCHAR2 
+  IS
+    v_condition_sql_tmp  VARCHAR2(32767);
+    v_condition_sql      VARCHAR2(32767);
+    v_arr_cond_expr      apex_application_global.vc_arr2;
+    v_arr_cond_sql       apex_application_global.vc_arr2;    
+  BEGIN
+    v_condition_sql := replace(replace(p_condition_sql,'#APXWS_HL_ID#','1'),'#APXWS_CC_EXPR#','"'||p_condition_column_name||'"');
+    v_condition_sql_tmp := substr(v_condition_sql,instr(v_condition_sql,'#'),instr(v_condition_sql,'#',-1)-instr(v_condition_sql,'#')+1);
 
-    v_arr_cond_expr := APEX_UTIL.STRING_TO_TABLE(p_condition_expression,',');
-    v_arr_cond_sql := APEX_UTIL.STRING_TO_TABLE(v_condition_sql_tmp,',');
+    v_arr_cond_expr := apex_util.string_to_table(p_condition_expression,',');
+    v_arr_cond_sql := apex_util.string_to_table(v_condition_sql_tmp,',');
 
-    for i in 1..v_arr_cond_expr.count
-    loop
+    FOR i IN 1..v_arr_cond_expr.count
+    LOOP
         -- consider everything as varchar2
         -- 'in' and 'not in' highlight conditions are not possible for DATE columns from IR
-        v_condition_sql := REPLACE(v_condition_sql,v_arr_cond_sql(i),''''||TO_CHAR(v_arr_cond_expr(i))||'''');
-    end loop;
-    return v_condition_sql;
-  end get_highlight_in_cond_sql;  
+        v_condition_sql := replace(v_condition_sql,v_arr_cond_sql(i),''''||TO_CHAR(v_arr_cond_expr(i))||'''');
+    END LOOP;
+    RETURN v_condition_sql;
+  END get_highlight_in_cond_sql;  
 
   ------------------------------------------------------------------------------  
-  procedure add1file
-    ( p_zipped_blob in out nocopy blob
-    , p_name in varchar2
-    , p_content in clob
-    )
-  is
-   v_desc_offset pls_integer := 1;
-   v_src_offset  PLS_INTEGER := 1;
-   v_lang        pls_integer := 0;
-   v_warning     pls_integer := 0;
-   v_blob        BLOB;
-  begin
+  PROCEDURE add1file(
+    p_zipped_blob IN OUT NOCOPY BLOB,
+    p_name IN VARCHAR2,
+    p_content IN CLOB
+  )
+  IS
+    v_desc_offset PLS_INTEGER := 1;
+    v_src_offset  PLS_INTEGER := 1;
+    v_lang        PLS_INTEGER := 0;
+    v_warning     PLS_INTEGER := 0;
+    v_blob        BLOB;
+  BEGIN
     dbms_lob.createtemporary(v_blob,true);
     dbms_lob.converttoblob(v_blob,p_content, dbms_lob.getlength(p_content), v_desc_offset, v_src_offset, dbms_lob.default_csid, v_lang, v_warning);
     as_zip.add1file( p_zipped_blob, p_name, v_blob);
     dbms_lob.freetemporary(v_blob);
-  end add1file;  
+  END add1file;  
 
   ------------------------------------------------------------------------------
-  function get_max_rows (p_app_id      in number,
-                         p_page_id     in number,
+  FUNCTION get_max_rows (p_app_id      IN NUMBER,
+                         p_page_id     IN NUMBER,
                          p_region_id   IN NUMBER)
-  return number
-  is 
-    v_max_row_count number;
-  begin
-    select max_row_count 
-    into v_max_row_count
-    from APEX_APPLICATION_PAGE_IR
-    where application_id = p_app_id
-      and page_id = p_page_id
-      and region_id = p_region_id;
+  RETURN NUMBER
+  IS 
+    v_max_row_count NUMBER;
+  BEGIN
+    SELECT max_row_count 
+    INTO v_max_row_count
+    FROM apex_application_page_ir
+    WHERE application_id = p_app_id
+      AND page_id = p_page_id
+      AND region_id = p_region_id
+      AND ROWNUM <2;
 
-     return v_max_row_count;
-  end get_max_rows;   
+     RETURN v_max_row_count;
+  END get_max_rows;   
   ------------------------------------------------------------------------------  
-  function get_file_name (p_app_id      IN NUMBER,
+  FUNCTION get_file_name (p_app_id      IN NUMBER,
                           p_page_id     IN NUMBER,
                           p_region_id   IN NUMBER)
-  return varchar2
-  is 
-    v_filename varchar2(255);
-  begin
-    select filename 
-    into v_filename
-    from APEX_APPLICATION_PAGE_IR
-    where application_id = p_app_id
-      and page_id = p_page_id
-      and region_id = p_region_id;
+  RETURN VARCHAR2
+  IS 
+    v_filename VARCHAR2(255);
+  BEGIN
+    SELECT filename 
+    INTO v_filename
+    FROM apex_application_page_ir
+    WHERE application_id = p_app_id
+      AND page_id = p_page_id
+      AND region_id = p_region_id
+      AND ROWNUM <2;
 
-     return apex_plugin_util.replace_substitutions(nvl(v_filename,'Excel'));
-  end get_file_name;   
+     RETURN apex_plugin_util.replace_substitutions(nvl(v_filename,'Excel'));
+  END get_file_name;   
   ------------------------------------------------------------------------------
   -- download binary file
-  procedure download(p_data        IN OUT NOCOPY BLOB,
+  PROCEDURE download(p_data        IN OUT NOCOPY BLOB,
                      p_mime_type   IN VARCHAR2,
                      p_file_name   IN VARCHAR2)
-  is
-  begin
-    owa_util.mime_header( ccontent_type=> p_mime_type, 
-                          bclose_header => false );
+  IS
+  BEGIN
+    owa_util.mime_header( 
+      ccontent_type=> p_mime_type, 
+      bclose_header => false
+    );
     sys.htp.p('Content-Length: ' || dbms_lob.getlength( p_data ) );
     sys.htp.p('Content-disposition: attachment; filename='||p_file_name );    
     sys.htp.p('Cache-Control: must-revalidate, max-age=0');
@@ -2844,82 +3041,29 @@ as
     sys.htp.p('Set-Cookie: GPV_DOWNLOAD_STARTED=1;');
     owa_util.http_header_close;    
     wpg_docload.download_file( p_data );  
-  exception
-     when others then 
-        raise_application_error(-20001,'Download (blob)'||SQLERRM);
-  end download;
+  EXCEPTION
+     WHEN OTHERS THEN 
+        raise_application_error(-20001,'Download (blob)'||sqlerrm);
+  END download;
   ------------------------------------------------------------------------------
 
-  procedure download_debug(p_app_id       IN NUMBER,
-                           p_page_id      IN NUMBER,
-                           p_region_id    IN NUMBER, 
-                           p_col_length   IN VARCHAR2 DEFAULT NULL,
-                           p_max_rows     IN NUMBER,
-                           p_autofilter   IN CHAR DEFAULT 'Y',
-                           p_export_links IN CHAR DEFAULT 'N',
-                           p_custom_width IN VARCHAR2
-                          )
-  is
-    v_blob     blob;
-    v_cells    clob;
-    v_strings  clob;
-    v_links    clob;
-    v_desc_offset PLS_INTEGER := 1;
-    v_src_offset  PLS_INTEGER := 1;
-    v_lang        PLS_INTEGER := 0;
-    v_warning     PLS_INTEGER := 0;   
-  begin
-    dbms_lob.createtemporary(v_cells,true);
-    dbms_lob.createtemporary(v_strings,true);
-    dbms_lob.createtemporary(v_blob,true);
-
-    get_report(p_app_id,
-               p_page_id ,  
-               p_region_id,
-               p_max_rows,            -- maximum rows for export   
-               v_cells ,
-               v_strings,
-               v_links,
-               p_col_length,
-               WIDTH_COEFFICIENT,
-               p_autofilter,
-               p_export_links,
-               p_custom_width);
-
-    log('LogFinish',TRUE);
-    dbms_lob.converttoblob(v_blob, v_debug, dbms_lob.getlength(v_debug), v_desc_offset, v_src_offset, dbms_lob.default_csid, v_lang, v_warning);
-    sys.htp.init;
-    sys.owa_util.mime_header('text/txt', FALSE );
-    sys.htp.p('Content-length: ' || sys.dbms_lob.getlength( v_blob));
-    sys.htp.p('Content-Disposition: attachment; filename="log.txt"' );
-    sys.htp.p('Cache-Control: must-revalidate, max-age=0');
-    sys.htp.p('Expires: Thu, 01 Jan 1970 01:00:00 CET');
-    sys.htp.p('Set-Cookie: GPV_DOWNLOAD_STARTED=1;');
-    sys.owa_util.http_header_close;
-    sys.wpg_docload.download_file( v_blob );
-
-    dbms_lob.freetemporary(v_blob);
-  end download_debug;
-
-  ------------------------------------------------------------------------------
-
-  procedure download_excel(p_app_id       IN NUMBER,
-                           p_page_id      IN NUMBER,
-                           p_region_id    IN NUMBER, 
-                           p_col_length   IN VARCHAR2 DEFAULT NULL,
-                           p_max_rows     IN NUMBER,
-                           p_autofilter   IN CHAR DEFAULT 'Y',
-                           p_export_links IN CHAR DEFAULT 'N',
-                           p_custom_width IN VARCHAR2
-                          )
-  is
-    t_template blob;
-    t_excel    blob;
-    v_cells    clob;
-    v_strings  clob;
-    v_links  clob;
+  PROCEDURE download_excel(
+    p_app_id       IN NUMBER,
+    p_page_id      IN NUMBER,
+    p_region_id    IN NUMBER, 
+    p_col_length   IN VARCHAR2 DEFAULT NULL,
+    p_max_rows     IN NUMBER,
+    p_autofilter   IN CHAR DEFAULT 'Y',
+    p_export_links IN CHAR DEFAULT 'N',
+    p_custom_width IN VARCHAR2
+  ) IS
+    t_template BLOB;
+    t_excel    BLOB;
+    v_cells    CLOB;
+    v_strings  CLOB;
+    v_links    CLOB;
     zip_files  as_zip.file_list;
-  begin        
+  BEGIN        
     dbms_lob.createtemporary(t_excel,true);    
     dbms_lob.createtemporary(v_cells,true);
     dbms_lob.createtemporary(v_strings,true);
@@ -2933,23 +3077,23 @@ as
                v_strings,
                v_links,
                p_col_length,
-               WIDTH_COEFFICIENT,
+               width_coefficient,
                p_autofilter,
                p_export_links,
                p_custom_width
               );
 
-    select file_content
-    into t_template
-    from apex_appl_plugin_files 
-    where file_name = 'ExcelTemplate.zip'
-      and application_id = p_app_id
-      and plugin_name='AT.FRT.GPV_IR_TO_MSEXCEL';
+    SELECT file_content
+    INTO t_template
+    FROM apex_appl_plugin_files 
+    WHERE file_name = 'ExcelTemplate.zip'
+      AND application_id = p_app_id
+      AND plugin_name='AT.FRT.GPV_IR_TO_MSEXCEL';
 
     zip_files  := as_zip.get_file_list( t_template );
-    for i in zip_files.first() .. zip_files.last loop
+    FOR i IN zip_files.first() .. zip_files.last LOOP
       as_zip.add1file( t_excel, zip_files( i ), as_zip.get_file( t_template, zip_files( i ) ) );
-    end loop;    
+    END LOOP;    
 
     add1file( t_excel, 'xl/styles.xml', get_styles_xml);    
     add1file( t_excel, 'xl/worksheets/Sheet1.xml', v_cells);
@@ -2968,203 +3112,258 @@ as
     dbms_lob.freetemporary(v_cells);
     dbms_lob.freetemporary(v_strings);    
     dbms_lob.freetemporary(v_links);    
-  end download_excel;
+  END download_excel;
 
-begin
-  dbms_lob.createtemporary(v_debug,true, DBMS_LOB.CALL);  
 END IR_TO_XLSX;
 /
-create or replace PACKAGE IR_TO_MSEXCEL 
-  AUTHID CURRENT_USER
-as
-  FUNCTION render  (p_dynamic_action in apex_plugin.t_dynamic_action,
-                    p_plugin         in apex_plugin.t_plugin )
-  return apex_plugin.t_dynamic_action_render_result; 
+CREATE OR REPLACE PACKAGE ir_to_msexcel 
+  AUTHID current_user
+AS
+  PLUGIN_VERSION CONSTANT VARCHAR2(10) DEFAULT '3.20'; 
+ 
+  FUNCTION render  (p_dynamic_action IN apex_plugin.t_dynamic_action,
+                    p_plugin         IN apex_plugin.t_plugin )
+  RETURN apex_plugin.t_dynamic_action_render_result; 
   
-  function ajax (p_dynamic_action in apex_plugin.t_dynamic_action,
-                 p_plugin         in apex_plugin.t_plugin )
-  return apex_plugin.t_dynamic_action_ajax_result;
+  FUNCTION ajax (p_dynamic_action IN apex_plugin.t_dynamic_action,
+                 p_plugin         IN apex_plugin.t_plugin )
+  RETURN apex_plugin.t_dynamic_action_ajax_result;
 
-  function is_ir2msexcel 
-  return boolean;
+  FUNCTION is_ir2msexcel 
+  RETURN BOOLEAN;
   
 end IR_TO_MSEXCEL;
 /
 
 create or replace PACKAGE BODY IR_TO_MSEXCEL 
 as
-  subtype t_large_varchar2  is varchar2(32767);
+  SUBTYPE t_large_varchar2  IS VARCHAR2(32767);
   v_plugin_running boolean default false;
 
-  function is_ir2msexcel 
-  return boolean
-  is
-  begin
-    return nvl(v_plugin_running,false);    
-  end is_ir2msexcel;
+  -- public function to determine in apex that download was started 
+  -- can be used to show certain columns in Excel only
+  FUNCTION is_ir2msexcel 
+  RETURN BOOLEAN
+  IS
+  BEGIN
+    RETURN nvl(v_plugin_running,false);    
+  END is_ir2msexcel;
   ------------------------------------------------------------------------------
-
-  function get_affected_region_id(p_dynamic_action_id IN apex_application_page_da_acts.action_id%TYPE,
-                                  p_html_region_id    IN VARCHAR2
-                                 )
-  return  apex_application_page_da_acts.affected_region_id%type
-  is
-    v_affected_region_id apex_application_page_da_acts.affected_region_id%type;
-  begin
-
-      SELECT affected_region_id
-      INTO v_affected_region_id
-      FROM apex_application_page_da_acts aapda
-      WHERE aapda.action_id = p_dynamic_action_id
-        and page_id in(nv('APP_PAGE_ID'),0)
-        and application_id = nv('APP_ID')
-        and rownum <2; 
-
-      if v_affected_region_id is null then 
-        begin 
-          select region_id 
-          into v_affected_region_id 
-          from apex_application_page_regions 
-          where  static_id = p_html_region_id
-            and page_id in (nv('APP_PAGE_ID'),0)
-            and application_id = nv('APP_ID');
-        exception 
-          when no_data_found then 
-           select region_id 
-           into v_affected_region_id 
-           from apex_application_page_regions 
-           where  region_id = to_number(ltrim(p_html_region_id,'R'))
-             and page_id in (nv('APP_PAGE_ID'),0)
-             and application_id = nv('APP_ID'); 
-        end; 
-      end if;       
-      return v_affected_region_id;
-  exception
-    when others then
+  -- add lines from source code to error stack 
+  -- needs to better identify the place where error happens
+  FUNCTION convert_error_stack(p_error_stack in varchar2) 
+  RETURN VARCHAR2 
+  IS 
+    v_str    VARCHAR2(32767);
+    v_code_line_txt VARCHAR2(32767);
+    v_package_and_line_no VARCHAR2(100);
+    v_line_no  VARCHAR2(100);  
+    v_package  VARCHAR2(100);
+    v_schema   VARCHAR2(100);
+  BEGIN
+    v_str := p_error_stack;
+    FOR i IN 1..4 LOOP -- it is enoght to have information about fist 4  places
+      v_package_and_line_no := regexp_substr(v_str,'"[^"]+", \w+ \d+',1,i);
+      
+      v_line_no := ltrim(regexp_substr(v_package_and_line_no,' \d+'),' ');
+      
+      v_package := ltrim(rtrim(regexp_substr(v_package_and_line_no,'[.]\w+"'),'"'),'.');
+      v_schema := ltrim(rtrim(regexp_substr(v_package_and_line_no,'"\w+[.]'),'.'),'"');
+      
+      BEGIN
+        SELECT substr(regexp_replace(text,'\s+',' '),1,100)
+        INTO v_code_line_txt
+        FROM all_source 
+        WHERE name = v_package 
+          AND owner = v_schema
+          AND type = 'PACKAGE BODY'
+          AND line = v_line_no;
+      EXCEPTION
+        WHEN OTHERS THEN
+          v_code_line_txt := '';
+      END;
+      
+      v_str := replace(v_str,v_package_and_line_no,v_package_and_line_no||' <'||v_code_line_txt||'>');
+    END LOOP;
+    RETURN v_str;
+  EXCEPTION
+    WHEN OTHERS THEN
+      RETURN p_error_stack;
+  END convert_error_stack;
+  ------------------------------------------------------------------------------
+  -- return APEX internal numeric region id
+  FUNCTION get_affected_region_id(
+    p_dynamic_action_id IN apex_application_page_da_acts.action_id%TYPE,
+    p_static_id  IN VARCHAR2 -- region ID in HTML, string, can be defined by developer as Static ID
+  )
+  RETURN  apex_application_page_da_acts.affected_region_id%TYPE
+  IS
+    v_affected_region_id apex_application_page_da_acts.affected_region_id%TYPE;
+  BEGIN
+    -- first try to get affected region from setting of dynamic action
+    SELECT affected_region_id
+    INTO v_affected_region_id
+    FROM apex_application_page_da_acts aapda
+    WHERE aapda.action_id = p_dynamic_action_id
+      AND page_id IN(nv('APP_PAGE_ID'),0)
+      AND application_id = nv('APP_ID')
+      AND ROWNUM <2; 
+    -- otherwise  use ststic id    
+    IF v_affected_region_id IS NULL THEN 
+       -- static id can be defined by developer
+      BEGIN 
+        SELECT region_id 
+        INTO v_affected_region_id 
+        FROM apex_application_page_regions 
+        WHERE  static_id = p_static_id
+          AND page_id IN (nv('APP_PAGE_ID'),0)
+          AND application_id = nv('APP_ID');
+      EXCEPTION 
+        WHEN no_data_found THEN   
+         -- or can be generated automatically as 'R'||region_id
+         SELECT region_id 
+         INTO v_affected_region_id 
+         FROM apex_application_page_regions 
+         WHERE  region_id = to_number(ltrim(p_static_id,'R'))
+           AND page_id IN (nv('APP_PAGE_ID'),0)
+           AND application_id = nv('APP_ID'); 
+      END; 
+    END IF;       
+    RETURN v_affected_region_id;
+  EXCEPTION
+    WHEN OTHERS THEN
       raise_application_error(-20001,'IR_TO_MSEXCEL.get_affected_region_id: No region found!');      
-  end get_affected_region_id;
+  END get_affected_region_id;
   ------------------------------------------------------------------------------
-
-  function get_affected_region_static_id(p_dynamic_action_id IN apex_application_page_da_acts.action_id%TYPE,
-                                         p_type              IN varchar2   
-                                         )
-  return  apex_application_page_regions.static_id%TYPE
-  is
-   v_affected_region_selector apex_application_page_regions.static_id%type;
-  begin
-      SELECT nvl(static_id,'R'||to_char(affected_region_id))
+  -- get static id for region
+  -- static id can be defined by developer
+  -- or generated by APEX as 'R'||region_id
+  FUNCTION get_affected_region_static_id(
+    p_dynamic_action_id IN apex_application_page_da_acts.action_id%TYPE,
+    p_type              IN VARCHAR2   
+  )
+  RETURN  apex_application_page_regions.static_id%TYPE
+  IS
+    v_affected_region_selector apex_application_page_regions.static_id%TYPE;
+  BEGIN
+      SELECT nvl(static_id,'R'||TO_CHAR(affected_region_id))
       INTO v_affected_region_selector
       FROM apex_application_page_da_acts aapda,
            apex_application_page_regions r
       WHERE aapda.action_id = p_dynamic_action_id
-        and aapda.affected_region_id = r.region_id
-        and r.source_type = p_type
-        and aapda.page_id = v('APP_PAGE_ID')
-        and aapda.application_id = v('APP_ID')
-        and r.page_id = v('APP_PAGE_ID')
-        and r.application_id = v('APP_ID');
+        AND aapda.affected_region_id = r.region_id
+        AND r.source_type = p_type
+        AND aapda.page_id = nv('APP_PAGE_ID')
+        AND aapda.application_id = nv('APP_ID')
+        AND r.page_id = nv('APP_PAGE_ID')
+        AND r.application_id = nv('APP_ID');
 
-      return v_affected_region_selector;
-  exception
-    when no_data_found then
-      return null;
-  end get_affected_region_static_id;
-
+      RETURN v_affected_region_selector;
+  EXCEPTION
+    WHEN no_data_found THEN
+      RETURN NULL;
+  END get_affected_region_static_id;
   ------------------------------------------------------------------------------
-  FUNCTION get_version
-  return varchar2
-  is
-   v_version varchar2(3);
-  begin
+  
+  FUNCTION get_apex_version
+  RETURN VARCHAR2
+  IS
+   v_version VARCHAR2(3);
+  BEGIN
      SELECT substr(version_no,1,3) 
-     into v_version
+     INTO v_version
      FROM apex_release
-     where rownum <2;
+     WHERE ROWNUM <2;
 
-     return v_version;
-  end get_version;
+     RETURN v_version;
+  END get_apex_version;
   ------------------------------------------------------------------------------
+  
+  FUNCTION get_ig_file_name (p_region_selector IN VARCHAR2)
+  RETURN VARCHAR2
+  IS
+    v_filename apex_appl_page_igs.download_filename%TYPE;
+  BEGIN
+    SELECT download_filename
+      INTO v_filename
+      FROM apex_appl_page_igs
+    WHERE application_id = nv('APP_ID')
+      AND page_id = nv('APP_PAGE_ID')
+      AND nvl(region_name,'R'||region_id) = p_region_selector
+      AND ROWNUM <2;
 
-  function get_ig_file_name (p_region_selector IN VARCHAR2)
-  return varchar2
-  is
-    v_filename APEX_APPL_PAGE_IGS.download_filename%TYPE;
-  begin
-    select download_filename
-      into v_filename
-      from APEX_APPL_PAGE_IGS
-    where application_id = v('APP_ID')
-      and page_id = v('APP_PAGE_ID')
-      and nvl(region_name,'R'||region_id) = p_region_selector
-      and rownum <2;
-
-     return apex_plugin_util.replace_substitutions(nvl(v_filename,'Excel'));
-  exception
-    when others then
-       return 'Excel';
-  end get_ig_file_name;
+     RETURN apex_plugin_util.replace_substitutions(nvl(v_filename,'Excel'));
+  EXCEPTION
+    WHEN OTHERS THEN
+       RETURN 'Excel';
+  END get_ig_file_name;
   ------------------------------------------------------------------------------
-
-  FUNCTION render (p_dynamic_action in apex_plugin.t_dynamic_action,
-                   p_plugin         in apex_plugin.t_plugin )
-  return apex_plugin.t_dynamic_action_render_result
-  is
-    v_javascript_code          varchar2(1000);
+  -- is used both for interactive grids and reports
+  FUNCTION render (
+    p_dynamic_action IN apex_plugin.t_dynamic_action,
+    p_plugin         IN apex_plugin.t_plugin 
+  )
+  RETURN apex_plugin.t_dynamic_action_render_result
+  IS
+    v_javascript_code          VARCHAR2(1000);
     v_result                   apex_plugin.t_dynamic_action_render_result;
-    v_plugin_id                varchar2(100);
-    v_affected_region_IR_selector apex_application_page_regions.static_id%type;
-    v_affected_region_IG_selector apex_application_page_regions.static_id%type;
-    v_is_ig                    boolean default false;
-    v_is_ir                    boolean default false;
+    v_plugin_id                VARCHAR2(100);
+    v_affected_region_ir_selector apex_application_page_regions.static_id%TYPE;
+    v_affected_region_ig_selector apex_application_page_regions.static_id%TYPE;
+    v_is_ig                    BOOLEAN DEFAULT false;
+    v_is_ir                    BOOLEAN DEFAULT false;
     v_workspace                apex_applications.workspace%TYPE;
-    v_found                    boolean default false;
+    v_found                    BOOLEAN DEFAULT false;
   BEGIN
     v_plugin_id := apex_plugin.get_ajax_identifier;
-    v_affected_region_IR_selector := get_affected_region_static_id(p_dynamic_action.ID,'Interactive Report');
-    v_affected_region_IG_selector := get_affected_region_static_id(p_dynamic_action.ID,'Interactive Grid');
+    v_affected_region_ir_selector := get_affected_region_static_id(p_dynamic_action.id,'Interactive Report');
+    v_affected_region_ig_selector := get_affected_region_static_id(p_dynamic_action.id,'Interactive Grid');
 
-    select workspace
-    into v_workspace
-    from apex_applications
-    where application_id =nv('APP_ID');
+    SELECT workspace
+    INTO v_workspace
+    FROM apex_applications
+    WHERE application_id = nv('APP_ID');
 
-    if nvl(p_dynamic_action.attribute_03,'Y') = 'Y' then -- add "Download XLSX" icon
-      if v_affected_region_IR_selector is not null then
+    -- add "Download XLSX" icon to the download - menu
+    IF nvl(p_dynamic_action.attribute_03,'Y') = 'Y' THEN 
+      IF v_affected_region_ir_selector IS NOT NULL THEN
         -- add XLSX Icon to Affected IR Region
-        v_javascript_code :=  'excel_gpv.addDownloadXLSXIcon('''||v_plugin_id||''','''||v_affected_region_IR_selector||''','''||get_version||''');';
-        APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,v_affected_region_IR_selector);
-      elsif v_affected_region_IG_selector is not null then
-         v_javascript_code := 'excel_ig_gpv.addDownloadXLSXiconToIG('''||v_affected_region_IG_selector
-           ||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_IG_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''');';  
-         APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,v_affected_region_IG_selector);
-      else
-        -- add XLSX Icon to all IR Regions on the page
-        for i in (SELECT nvl(static_id,'R'||to_char(region_id)) as affected_region_selector,
+        v_javascript_code :=  'excel_gpv.addDownloadXLSXIcon('''||v_plugin_id||''','''||v_affected_region_ir_selector||''','''||get_apex_version||''');';
+        apex_javascript.add_onload_code(v_javascript_code,v_affected_region_ir_selector);
+      ELSIF v_affected_region_ig_selector IS NOT NULL THEN
+         -- add XLSX Icon to Affected IG Region
+         v_javascript_code := 'excel_ig_gpv.addDownloadXLSXiconToIG('''||v_affected_region_ig_selector
+           ||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_ig_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''');';  
+         apex_javascript.add_onload_code(v_javascript_code,v_affected_region_ig_selector);
+      ELSE
+        -- add XLSX Icon to all IR and IR  Regions on the page
+        FOR i IN (SELECT nvl(static_id,'R'||TO_CHAR(region_id)) AS affected_region_selector,
                          r.source_type
                   FROM apex_application_page_regions r
-                  where r.page_id = nv('APP_PAGE_ID')
-                    and r.application_id =nv('APP_ID')
-                    and r.source_type  in ('Interactive Report','Interactive Grid')
-                    and r.workspace = v_workspace
+                  WHERE r.page_id = nv('APP_PAGE_ID')
+                    AND r.application_id =nv('APP_ID')
+                    AND r.source_type  IN ('Interactive Report','Interactive Grid')
+                    AND r.workspace = v_workspace
                  )
-        loop
-           if i.source_type = 'Interactive Report' then 
-             v_javascript_code :=  'excel_gpv.addDownloadXLSXIcon('''||v_plugin_id||''','''||i.affected_region_selector||''','''||get_version||''');';
+        LOOP
+           IF i.source_type = 'Interactive Report' THEN 
+             v_javascript_code :=  'excel_gpv.addDownloadXLSXIcon('''||v_plugin_id||''','''||i.affected_region_selector||''','''||get_apex_version||''');';
              v_is_ir := true;
-           else             
-             v_javascript_code := 'excel_ig_gpv.addDownloadXLSXiconToIG('''||i.affected_region_selector||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_IG_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''');';  
+           ELSE             
+             v_javascript_code := 'excel_ig_gpv.addDownloadXLSXiconToIG('''||i.affected_region_selector||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_ig_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''');';  
              v_is_ig := true;
-           end if;
-           APEX_JAVASCRIPT.ADD_ONLOAD_CODE(v_javascript_code,i.affected_region_selector);
-        end loop;
-      end if;
-    end if;
+           END IF;
+           apex_javascript.add_onload_code(v_javascript_code,i.affected_region_selector);
+        END LOOP;
+      END IF;
+    END IF;
 
-    if v_affected_region_IR_selector is not null or v_is_ir then
+    -- add libraries only if needed
+    IF v_affected_region_ir_selector IS NOT NULL OR v_is_ir THEN
        apex_javascript.add_library (p_name      => 'IR2MSEXCEL', 
                                     p_directory => p_plugin.file_prefix); 
-    end if;                                 
-    if v_affected_region_IG_selector is not null or v_is_ig then
+    END IF;                                 
+    IF v_affected_region_ig_selector IS NOT NULL OR v_is_ig THEN
         apex_javascript.add_library (p_name      => 'IG2MSEXCEL', 
                                      p_directory => p_plugin.file_prefix); 
         apex_javascript.add_library (p_name      => 'shim.min', 
@@ -3173,117 +3372,125 @@ as
                                      p_directory => p_plugin.file_prefix);
         apex_javascript.add_library (p_name      => 'FileSaver.min', 
                                      p_directory => p_plugin.file_prefix);
-    end if;
+    END IF;
 
-    if v_affected_region_IR_selector is not null then
-      v_result.javascript_function := 'function(){excel_gpv.getExcel('''||v_affected_region_IR_selector||''','''||v_plugin_id||''')}';
-    elsif v_affected_region_IG_selector is not null then      
-      v_result.javascript_function := 'function(){excel_ig_gpv.downloadXLSXfromIG('''||v_affected_region_IG_selector||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_IG_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''')}';
-    else
+    -- if affected region is defined add javaScript - code 
+    -- to realize download functionality
+    IF v_affected_region_ir_selector IS NOT NULL THEN
+      -- for IR
+      v_result.javascript_function := 'function(){excel_gpv.getExcel('''||v_affected_region_ir_selector||''','''||v_plugin_id||''')}';
+    ELSIF v_affected_region_ig_selector IS NOT NULL THEN      
+      -- for IG
+      v_result.javascript_function := 'function(){excel_ig_gpv.downloadXLSXfromIG('''||v_affected_region_ig_selector||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_ig_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''')}';
+    ELSE
       -- try to find first IR/IG on the page
-      for i in (SELECT nvl(static_id,'R'||to_char(region_id)) as affected_region_selector,
+      FOR i IN (SELECT nvl(static_id,'R'||TO_CHAR(region_id)) AS affected_region_selector,
                          r.source_type
                   FROM apex_application_page_regions r
-                  where r.page_id = nv('APP_PAGE_ID')
-                    and r.application_id =nv('APP_ID')
-                    and r.source_type  in ('Interactive Report','Interactive Grid')
-                    and r.workspace = v_workspace
-                    and rownum < 2
+                  WHERE r.page_id = nv('APP_PAGE_ID')
+                    AND r.application_id =nv('APP_ID')
+                    AND r.source_type  IN ('Interactive Report','Interactive Grid')
+                    AND r.workspace = v_workspace
+                    AND ROWNUM < 2
                  )
-        loop
-          if i.source_type = 'Interactive Report' then
+        LOOP
+          IF i.source_type = 'Interactive Report' THEN
             v_result.javascript_function := 'function(){excel_gpv.getExcel('''||i.affected_region_selector||''','''||v_plugin_id||''')}';
-          else
-            v_result.javascript_function := 'function(){excel_ig_gpv.downloadXLSXfromIG('''||i.affected_region_selector||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_IG_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''')}';
-          end if; 
+          ELSE
+            v_result.javascript_function := 'function(){excel_ig_gpv.downloadXLSXfromIG('''||i.affected_region_selector||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_ig_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''')}';
+          END IF; 
           v_found := true;
-        end loop;        
-        if not v_found then
+        END LOOP;        
+        IF NOT v_found THEN
           v_result.javascript_function := 'function(){console.log("No Affected Region Found!");}';
-        end if;  
-    end if;
+        END IF;  
+    END IF;
 
     v_result.ajax_identifier := v_plugin_id;
 
-    return v_result;
-  end render;
+    RETURN v_result;
+  END render;
 
   ------------------------------------------------------------------------------
   --used for export in IG
-  procedure print_column_properties_json(p_application_id in number,
-                                         p_page_id        in number,
-                                         p_rows_portion   in number,
-                                         p_max_rows       in number
+  -- IG-Export needs to get some additional data from APEX DB
+  -- these data can't be recieved using IG javascript API
+  -- at least for older versions of APEX
+  -- This function prepares all the data in json- format
+  PROCEDURE print_column_properties_json(p_application_id IN NUMBER,
+                                         p_page_id        IN NUMBER,
+                                         p_rows_portion   IN NUMBER,
+                                         p_max_rows       IN NUMBER
                                         )
-  is
+  IS
     l_columns_cursor    SYS_REFCURSOR;
     l_highlihts_cursor  SYS_REFCURSOR;
-    v_decimal_separator char(1 char);
-    v_lang_code         char(2 char);
-  begin
-    open l_columns_cursor for 
-    select column_id,
-           case 
-            when  data_type in ('DATE','TIMESTAMP_TZ','TIMESTAMP_LTZ','TIMESTAMP') then 'DATE'
-            else data_type
-           end data_type,
+    v_decimal_separator CHAR(1 CHAR);
+    v_lang_code         CHAR(2 CHAR);
+  BEGIN
+    OPEN l_columns_cursor FOR 
+    SELECT column_id,
+           CASE 
+            WHEN  data_type IN ('DATE','TIMESTAMP_TZ','TIMESTAMP_LTZ','TIMESTAMP') THEN 'DATE'
+            ELSE data_type
+           END data_type,
            name,
-           case 
-            when  data_type in ('DATE','TIMESTAMP_TZ','TIMESTAMP_LTZ','TIMESTAMP') then
+           CASE 
+            WHEN  data_type IN ('DATE','TIMESTAMP_TZ','TIMESTAMP_LTZ','TIMESTAMP') THEN
                   ir_to_xlsx.convert_date_format_js(p_datatype => data_type, p_format => format_mask)
-            else ''
-           end date_format_mask_js,
-           case 
-            when  data_type in ('DATE','TIMESTAMP_TZ','TIMESTAMP_LTZ','TIMESTAMP') then
+            ELSE ''
+           END date_format_mask_js,
+           CASE 
+            WHEN  data_type IN ('DATE','TIMESTAMP_TZ','TIMESTAMP_LTZ','TIMESTAMP') THEN
                   ir_to_xlsx.convert_date_format(p_datatype => data_type,p_format => format_mask)
-            else ''
-           end date_format_mask_excel,
+            ELSE ''
+           END date_format_mask_excel,
            value_alignment,
            heading_alignment
-    from APEX_APPL_PAGE_IG_COLUMNS
-    where application_id = p_application_id 
-      and page_id = p_page_id
-    order by display_sequence;
+    FROM apex_appl_page_ig_columns
+    WHERE application_id = p_application_id 
+      AND page_id = p_page_id
+    ORDER BY display_sequence;
 
-    open l_highlihts_cursor for 
-    select highlight_id,
+    OPEN l_highlihts_cursor FOR 
+    SELECT highlight_id,
            background_color,
            text_color
-    from apex_appl_page_ig_rpt_highlts
-    where application_id = p_application_id 
-      and page_id = p_page_id;
+    FROM apex_appl_page_ig_rpt_highlts
+    WHERE application_id = p_application_id 
+      AND page_id = p_page_id;
 
-    select substr(value,1,1)  as decimal_seperator
-    into v_decimal_separator
-    from nls_session_parameters
-    where parameter = 'NLS_NUMERIC_CHARACTERS';
+    SELECT substr(value,1,1)  AS decimal_seperator
+    INTO v_decimal_separator
+    FROM nls_session_parameters
+    WHERE parameter = 'NLS_NUMERIC_CHARACTERS';
 
     -- always use 'AMERICA' as second parameter because 
     -- really i need only lang code (first parameter) and not the country
-    select regexp_substr(UTL_I18N.MAP_LOCALE_TO_ISO  (value, 'AMERICA'),'[^_]+')
-    into v_lang_code
-    from nls_session_parameters
-    where parameter = 'NLS_LANGUAGE';
+    SELECT regexp_substr(utl_i18n.map_locale_to_iso  (value, 'AMERICA'),'[^_]+')
+    INTO v_lang_code
+    FROM nls_session_parameters
+    WHERE parameter = 'NLS_LANGUAGE';
 
-    APEX_JSON.initialize_clob_output;
-    APEX_JSON.open_object;
-    APEX_JSON.write('column_properties', l_columns_cursor);
-    APEX_JSON.write('highlights', l_highlihts_cursor);
-    APEX_JSON.write('decimal_separator', v_decimal_separator);
-    APEX_JSON.write('lang_code', v_lang_code);
-    APEX_JSON.write('rows_portion',p_rows_portion);
-    APEX_JSON.write('max_rows',p_max_rows);
-    APEX_JSON.close_object;
-    sys.htp.p(APEX_JSON.get_clob_output);
-    APEX_JSON.free_output;
+    apex_json.initialize_clob_output;
+    apex_json.open_object;
+    apex_json.write('column_properties', l_columns_cursor);
+    apex_json.write('highlights', l_highlihts_cursor);
+    apex_json.write('decimal_separator', v_decimal_separator);
+    apex_json.write('lang_code', v_lang_code);
+    apex_json.write('rows_portion',p_rows_portion);
+    apex_json.write('max_rows',p_max_rows);
+    apex_json.close_object;
+    sys.htp.p(apex_json.get_clob_output);
+    apex_json.free_output;
 
-    if l_columns_cursor%ISOPEN THEN
-       close l_columns_cursor;
-    end if;
-    if l_highlihts_cursor%ISOPEN THEN
-       close l_highlihts_cursor;
-    end if;    
-  end print_column_properties_json;
+    IF l_columns_cursor%isopen THEN
+       CLOSE l_columns_cursor;
+    END IF;
+    IF l_highlihts_cursor%isopen THEN
+       CLOSE l_highlihts_cursor;
+    END IF;    
+  END print_column_properties_json;
   ------------------------------------------------------------------------------
 
   function ajax (p_dynamic_action in apex_plugin.t_dynamic_action,
@@ -3313,46 +3520,29 @@ as
       p_autofilter := nvl(p_dynamic_action.attribute_04,'Y');
       p_export_links := nvl(p_dynamic_action.attribute_05,'N');
       p_custom_width := p_dynamic_action.attribute_06;
-      v_affected_region_id := get_affected_region_id(p_dynamic_action_id => p_dynamic_action.ID
-                                                    ,p_html_region_id    => apex_application.g_x03);
+      v_affected_region_id := get_affected_region_id(
+        p_dynamic_action_id => p_dynamic_action.ID,
+        p_static_id         => apex_application.g_x03
+      );
 
       v_maximum_rows := nvl(apex_plugin_util.replace_substitutions(apex_plugin_util.replace_substitutions(p_dynamic_action.attribute_01)),
                                 nvl(IR_TO_XLSX.get_max_rows (p_app_id    => apex_application.g_x01,
                                                              p_page_id   => apex_application.g_x02,
                                                              p_region_id => v_affected_region_id)
                                 ,1000)); 
-      if p_download_type = 'E' then 
-        ir_to_xlsx.download_excel(p_app_id        => apex_application.g_x01,
-                                  p_page_id      => apex_application.g_x02,
-                                  p_region_id    => v_affected_region_id,
-                                  p_col_length   => apex_application.g_x04,
-                                  p_max_rows     => v_maximum_rows,
-                                  p_autofilter   => p_autofilter,
-                                  p_export_links => p_export_links,
-                                  p_custom_width => p_custom_width
-                                  );
-      elsif p_download_type = 'T' then 
-        ir_to_xlsx.download_debug(p_app_id        => apex_application.g_x01,
-                                  p_page_id      => apex_application.g_x02,
-                                  p_region_id    => v_affected_region_id,
-                                  p_col_length   => apex_application.g_x04,
-                                  p_max_rows     => v_maximum_rows,
-                                  p_autofilter   => p_autofilter,
-                                  p_export_links => p_export_links,
-                                  p_custom_width => p_custom_width
-                                  );
-      elsif p_download_type = 'M' then -- use Moritz Klein engine https://github.com/commi235
-        apexir_xlsx_pkg.download( p_ir_region_id => v_affected_region_id,
-                                  p_app_id => apex_application.g_x01,
-                                  p_ir_page_id => apex_application.g_x02
-                                 );      
-      else
-        raise_application_error(-20001,'Unknown download_type: '||p_download_type);
-      end if;
+      ir_to_xlsx.download_excel(p_app_id        => apex_application.g_x01,
+                                p_page_id      => apex_application.g_x02,
+                                p_region_id    => v_affected_region_id,
+                                p_col_length   => apex_application.g_x04,
+                                p_max_rows     => v_maximum_rows,
+                                p_autofilter   => p_autofilter,
+                                p_export_links => p_export_links,
+                                p_custom_width => p_custom_width
+                                );
      return v_dummy;
   exception
     when others then
-      raise_application_error(-20001,SQLERRM||chr(10)||dbms_utility.format_error_backtrace);      
+      raise_application_error(-20001,'Version:'||PLUGIN_VERSION||' '||convert_error_stack(SQLERRM||chr(10)||dbms_utility.format_error_backtrace));      
   end ajax;
 
 end IR_TO_MSEXCEL;

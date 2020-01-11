@@ -523,11 +523,10 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
         $('body').on('dialogopen', function (event, ui) {         
           var $dialog = $(event.target);          
           //var $dialog_instance = $dialog.dialog("instance"); // do not work in APEX 5.2
-          if (event.target.id !== (vRegionID + '_ig_download-dialog')) {
+          if (!(event.target.id == (vRegionID + '_ig_download-dialog') || event.target.id == (vRegionID + '_ig_download_dialog'))) {
             return;
           }
           if($dialog.parent().find('span.ui-dialog-title').text() !== apex.lang.getMessage( "APEXIR_DOWNLOAD")) {
-          //if( $dialog_instance.options.title !== apex.lang.getMessage( "APEXIR_DOWNLOAD")) { 
             return; 
           }  
           // add button to the modal page
@@ -535,20 +534,24 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
           // only one possibility i found is add a  div with position:absolute; 
           // to show the button on the right side
           if ($dialog.parent("div").find('.ir-to-ms-excel-block-w-button').length == 0) {   
-            if(apex.region("IGRID").widget().interactiveGrid("option").config.features.download.formats[0]==="") { // old syntax to keep compability with APEX 5.1.4
+            if(apex.region(vRegionID).widget().interactiveGrid("option").config.features.download.formats[0]==="") { // old syntax to keep compability with APEX 5.1.4
               $dialog.append('<style> div.ui-dialog-buttonset button.ui-button--hot { \
                               display: none; \
                               } </style>'); 
             }
             /*ui-state-default*/
-            $dialog.parent("div").append('<div class="ir-to-ms-excel-block-w-button ' + APEX18_1_class_exclude + '"> \
-                <button type="button" class="ir-to-ms-excel-button ui-button--hot ui-button ui-corner-all ui-widget' + APEX5_1_class +  'ui-button-text-only"> \
-                  <div class="ir-to-ms-excel-block ui-button-text"> \
-                    <span class="a-IGDialog-iconList-icon a-Icon icon-ig-dl-xls ir-to-ms-excel-block-icon" aria-hidden="true"></span> \
-                    <span class="a-IGDialog-iconList-label ir-to-ms-excel-block-text">XLSX</span> \
-                  </div> \
-                </button> \
-              </div>');
+            $dialog.parent("div").append('<div class="ir-to-ms-excel-block-w-button ' + APEX18_1_class_exclude + '">');
+            var $button = $(".ui-button--hot").clone();
+            $button.addClass('ir-to-ms-excel-button');
+            var span_inside_button = $button.find("span");
+            if(span_inside_button.length) {
+              $(span_inside_button).text('XLSX');  
+            } else {
+              $button.text('XLSX');
+            };
+            /*$button.prepend('<span class="a-IGDialog-iconList-icon a-Icon icon-ig-dl-xls ir-to-ms-excel-block-icon" aria-hidden="true"></span>');*/
+            $( ".ir-to-ms-excel-block-w-button").prepend($button);
+
             $('.ir-to-ms-excel-button').click(function () {               
               vActions.invoke("GPVGETXLSX");
               $dialog.dialog('close');
