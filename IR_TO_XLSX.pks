@@ -1,7 +1,7 @@
-CREATE OR REPLACE PACKAGE IR_TO_XLSX
-  AUTHID CURRENT_USER
+CREATE OR REPLACE PACKAGE ir_to_xlsx
+  AUTHID current_user
 IS
-  procedure download_excel(p_app_id       IN NUMBER,
+  PROCEDURE download_excel(p_app_id       IN NUMBER,
                            p_page_id      IN NUMBER,
                            p_region_id    IN NUMBER,
                            p_col_length   IN VARCHAR2 DEFAULT NULL,
@@ -11,30 +11,27 @@ IS
                            p_custom_width IN VARCHAR2
                           ); 
   
-  function convert_date_format(p_format IN VARCHAR2)
-  return varchar2;
-  function convert_number_format(p_format IN VARCHAR2)
-  return varchar2;  
-  function convert_date_format(p_datatype IN VARCHAR2,p_format IN VARCHAR2)
-  return varchar2;
-  function convert_date_format_js(p_datatype in varchar2, p_format in varchar2)
-  return varchar2;
+  FUNCTION convert_date_format(p_format IN VARCHAR2)
+  RETURN VARCHAR2;
   
-  function get_max_rows (p_app_id      IN NUMBER,
+  FUNCTION convert_number_format(p_format IN VARCHAR2)
+  RETURN VARCHAR2;  
+  
+  FUNCTION convert_date_format(p_datatype IN VARCHAR2,p_format IN VARCHAR2)
+  RETURN VARCHAR2;
+  
+  FUNCTION convert_date_format_js(p_datatype IN VARCHAR2, p_format IN VARCHAR2)
+  RETURN VARCHAR2;
+  
+  FUNCTION get_max_rows (p_app_id      IN NUMBER,
                          p_page_id     IN NUMBER,
                          p_region_id   IN NUMBER)
-  return number;
+  RETURN NUMBER;
 
-   /* 
-    function to handle cases of 'in' and 'not in' conditions for highlights
-       used in cursor cur_highlight
-    
-    Author: Srihari Ravva
-  */ 
-  function get_highlight_in_cond_sql(p_condition_expression  in APEX_APPLICATION_PAGE_IR_COND.CONDITION_EXPRESSION%TYPE,
-                                     p_condition_sql         in APEX_APPLICATION_PAGE_IR_COND.CONDITION_SQL%TYPE,
-                                     p_condition_column_name in APEX_APPLICATION_PAGE_IR_COND.CONDITION_COLUMN_NAME%TYPE)
-  return varchar2;
+  FUNCTION get_highlight_in_cond_sql(p_condition_expression  IN apex_application_page_ir_cond.condition_expression%TYPE,
+                                     p_condition_sql         IN apex_application_page_ir_cond.condition_sql%TYPE,
+                                     p_condition_column_name IN apex_application_page_ir_cond.condition_column_name%TYPE)
+  RETURN VARCHAR2;
   /*
   -- format test cases
   select ir_to_xlsx.convert_date_format('dd.mm.yyyy hh24:mi:ss'),to_char(sysdate,'dd.mm.yyyy hh24:mi:ss') from dual
@@ -54,6 +51,6 @@ IS
   select ir_to_xlsx.convert_date_format('fmDay, fmDD fmMonth, YYYY'),to_char(sysdate,'fmDay, fmDD fmMonth, YYYY') from dual 
   */
                     
-end;
+END;
 /
 

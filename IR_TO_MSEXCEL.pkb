@@ -12,6 +12,48 @@ as
     RETURN nvl(v_plugin_running,false);    
   END is_ir2msexcel;
   ------------------------------------------------------------------------------
+  -- add lines from source code to error stack 
+  -- needs to better identify the place where error happens
+  FUNCTION convert_error_stack(p_error_stack in varchar2) 
+  RETURN VARCHAR2 
+  IS 
+    v_str    VARCHAR2(32767);
+    v_code_line_txt VARCHAR2(32767);
+    v_package_and_line_no VARCHAR2(100);
+    v_line_no  VARCHAR2(100);  
+    v_package  VARCHAR2(100);
+    v_schema   VARCHAR2(100);
+  BEGIN
+    v_str := p_error_stack;
+    FOR i IN 1..4 LOOP -- it is enoght to have information about fist 4  places
+      v_package_and_line_no := regexp_substr(v_str,'"[^"]+", \w+ \d+',1,i);
+      
+      v_line_no := ltrim(regexp_substr(v_package_and_line_no,' \d+'),' ');
+      
+      v_package := ltrim(rtrim(regexp_substr(v_package_and_line_no,'[.]\w+"'),'"'),'.');
+      v_schema := ltrim(rtrim(regexp_substr(v_package_and_line_no,'"\w+[.]'),'.'),'"');
+      
+      BEGIN
+        SELECT substr(regexp_replace(text,'\s+',' '),1,100)
+        INTO v_code_line_txt
+        FROM all_source 
+        WHERE name = v_package 
+          AND owner = v_schema
+          AND type = 'PACKAGE BODY'
+          AND line = v_line_no;
+      EXCEPTION
+        WHEN OTHERS THEN
+          v_code_line_txt := '';
+      END;
+      
+      v_str := replace(v_str,v_package_and_line_no,v_package_and_line_no||' <'||v_code_line_txt||'>');
+    END LOOP;
+    RETURN v_str;
+  EXCEPTION
+    WHEN OTHERS THEN
+      RETURN p_error_stack;
+  END convert_error_stack;
+  ------------------------------------------------------------------------------
   -- return APEX internal numeric region id
   FUNCTION get_affected_region_id(
     p_dynamic_action_id IN apex_application_page_da_acts.action_id%TYPE,
@@ -363,7 +405,7 @@ as
      return v_dummy;
   exception
     when others then
-      raise_application_error(-20001,SQLERRM||chr(10)||dbms_utility.format_error_backtrace);      
+      raise_application_error(-20001,'Version:'||PLUGIN_VERSION||' '||convert_error_stack(SQLERRM||chr(10)||dbms_utility.format_error_backtrace));      
   end ajax;
 
 end IR_TO_MSEXCEL;
