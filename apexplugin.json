@@ -1,6 +1,6 @@
 {
   "name" : "GPV Interactive Report/Grid to MSExcel",
-  "version" : "3.16",
+  "version" : "3.20",
   "description" : "Getting result of your Interactive Report/Grid in Microsoft Excel.",
   "keywords" : ["Intearctive Report", "Interactive Grid","export", "excel", "Report"],
   "homepage" : "http://glebovpavel.github.io/Description_IR_TO_XSLX/",
@@ -11,8 +11,7 @@
   "license" : "MIT",
   "author" : {
     "name" : "Pavel Glebov",
-    "email" : "pavelglebov@outlook.com",
-    "url" : "https://plus.google.com/117813085088180273298/posts"
+    "email" : "pavelglebov@outlook.com"
   },
   "repository" : {
     "type" : "git",
@@ -21,7 +20,7 @@
   "oracle" : {
     "versions" : ["11.2", "12"],
     "apex" : {
-      "versions" : ["5.1.3","5.1.4","18.1"],
+      "versions" : ["5.1.4","18.1","18.2","19.1","19.2"],
       "plugin" : {
         "internalName" : "GPV_IR_TO_MSEXCEL",
         "type" : "process",
