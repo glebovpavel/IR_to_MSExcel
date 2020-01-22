@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 01-2020
-** Version: 3.20
+** Version: 3.21
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -619,7 +619,7 @@ as
              nvl2(highlight_row_font_color,1,0) DESC,
              highlight_sequence 
     ) rez;
-    
+
   SUBTYPE t_color IS VARCHAR2(7);
   SUBTYPE t_style_string IS VARCHAR2(300);
   SUBTYPE t_format_mask IS VARCHAR2(100);
@@ -628,14 +628,14 @@ as
   SUBTYPE largevarchar2 IS VARCHAR2(32767);
   SUBTYPE columntype IS VARCHAR2(15);
   SUBTYPE t_formatmask IS VARCHAR2(100);
-  
+
   TYPE t_date_table IS TABLE OF DATE INDEX BY BINARY_INTEGER;  
   TYPE t_number_table IS TABLE OF NUMBER INDEX BY BINARY_INTEGER;  
   TYPE t_styles IS TABLE OF BINARY_INTEGER INDEX BY t_style_string;
   TYPE t_fill_list IS TABLE OF BINARY_INTEGER INDEX BY t_color;
   TYPE t_font_list IS TABLE OF BINARY_INTEGER INDEX BY t_font;
   TYPE t_format_mask_list IS TABLE OF BINARY_INTEGER INDEX BY t_format_mask;
-  
+
   TYPE t_col_names IS TABLE OF apex_application_page_ir_col.report_label%TYPE INDEX BY apex_application_page_ir_col.column_alias%TYPE;
   TYPE t_col_format_mask IS TABLE OF apex_application_page_ir_comp.computation_format_mask%TYPE INDEX BY apex_application_page_ir_col.column_alias%TYPE;
   TYPE t_header_alignment IS TABLE OF apex_application_page_ir_col.heading_alignment%TYPE INDEX BY apex_application_page_ir_col.column_alias%TYPE;
@@ -663,7 +663,6 @@ as
     start_with                BINARY_INTEGER default 0, -- position of first displayed column in query
     end_with                  BINARY_INTEGER default 0, -- position of last displayed column in query    
     agg_cols_cnt              BINARY_INTEGER default 0, 
-    hidden_cols_cnt           BINARY_INTEGER default 0, 
     column_header_labels      t_col_names,       -- column names in report header
     col_format_mask           t_col_format_mask, -- format like $3849,56
     row_highlight             t_highlight,
@@ -682,7 +681,7 @@ as
      text            largevarchar2,
      datatype        VARCHAR2(50)
    );  
-  
+
   -- EXCEPTIONS
   format_error EXCEPTION;
   PRAGMA EXCEPTION_INIT(format_error, -01830);
@@ -704,7 +703,7 @@ as
   g_back_xml         t_large_varchar2;
   v_styles_xml       CLOB;
   v_format_mask_xml  CLOB;
-  
+
   -- CONSTANT
   STRING_HEIGHT CONSTANT NUMBER DEFAULT 14.4;
   WIDTH_COEFFICIENT CONSTANT NUMBER DEFAULT 6;
@@ -720,7 +719,7 @@ as
   DEFAULT_FILL_CNT CONSTANT  BINARY_INTEGER DEFAULT 2; 
   DEFAULT_STYLES_CNT CONSTANT  BINARY_INTEGER DEFAULT 1;     
   FORMAT_MASK_START_WITH  CONSTANT  BINARY_INTEGER DEFAULT 164;  
-  
+
   ------------------------------------------------------------------------------
   t_sheet_rels CLOB DEFAULT '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
@@ -794,7 +793,7 @@ as
       <family val="2" />
       <scheme val="minor" />
     </font>';
-    
+
   BOLD_FONT CONSTANT VARCHAR2(200) DEFAULT '
    <font>
       <b />
@@ -824,7 +823,7 @@ as
 
   DEFAULT_STYLE CONSTANT VARCHAR2(200) DEFAULT '
       <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>';
-      
+
   AGGREGATE_STYLE CONSTANT VARCHAR2(250) DEFAULT '
       <xf numFmtId="#FMTID#" borderId="1" fillId="0" fontId="1" xfId="0" applyAlignment="1" applyFont="1" applyBorder="1">
          <alignment wrapText="1" horizontal="right"  vertical="top"/>
@@ -1234,7 +1233,7 @@ as
        ||p_format_mask
        ||p_align
        ||CASE WHEN p_is_link THEN 'LINK' ELSE '' END;
-       
+
     IF g_styles.EXISTS(v_style) THEN
       RETURN g_styles(v_style)   - 1 + default_styles_cnt;
     ELSE
@@ -1615,51 +1614,6 @@ as
     RETURN intersect_arrays(apex_util.string_to_table(rr(p_delimetered_column_list)),p_displayed_nonbreak_columns);
   END get_cols_as_table;
   ------------------------------------------------------------------------------
-  --get amount of hidden colmns
-  FUNCTION get_hidden_columns_cnt(
-    p_app_id       IN NUMBER,
-    p_page_id      IN NUMBER,
-    p_region_id    IN NUMBER,
-    p_report_id    IN NUMBER
-  )
-  RETURN NUMBER
-  -- J.P.Lourens 9-Oct-16 added p_region_id as input variable, and added v_get_query_column_list
-  IS 
-   v_hidden_columns  NUMBER DEFAULT 0;
-   v_hidden_computation_columns  NUMBER DEFAULT 0;
-   v_get_query_column_list VARCHAR2(32676);
-  BEGIN
-
-      v_get_query_column_list := apex_util.table_to_string(get_query_column_list);
-
-      SELECT COUNT(*)
-      INTO v_hidden_columns
-      FROM apex_application_page_ir_col
-     WHERE application_id = p_app_id
-       AND page_id = p_page_id
-       -- J.P.Lourens 9-Oct-16 added p_region_id to ensure correct results when having multiple IR on a page
-       AND region_id = p_region_id
-       AND (display_text_as = 'HIDDEN'
-       -- J.P.Lourens 9-Oct-2016 modified get_hidden_columns_cnt to INCLUDE columns which are
-       -- * selected in the IR query, and thus included in v_get_query_column_list
-       -- * not included in the report, thus missing from l_report.ir_data.report_columns
-          OR instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') = 0)
-       AND instr(':'||v_get_query_column_list||':',':'||column_alias||':') > 0;
-
-       SELECT COUNT(*)
-       INTO v_hidden_computation_columns
-       FROM apex_application_page_ir_comp
-       WHERE application_id = p_app_id
-         AND page_id = p_page_id       
-         AND report_id = p_report_id         
-         AND instr(':'||l_report.ir_data.report_columns||':',':'||computation_column_alias||':') = 0;       
-
-      RETURN v_hidden_columns + v_hidden_computation_columns;
-  EXCEPTION
-    WHEN no_data_found THEN
-      RETURN 0;
-  END get_hidden_columns_cnt;
-  ------------------------------------------------------------------------------ 
   -- fill all report metadata
   PROCEDURE init_t_report(p_app_id       IN NUMBER,
                           p_page_id      IN NUMBER,
@@ -1679,7 +1633,7 @@ as
     );
 
     log('l_base_report_id='||l_report_id);    
-    
+
     -- get ddata from table
     SELECT r.* 
     INTO l_report.ir_data       
@@ -1705,17 +1659,6 @@ as
    -- Only columns that are really represented in SQL query are permitted.
     l_report.ir_data.report_columns := apex_util.table_to_string(get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list));
 
-    -- J.P.Lourens 9-Oct-16 added p_region_id as input variable
-    -- count of all columns presented in report's SQL-query
-    -- but not displayed in Excel: hidden columns (also hidden computation columns),
-    -- additionall hidden columns added by APEX etc..
-    l_report.hidden_cols_cnt := get_hidden_columns_cnt(
-      p_app_id    => p_app_id,
-      p_page_id   => p_page_id,
-      p_region_id => p_region_id,
-      p_report_id => l_report_id
-    );
-    
     -- here 2 plSQL tables wll be filled:
     -- l_report.displayed_columns - columns to display as Excel-columns
     -- l_report.break_really_on   - colums for control breaks, 
@@ -1806,11 +1749,10 @@ as
     log('l_report.count_distnt_col_on_break='||rr(l_report.ir_data.count_distnt_col_on_break));
     log('l_report.break_really_on='||apex_util.table_to_string(l_report.break_really_on));
     log('l_report.agg_cols_cnt='||l_report.agg_cols_cnt);
-    log('l_report.hidden_cols_cnt='||l_report.hidden_cols_cnt);
 
     -- fill data for highlights
     -- v_query_targets is a list of columns needed to be added to calculate highlight
-    
+
     FOR c IN cur_highlight(
       p_report_id => l_report_id,
       p_delimetered_column_list => l_report.ir_data.report_columns
@@ -1824,12 +1766,12 @@ as
         END IF;  
         v_query_targets(v_query_targets.count + 1) := c.condition_sql||' as HLIGHTS_'||(v_query_targets.count + 1);
     END LOOP;    
-    
+
     -- original APEX Intractive Report calculates highlights by displaying,
     -- not by querying the data
     -- for me it was to difficult and I have decided to modify
     -- original SQL-query by adding highlights-columns
-    
+
     IF v_query_targets.count  > 0 THEN
       -- uwr485kv is a random name 
       l_report.report.sql_query := 'SELECT '||apex_util.table_to_string(v_query_targets,','||chr(10))||', uwr485kv.* from ('||l_report.report.sql_query||') uwr485kv';
@@ -1838,7 +1780,7 @@ as
     IF instr(l_report.report.sql_query,':APXWS_MAX_ROW_CNT') = 0 THEN
       l_report.report.sql_query := 'SELECT * FROM ('|| l_report.report.sql_query ||') where rownum <= :APXWS_MAX_ROW_CNT';
     END IF;  
-    
+
     -- the final LIST OF SQL-QUERY-COLUMNS:
     -- [columns for row/column-highlighting],      -- l_report.row_highlight.count + l_report.col_highlight.count
     -- [apxws_row_pk],                             -- l_report.skipped_columns, optional
@@ -1852,7 +1794,7 @@ as
     -- [aggregation results: median]               -- l_report.median_columns_on_break.count
     -- [aggregation results: count]                -- l_report.count_columns_on_break.count
     -- [aggregation results: count distinct]       -- l_report.count_distnt_col_on_break.count
- 
+
     log('l_report.report.sql_query='||chr(10)||l_report.report.sql_query||chr(10));
   EXCEPTION
     WHEN no_data_found THEN
@@ -2048,20 +1990,18 @@ as
   BEGIN
       -- see strucure of SQL-query in init_t_report-procedure
       --
-      -- the SQL-Query generated by APEX does not provide aliases for
-      -- aggregate columns (at least for all supported APEX-Versions)
       -- The aggregate values can see like 
       -- SELECT COL1,
       --        COL2,
       --        COL3,
       --        COL4,
       --        COL5,
-      --       ,SUM(COL1) OVER() 
+      --       ,SUM(COL1) OVER()
       --       ,SUM(COL2) OVER()
       --       ,SUM(COL3) OVER()
       --       ,MIN(COL1) OVER()
       --       ,MAX(COL5) OVER()
-             
+
       -- aggregate(s) of each type can be defined for many columns.
       -- v_relative_position shows the column position inside aggregate of each type
       -- for example above, 
@@ -2077,7 +2017,7 @@ as
         v_g_format_mask :=  get_col_format_mask(v_col_alias);   
         v_format_mask := nvl(v_g_format_mask,p_default_format_mask);
         v_format_mask := nvl(p_overwrite_format_mask,v_format_mask);
-        v_row_value :=  get_current_row(p_current_row,p_start_position_sql + l_report.hidden_cols_cnt + v_relative_position_sql);
+        v_row_value :=  get_current_row(p_current_row,p_start_position_sql + v_relative_position_sql);
         v_agg_value := trim(TO_CHAR(v_row_value,v_format_mask));
 
         RETURN  get_xmlval(p_agg_text||v_agg_value||' '||chr(10));
@@ -2093,8 +2033,6 @@ as
         log('p_default_format_mask='||p_default_format_mask);
         log('v_relative_position_sql='||v_relative_position_sql);
         log('p_start_position_sql='||p_start_position_sql);
-        -- J.P.Lourens 9-Oct-16 added to log     
-        log('l_report.hidden_cols_cnt='||l_report.hidden_cols_cnt);    
         log('v_row_value='||v_row_value);
         log('v_format_mask='||v_format_mask);
         RAISE;
@@ -2251,12 +2189,12 @@ as
     add(p_clob,p_buffer,'<cols>'||chr(10));    
     -- save custom column widhts as pl/sql table    
     a_col_name_plus_width := apex_util.string_to_table(rtrim(p_width_str,','),',');    
-    
+
     v_coefficient := nvl(p_coefficient,width_coefficient);
     IF v_coefficient = 0 THEN
       v_coefficient := width_coefficient;
     END IF;     
-    
+
     FOR i IN 1..l_report.displayed_columns.count   LOOP
        v_column_alias := get_column_alias(i);
       -- if current column is not control break column
@@ -2287,7 +2225,7 @@ as
     v_i := 0;
     add(p_clob,p_buffer,'</cols>'||chr(10));
   END print_column_widths;
-  
+
   ------------------------------------------------------------------------------
   -- links in Excel are saved in separate structure 
   -- and are linked with Excel cells
@@ -2384,7 +2322,7 @@ as
     v_cell_back_color   VARCHAR2(10);     
     v_column_data_type       columntype;
     v_cell_data         t_cell_data;    
-   
+
 
     v_strings           apex_application_global.vc_arr2;
     v_links             apex_application_global.vc_arr2; -- which cell has a link
@@ -2396,7 +2334,7 @@ as
     v_break_header      t_large_varchar2;
     v_links_buffer      t_large_varchar2;
     v_last_agg_obj      apex_application_global.vc_arr2;
-    
+
     v_link              apex_application_page_ir_col.column_link%TYPE;
     v_cell_addr         VARCHAR2(12);
 
@@ -2419,7 +2357,7 @@ as
                          ||'</c>'||chr(10));
       v_strings(v_strings.count + 1) := p_string;      
     END print_char_cell;
-    
+
     -- print Excel-cell containing number into XML-CLOB (using buffer)
     PROCEDURE print_number_cell(
       p_cell_addr IN VARCHAR2,
@@ -2439,7 +2377,7 @@ as
                          ||'</c>'||chr(10));
 
     END print_number_cell; 
-    
+
     -- print Excel-cell containing aggregates - as text -  into XML-CLOB (using buffer)
     PROCEDURE print_agg(
       p_agg_obj apex_application_global.vc_arr2,
@@ -2485,8 +2423,8 @@ as
         dbms_lob.freetemporary(v_agg_clob);
   END print_agg;
   --
-  
-  
+
+
   --
   BEGIN  -- BEGIN of the MAIN-function generate_from_report   
      -- inline often used functions
@@ -2497,7 +2435,7 @@ as
      -- But it was too slow, after combining it
      -- the readability was worsened
      -- but performance was increased up to x10
-  
+
     add(v_clob,v_buffer,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'||chr(10));
     add(v_clob,v_buffer,'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
         <dimension ref="A1"/>
@@ -2508,7 +2446,7 @@ as
             </sheetView>
             </sheetViews>
         <sheetFormatPr baseColWidth="10" defaultColWidth="10" defaultRowHeight="15"/>'||chr(10),true);
-    
+
     print_column_widths(
       p_clob          => v_clob,
       p_buffer        => v_buffer,
@@ -2516,7 +2454,7 @@ as
       p_coefficient   => p_coefficient,
       p_custom_width  => p_custom_width
     );    
-   
+
     add(v_clob,v_buffer,'<sheetData>'||chr(10));
      --column header
     add(v_clob,v_buffer,'<row>'||chr(10));      
@@ -3050,7 +2988,7 @@ END IR_TO_XLSX;
 CREATE OR REPLACE PACKAGE ir_to_msexcel 
   AUTHID current_user
 AS
-  PLUGIN_VERSION CONSTANT VARCHAR2(10) DEFAULT '3.20'; 
+  PLUGIN_VERSION CONSTANT VARCHAR2(10) DEFAULT '3.21'; 
  
   FUNCTION render  (p_dynamic_action IN apex_plugin.t_dynamic_action,
                     p_plugin         IN apex_plugin.t_plugin )
