@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 01-2020
-** Version: 3.21
+** Version: 3.22
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -1047,7 +1047,7 @@ as
     END IF;
 
     RETURN v_str;
-  END convert_date_format_js;
+  END convert_date_format_js;  
   ------------------------------------------------------------------------------
   -- to set a font-color in Excel one need to define a Font 
   -- add_font function:
@@ -1622,6 +1622,7 @@ as
     l_report_id     NUMBER;
     v_query_targets apex_application_global.vc_arr2;
     l_new_report    ir_report; 
+    v_sql_columns   apex_application_global.vc_arr2;
   BEGIN
     l_report := l_new_report;    
     --get base report id    
@@ -1657,7 +1658,8 @@ as
    -- does not 100% reflect the current status of the report.
    -- For such special cases, a list of columns will be filtered:
    -- Only columns that are really represented in SQL query are permitted.
-    l_report.ir_data.report_columns := apex_util.table_to_string(get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list));
+    v_sql_columns := get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list);
+    l_report.ir_data.report_columns := apex_util.table_to_string(v_sql_columns);
 
     -- here 2 plSQL tables wll be filled:
     -- l_report.displayed_columns - columns to display as Excel-columns
@@ -1721,13 +1723,13 @@ as
     END LOOP displayed_columns;    
 
     -- calculate columns count with aggregation separately
-    l_report.sum_columns_on_break := get_cols_as_table(l_report.ir_data.sum_columns_on_break,l_report.displayed_columns);  
-    l_report.avg_columns_on_break := get_cols_as_table(l_report.ir_data.avg_columns_on_break,l_report.displayed_columns);  
-    l_report.max_columns_on_break := get_cols_as_table(l_report.ir_data.max_columns_on_break,l_report.displayed_columns);  
-    l_report.min_columns_on_break := get_cols_as_table(l_report.ir_data.min_columns_on_break,l_report.displayed_columns);  
-    l_report.median_columns_on_break := get_cols_as_table(l_report.ir_data.median_columns_on_break,l_report.displayed_columns); 
-    l_report.count_columns_on_break := get_cols_as_table(l_report.ir_data.count_columns_on_break,l_report.displayed_columns);  
-    l_report.count_distnt_col_on_break := get_cols_as_table(l_report.ir_data.count_distnt_col_on_break,l_report.displayed_columns); 
+    l_report.sum_columns_on_break := apex_util.string_to_table(l_report.ir_data.sum_columns_on_break);  
+    l_report.avg_columns_on_break := apex_util.string_to_table(l_report.ir_data.avg_columns_on_break);  
+    l_report.max_columns_on_break := apex_util.string_to_table(l_report.ir_data.max_columns_on_break);  
+    l_report.min_columns_on_break := apex_util.string_to_table(l_report.ir_data.min_columns_on_break);  
+    l_report.median_columns_on_break := apex_util.string_to_table(l_report.ir_data.median_columns_on_break); 
+    l_report.count_columns_on_break := apex_util.string_to_table(l_report.ir_data.count_columns_on_break);  
+    l_report.count_distnt_col_on_break := apex_util.string_to_table(l_report.ir_data.count_distnt_col_on_break); 
 
     -- calculate total count of columns with aggregation
     l_report.agg_cols_cnt := l_report.sum_columns_on_break.count + 
@@ -1737,7 +1739,10 @@ as
                              l_report.median_columns_on_break.count +
                              l_report.count_columns_on_break.count +
                              l_report.count_distnt_col_on_break.count;
-
+                             
+     -- count of all columns presented in report's SQL-query
+    -- but not displayed in Excel: hidden columns (also hidden computation columns),
+    -- additionall hidden columns added by APEX etc..
     log('l_report.report_columns='||rr(l_report.ir_data.report_columns));    
     log('l_report.break_on='||rr(l_report.ir_data.break_enabled_on));
     log('l_report.sum_columns_on_break='||rr(l_report.ir_data.sum_columns_on_break));
@@ -1749,7 +1754,7 @@ as
     log('l_report.count_distnt_col_on_break='||rr(l_report.ir_data.count_distnt_col_on_break));
     log('l_report.break_really_on='||apex_util.table_to_string(l_report.break_really_on));
     log('l_report.agg_cols_cnt='||l_report.agg_cols_cnt);
-
+   
     -- fill data for highlights
     -- v_query_targets is a list of columns needed to be added to calculate highlight
 
@@ -2988,7 +2993,7 @@ END IR_TO_XLSX;
 CREATE OR REPLACE PACKAGE ir_to_msexcel 
   AUTHID current_user
 AS
-  PLUGIN_VERSION CONSTANT VARCHAR2(10) DEFAULT '3.21'; 
+  PLUGIN_VERSION CONSTANT VARCHAR2(10) DEFAULT '3.22'; 
  
   FUNCTION render  (p_dynamic_action IN apex_plugin.t_dynamic_action,
                     p_plugin         IN apex_plugin.t_plugin )
