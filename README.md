@@ -1,7 +1,5 @@
 GPV Interactive Report/Grid to MSExcel
 =================================
-Because of prepaering of the new release please download last version from Master - Branch : https://github.com/glebovpavel/IR_to_MSExcel/archive/master.zip
-
 Getting results of your Interactive Report/Grid in Microsoft Excel. 
 
 ## About
