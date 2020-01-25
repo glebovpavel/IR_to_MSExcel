@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 01-2020
-** Version: 3.22
+** Version: 3.23
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -2706,7 +2706,7 @@ as
                     p_data_type    => v_cell_data.datatype,
                     p_format_mask  => v_format_mask,
                     p_align        => lower(get_column_alignment(v_column_alias)),
-                    p_is_link      => (v_link IS NULL)
+                    p_is_link      => (v_link IS NOT NULL)
                   );
                   IF v_cell_data.datatype IN ('NUMBER') THEN
                       print_number_cell(p_cell_addr => v_cell_addr,
@@ -2993,7 +2993,7 @@ END IR_TO_XLSX;
 CREATE OR REPLACE PACKAGE ir_to_msexcel 
   AUTHID current_user
 AS
-  PLUGIN_VERSION CONSTANT VARCHAR2(10) DEFAULT '3.22'; 
+  PLUGIN_VERSION CONSTANT VARCHAR2(10) DEFAULT '3.23'; 
  
   FUNCTION render  (p_dynamic_action IN apex_plugin.t_dynamic_action,
                     p_plugin         IN apex_plugin.t_plugin )

@@ -1,7 +1,7 @@
 CREATE OR REPLACE PACKAGE ir_to_msexcel 
   AUTHID current_user
 AS
-  PLUGIN_VERSION CONSTANT VARCHAR2(10) DEFAULT '3.22'; 
+  PLUGIN_VERSION CONSTANT VARCHAR2(10) DEFAULT '3.23'; 
  
   FUNCTION render  (p_dynamic_action IN apex_plugin.t_dynamic_action,
                     p_plugin         IN apex_plugin.t_plugin )

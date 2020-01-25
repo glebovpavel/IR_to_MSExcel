@@ -2120,7 +2120,7 @@ as
                     p_data_type    => v_cell_data.datatype,
                     p_format_mask  => v_format_mask,
                     p_align        => lower(get_column_alignment(v_column_alias)),
-                    p_is_link      => (v_link IS NULL)
+                    p_is_link      => (v_link IS NOT NULL)
                   );
                   IF v_cell_data.datatype IN ('NUMBER') THEN
                       print_number_cell(p_cell_addr => v_cell_addr,
