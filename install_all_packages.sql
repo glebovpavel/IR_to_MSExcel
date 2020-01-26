@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 01-2020
-** Version: 3.23
+** Version: 3.24
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -587,6 +587,9 @@ END;
 create or replace PACKAGE BODY IR_TO_XLSX
 as
 
+  -- general: displayed / not displayed columns - can be sow/hidden by user
+  --         hidden columns - column with type "hidden"
+
   CURSOR cur_highlight(
     p_report_id in APEX_APPLICATION_PAGE_IR_RPT.REPORT_ID%TYPE,
     p_delimetered_column_list IN VARCHAR2
@@ -663,6 +666,7 @@ as
     start_with                BINARY_INTEGER default 0, -- position of first displayed column in query
     end_with                  BINARY_INTEGER default 0, -- position of last displayed column in query    
     agg_cols_cnt              BINARY_INTEGER default 0, 
+    sql_query_columns_cnt     BINARY_INTEGER default 0, -- columns count in SQL query
     column_header_labels      t_col_names,       -- column names in report header
     col_format_mask           t_col_format_mask, -- format like $3849,56
     row_highlight             t_highlight,
@@ -1623,6 +1627,7 @@ as
     v_query_targets apex_application_global.vc_arr2;
     l_new_report    ir_report; 
     v_sql_columns   apex_application_global.vc_arr2;
+    v_query_column_list apex_application_global.vc_arr2;
   BEGIN
     l_report := l_new_report;    
     --get base report id    
@@ -1658,8 +1663,12 @@ as
    -- does not 100% reflect the current status of the report.
    -- For such special cases, a list of columns will be filtered:
    -- Only columns that are really represented in SQL query are permitted.
-    v_sql_columns := get_cols_as_table(l_report.ir_data.report_columns,get_query_column_list);
-    l_report.ir_data.report_columns := apex_util.table_to_string(v_sql_columns);
+    log('l_report.original_report_columns='||rr(l_report.ir_data.report_columns)); 
+    v_query_column_list := get_query_column_list;
+    l_report.sql_query_columns_cnt := v_query_column_list.count; 
+    -- !! l_report.sql_query_columns_cnt will be modified later to count highlights
+    v_query_column_list := get_cols_as_table(l_report.ir_data.report_columns,v_query_column_list);
+    l_report.ir_data.report_columns := apex_util.table_to_string(v_query_column_list);
 
     -- here 2 plSQL tables wll be filled:
     -- l_report.displayed_columns - columns to display as Excel-columns
@@ -1681,7 +1690,7 @@ as
                WHERE application_id = p_app_id
                  AND page_id = p_page_id
                  AND region_id = p_region_id
-                 AND display_text_as != 'HIDDEN' --l_report.ir_data.report_columns can include HIDDEN columns
+                 AND display_text_as != 'HIDDEN' --l_report.ir_data.report_columns can include HIDDEN columns if they are used in liks, #VARIABLE# references  etc. 
                  AND instr(':'||l_report.ir_data.report_columns||':',':'||column_alias||':') > 0
               UNION
               SELECT computation_column_alias,
@@ -1739,8 +1748,7 @@ as
                              l_report.median_columns_on_break.count +
                              l_report.count_columns_on_break.count +
                              l_report.count_distnt_col_on_break.count;
-                             
-     -- count of all columns presented in report's SQL-query
+    -- count of all columns presented in report's SQL-query
     -- but not displayed in Excel: hidden columns (also hidden computation columns),
     -- additionall hidden columns added by APEX etc..
     log('l_report.report_columns='||rr(l_report.ir_data.report_columns));    
@@ -1753,7 +1761,7 @@ as
     log('l_report.count_columns_on_break='||rr(l_report.ir_data.count_columns_on_break));    
     log('l_report.count_distnt_col_on_break='||rr(l_report.ir_data.count_distnt_col_on_break));
     log('l_report.break_really_on='||apex_util.table_to_string(l_report.break_really_on));
-    log('l_report.agg_cols_cnt='||l_report.agg_cols_cnt);
+    log('l_report.agg_cols_cnt='||l_report.agg_cols_cnt);    
    
     -- fill data for highlights
     -- v_query_targets is a list of columns needed to be added to calculate highlight
@@ -1787,20 +1795,23 @@ as
     END IF;  
 
     -- the final LIST OF SQL-QUERY-COLUMNS:
-    -- [columns for row/column-highlighting],      -- l_report.row_highlight.count + l_report.col_highlight.count
-    -- [apxws_row_pk],                             -- l_report.skipped_columns, optional
-    -- [columns for control break],                -- l_report.break_really_on.count
-    -- [normal columns displayed as Excel-columns, 
-    --  including computation-columns]             -- l_report.displayed_columns.count
-    -- [aggregation results: sum]                  -- l_report.sum_columns_on_break.count
-    -- [aggregation results: avg]                  -- l_report.avg_columns_on_break.count
-    -- [aggregation results: max]                  -- l_report.max_columns_on_break.count
-    -- [aggregation results: min]                  -- l_report.min_columns_on_break.count
-    -- [aggregation results: median]               -- l_report.median_columns_on_break.count
-    -- [aggregation results: count]                -- l_report.count_columns_on_break.count
-    -- [aggregation results: count distinct]       -- l_report.count_distnt_col_on_break.count
+    -- [columns for row/column-highlighting],         l_report.row_highlight.count + l_report.col_highlight.count
+    -- [apxws_row_pk],                                l_report.skipped_columns, optional
+    -- [columns for control break],                   l_report.break_really_on.count
+    -- [displayed columns]                            +  sums up with the following line
+    -- [displayed computation-columns APXWS_CC_###]   => l_report.displayed_columns.count
+    -- [hidden columns used in links, references etc]
+    -- [aggregation results: sum]                     l_report.sum_columns_on_break.count
+    -- [aggregation results: avg]                     l_report.avg_columns_on_break.count
+    -- [aggregation results: max]                     l_report.max_columns_on_break.count
+    -- [aggregation results: min]                     l_report.min_columns_on_break.count
+    -- [aggregation results: median]                  l_report.median_columns_on_break.count
+    -- [aggregation results: count]                   l_report.count_columns_on_break.count
+    -- [aggregation results: count distinct]          l_report.count_distnt_col_on_break.count
 
     log('l_report.report.sql_query='||chr(10)||l_report.report.sql_query||chr(10));
+    l_report.sql_query_columns_cnt := l_report.sql_query_columns_cnt + v_query_targets.count;
+    log('l_report.sql_query_columns_cnt='||l_report.sql_query_columns_cnt);
   EXCEPTION
     WHEN no_data_found THEN
       raise_application_error(-20001,'No Interactive Report found on Page='||p_page_id||' Application='||p_app_id||' Please make sure that the report was running at least once by this session.');
@@ -2060,7 +2071,7 @@ as
     FOR i IN l_report.start_with..l_report.end_with LOOP
       v_aggregate_xml := '';
       v_i := v_i + 1;
-      v_position := l_report.end_with; --aggregate are placed after displayed columns and computations      
+      v_position := l_report.sql_query_columns_cnt - l_report.agg_cols_cnt; 
       v_aggregate_xml := v_aggregate_xml || get_agg_text(p_curr_col_name => get_column_alias_sql(i),
                                        p_agg_rows      => l_report.sum_columns_on_break,
                                        p_current_row   => p_current_row,
@@ -2993,7 +3004,7 @@ END IR_TO_XLSX;
 CREATE OR REPLACE PACKAGE ir_to_msexcel 
   AUTHID current_user
 AS
-  PLUGIN_VERSION CONSTANT VARCHAR2(10) DEFAULT '3.23'; 
+  PLUGIN_VERSION CONSTANT VARCHAR2(10) DEFAULT '3.24'; 
  
   FUNCTION render  (p_dynamic_action IN apex_plugin.t_dynamic_action,
                     p_plugin         IN apex_plugin.t_plugin )
