@@ -22,7 +22,7 @@ Here's a link to the [main project page + demo](http://glebovpavel.github.io/Des
 
 ## Current Version
 
-Version 3.24
+Version 3.25
 
 ## License
 

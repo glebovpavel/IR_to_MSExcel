@@ -1,8 +1,8 @@
 /**********************************************
 **
 ** Author: Pavel Glebov
-** Date: 01-2020
-** Version: 3.24
+** Date: 05-2020
+** Version: 3.25
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -1065,7 +1065,7 @@ as
   IS  
    v_index t_font;
   BEGIN
-    IF p_is_link IS NOT NULL THEN
+    IF p_is_link THEN
       v_index := p_font_color||'L';
     ELSIF p_font_color IS NOT NULL THEN
       v_index := p_font_color;
@@ -1077,7 +1077,7 @@ as
       g_fonts(v_index) := g_fonts.count + 1;
       g_fonts_xml := g_fonts_xml||
         '<font>'||chr(10)||
-        CASE WHEN p_is_link IS NOT NULL THEN 
+        CASE WHEN p_is_link  THEN 
         '   <u />'||chr(10)
         ELSE ''||
         '   <sz val="11" />'||chr(10)
@@ -3004,7 +3004,7 @@ END IR_TO_XLSX;
 CREATE OR REPLACE PACKAGE ir_to_msexcel 
   AUTHID current_user
 AS
-  PLUGIN_VERSION CONSTANT VARCHAR2(10) DEFAULT '3.24'; 
+  PLUGIN_VERSION CONSTANT VARCHAR2(10) DEFAULT '3.25'; 
  
   FUNCTION render  (p_dynamic_action IN apex_plugin.t_dynamic_action,
                     p_plugin         IN apex_plugin.t_plugin )
@@ -3356,8 +3356,9 @@ as
     INTO v_lang_code
     FROM nls_session_parameters
     WHERE parameter = 'NLS_LANGUAGE';
-
-    apex_json.initialize_clob_output;
+    
+    --https://github.com/Pretius/apex-nested-reports/issues/7
+    --apex_json.initialize_clob_output;
     apex_json.open_object;
     apex_json.write('column_properties', l_columns_cursor);
     apex_json.write('highlights', l_highlihts_cursor);
@@ -3366,8 +3367,8 @@ as
     apex_json.write('rows_portion',p_rows_portion);
     apex_json.write('max_rows',p_max_rows);
     apex_json.close_object;
-    sys.htp.p(apex_json.get_clob_output);
-    apex_json.free_output;
+    --sys.htp.p(apex_json.get_clob_output);
+    --apex_json.free_output;
 
     IF l_columns_cursor%isopen THEN
        CLOSE l_columns_cursor;

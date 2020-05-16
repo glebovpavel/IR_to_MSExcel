@@ -479,7 +479,7 @@ as
   IS  
    v_index t_font;
   BEGIN
-    IF p_is_link IS NOT NULL THEN
+    IF p_is_link THEN
       v_index := p_font_color||'L';
     ELSIF p_font_color IS NOT NULL THEN
       v_index := p_font_color;
@@ -491,7 +491,7 @@ as
       g_fonts(v_index) := g_fonts.count + 1;
       g_fonts_xml := g_fonts_xml||
         '<font>'||chr(10)||
-        CASE WHEN p_is_link IS NOT NULL THEN 
+        CASE WHEN p_is_link  THEN 
         '   <u />'||chr(10)
         ELSE ''||
         '   <sz val="11" />'||chr(10)

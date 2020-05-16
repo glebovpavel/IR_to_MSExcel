@@ -334,8 +334,9 @@ as
     INTO v_lang_code
     FROM nls_session_parameters
     WHERE parameter = 'NLS_LANGUAGE';
-
-    apex_json.initialize_clob_output;
+    
+    --https://github.com/Pretius/apex-nested-reports/issues/7
+    --apex_json.initialize_clob_output;
     apex_json.open_object;
     apex_json.write('column_properties', l_columns_cursor);
     apex_json.write('highlights', l_highlihts_cursor);
@@ -344,8 +345,8 @@ as
     apex_json.write('rows_portion',p_rows_portion);
     apex_json.write('max_rows',p_max_rows);
     apex_json.close_object;
-    sys.htp.p(apex_json.get_clob_output);
-    apex_json.free_output;
+    --sys.htp.p(apex_json.get_clob_output);
+    --apex_json.free_output;
 
     IF l_columns_cursor%isopen THEN
        CLOSE l_columns_cursor;
