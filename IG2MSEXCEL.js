@@ -567,17 +567,15 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
       {
         name   : "GPVGETXLSX"
         , action : function(event, element) {         
-          var mySpinner = apex.widget.waitPopup();
-          apex.server.plugin ( vPluginID, 
+                     apex.server.plugin ( vPluginID, 
                                         {x01: "G",
                                          x02: $v("pFlowId"),
                                          x03: $v("pFlowStepId")
                                         },                                   
-                                        {success: function(propertiesFromPlugin){                               
-                                             getRows(vWidget$,propertiesFromPlugin,buildExcel,fileName,path);   
-                                        }                                  
+                                        { success: function(propertiesFromPlugin) { getRows(vWidget$,propertiesFromPlugin,buildExcel,fileName,path); }
+                                        , loadingIndicator:         vRegionID
+                                        , loadingIndicatorPosition: 'centered'
                                         }); 
-         mySpinner.remove();
         }
         , hide : false
         , disabled : false
@@ -591,17 +589,15 @@ function buildExcel(rows,iGrid,propertiesFromPlugin,fileName,path,moment) {
   
 function downloadXLSXfromIG(vRegionID,vPluginID,fileName,path) {
   var vWidget$ = apex.region(vRegionID).widget();
-  var mySpinner = apex.widget.waitPopup();
   apex.server.plugin ( vPluginID, 
                       {x01: "G",
                        x02: $v("pFlowId"),
                        x03: $v("pFlowStepId")
                       },                                   
-                      {success: function(propertiesFromPlugin){                               
-                        getRows(vWidget$,propertiesFromPlugin,buildExcel,fileName,path);    
-                      }                                  
+                      { success: function(propertiesFromPlugin){getRows(vWidget$,propertiesFromPlugin,buildExcel,fileName,path); }                                  
+                      , loadingIndicator:         vRegionID
+                      , loadingIndicatorPosition: 'centered'
                       }); 
-  mySpinner.remove(); 
 }
 //end
       
