@@ -7,7 +7,7 @@ Getting results of your Interactive Report/Grid in Microsoft Excel.
 The "GPV Interactive Report/Grid to MSExcel v2" APEX plugin lets you get results of your Interactive Report or Interactive Grid in XLSX-format, ready to be used in Microsoft Excel.
 
 Many features of Interactive Reports are supported:
- *  APEX 5.1 - 19.2 support
+ *  APEX 5.1 - 20.2 support
  *  Correct export of datatypes (String/Date/Number/Timestamp)
  *  Filtering and Sorting
  *  Control Break
