@@ -69,29 +69,44 @@
               if($dialog_window.parent().find('span.ui-dialog-title').text() !== apex.lang.getMessage( "APEXIR_DOWNLOAD"))  {
               return;
             }  
-            html = apex.util.htmlBuilder();
-            html.markup('<li')
-                .attr('class', 'a-IRR-iconList-item')
-                .markup('>')                    
-                .markup('<a')
-                .attr('class', 'a-IRR-iconList-link')
-                .attr('href','javascript:excel_gpv.getExcel(' + "'" + p_region_static_id + "','" + plugin_id_in +  "'" +');')
-                .attr('id', 'download_excel_gpv')
-                .markup('>')
-                .markup('<span')
-                .attr('class','a-IRR-iconList-icon a-Icon icon-irr-dl-xls')
-                .markup('>')
-                .markup('</span>')
-                .markup('<span')
-                .attr('class','a-IRR-iconList-label')
-                .markup('>')
-                .markup('XLSX')
-                .markup('</span>')
-                .markup('</a>')
-                .markup('</li>');
-            $('.a-IRR-iconList').append(html.toString());
-            $dialog_window.find("li.a-IRR-iconList-item a[id$='_XLS']").parent('li').hide();
-            $dialog_window.parent().find("button").addClass("gpvCloseButton");
+            if(p_version < 201) {
+              html = apex.util.htmlBuilder();
+              html.markup('<li')
+                  .attr('class', 'a-IRR-iconList-item')
+                  .markup('>')                    
+                  .markup('<a')
+                  .attr('class', 'a-IRR-iconList-link')
+                  .attr('href','javascript:excel_gpv.getExcel(' + "'" + p_region_static_id + "','" + plugin_id_in +  "'" +');')
+                  .attr('id', 'download_excel_gpv')
+                  .markup('>')
+                  .markup('<span')
+                  .attr('class','a-IRR-iconList-icon a-Icon icon-irr-dl-xls')
+                  .markup('>')
+                  .markup('</span>')
+                  .markup('<span')
+                  .attr('class','a-IRR-iconList-label')
+                  .markup('>')
+                  .markup('XLSX')
+                  .markup('</span>')
+                  .markup('</a>')
+                  .markup('</li>');
+              $('.a-IRR-iconList').append(html.toString());
+              $dialog_window.find("li.a-IRR-iconList-item a[id$='_XLS']").parent('li').hide();
+              $dialog_window.parent().find("button").addClass("gpvCloseButton");
+            } else {
+              /* APEX 20.2 */
+              html = apex.util.htmlBuilder();
+              html.markup('<button')
+                  .attr('type', 'button')
+                  .attr('class', 'ui-button--hot ui-button ui-corner-all ui-widget')
+                  .attr('onclick','javascript:excel_gpv.getExcel(' + "'" + p_region_static_id + "','" + plugin_id_in +  "'" +');')
+                  .attr('style', '  display: block;position: absolute;left: 4px;')
+                  .markup('>')    
+                  .markup('XLSX')
+                  .markup('</button>');
+
+              $(".ui-dialog-buttonset").prepend(html.toString());
+            }
           } catch(err) {
             console.info("Error: ",err)
           };    

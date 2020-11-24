@@ -1146,13 +1146,27 @@ as
     END LOOP displayed_columns;    
 
     -- calculate columns count with aggregation separately
-    l_report.sum_columns_on_break := apex_util.string_to_table(l_report.ir_data.sum_columns_on_break);  
-    l_report.avg_columns_on_break := apex_util.string_to_table(l_report.ir_data.avg_columns_on_break);  
-    l_report.max_columns_on_break := apex_util.string_to_table(l_report.ir_data.max_columns_on_break);  
-    l_report.min_columns_on_break := apex_util.string_to_table(l_report.ir_data.min_columns_on_break);  
-    l_report.median_columns_on_break := apex_util.string_to_table(l_report.ir_data.median_columns_on_break); 
-    l_report.count_columns_on_break := apex_util.string_to_table(l_report.ir_data.count_columns_on_break);  
-    l_report.count_distnt_col_on_break := apex_util.string_to_table(l_report.ir_data.count_distnt_col_on_break); 
+     l_report.sum_columns_on_break           := get_cols_as_table(
+                                                    l_report.ir_data.sum_columns_on_break,
+                                                    l_report.displayed_columns);
+      l_report.avg_columns_on_break           := get_cols_as_table(
+                                                    l_report.ir_data.avg_columns_on_break,
+                                                    l_report.displayed_columns);
+      l_report.max_columns_on_break           := get_cols_as_table(
+                                                    l_report.ir_data.max_columns_on_break,
+                                                    l_report.displayed_columns);
+      l_report.min_columns_on_break           := get_cols_as_table(
+                                                    l_report.ir_data.min_columns_on_break,
+                                                    l_report.displayed_columns);
+      l_report.median_columns_on_break        := get_cols_as_table(
+                                                    l_report.ir_data.median_columns_on_break,
+                                                    l_report.displayed_columns);
+      l_report.count_columns_on_break         := get_cols_as_table(
+                                                    l_report.ir_data.count_columns_on_break,
+                                                    l_report.displayed_columns);
+      l_report.count_distnt_col_on_break      := get_cols_as_table(
+                                                    l_report.ir_data.count_distnt_col_on_break,
+                                                    l_report.displayed_columns); 
 
     -- calculate total count of columns with aggregation
     l_report.agg_cols_cnt := l_report.sum_columns_on_break.count + 
@@ -1203,10 +1217,6 @@ as
       -- uwr485kv is a random name 
       l_report.report.sql_query := 'SELECT '||apex_util.table_to_string(v_query_targets,','||chr(10))||', uwr485kv.* from ('||l_report.report.sql_query||') uwr485kv';
     END IF;
-    -- plugin is always using the  restriction by maximal rows count
-    IF instr(l_report.report.sql_query,':APXWS_MAX_ROW_CNT') = 0 THEN
-      l_report.report.sql_query := 'SELECT * FROM ('|| l_report.report.sql_query ||') where rownum <= :APXWS_MAX_ROW_CNT';
-    END IF;  
 
     -- the final LIST OF SQL-QUERY-COLUMNS:
     -- [columns for row/column-highlighting],         l_report.row_highlight.count + l_report.col_highlight.count
@@ -1960,6 +1970,8 @@ as
     add(v_clob,v_buffer,'</row>'||chr(10)); 
 
     log('<<bind variables>>');
+    
+    --
     <<bind_variables>>
     FOR i IN 1..v_bind_variables.count LOOP      
       v_bind_var_name := ltrim(v_bind_variables(i),':');
@@ -2011,6 +2023,9 @@ as
          log('<<fetch>>');
            -- get column values of the row 
             v_current_row := v_current_row + 1;
+            if v_current_row > p_max_rows then
+              exit;
+            end if;
             <<query_columns>>
             FOR i IN 1..v_colls_count LOOP               
                log('column type '||l_report.desc_tab(i).col_type);

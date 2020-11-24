@@ -1,8 +1,8 @@
 /**********************************************
 **
 ** Author: Pavel Glebov
-** Date: 05-2020
-** Version: 3.25
+** Date: 11-2020
+** Version: 3.26
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **
@@ -1732,13 +1732,27 @@ as
     END LOOP displayed_columns;    
 
     -- calculate columns count with aggregation separately
-    l_report.sum_columns_on_break := apex_util.string_to_table(l_report.ir_data.sum_columns_on_break);  
-    l_report.avg_columns_on_break := apex_util.string_to_table(l_report.ir_data.avg_columns_on_break);  
-    l_report.max_columns_on_break := apex_util.string_to_table(l_report.ir_data.max_columns_on_break);  
-    l_report.min_columns_on_break := apex_util.string_to_table(l_report.ir_data.min_columns_on_break);  
-    l_report.median_columns_on_break := apex_util.string_to_table(l_report.ir_data.median_columns_on_break); 
-    l_report.count_columns_on_break := apex_util.string_to_table(l_report.ir_data.count_columns_on_break);  
-    l_report.count_distnt_col_on_break := apex_util.string_to_table(l_report.ir_data.count_distnt_col_on_break); 
+     l_report.sum_columns_on_break           := get_cols_as_table(
+                                                    l_report.ir_data.sum_columns_on_break,
+                                                    l_report.displayed_columns);
+      l_report.avg_columns_on_break           := get_cols_as_table(
+                                                    l_report.ir_data.avg_columns_on_break,
+                                                    l_report.displayed_columns);
+      l_report.max_columns_on_break           := get_cols_as_table(
+                                                    l_report.ir_data.max_columns_on_break,
+                                                    l_report.displayed_columns);
+      l_report.min_columns_on_break           := get_cols_as_table(
+                                                    l_report.ir_data.min_columns_on_break,
+                                                    l_report.displayed_columns);
+      l_report.median_columns_on_break        := get_cols_as_table(
+                                                    l_report.ir_data.median_columns_on_break,
+                                                    l_report.displayed_columns);
+      l_report.count_columns_on_break         := get_cols_as_table(
+                                                    l_report.ir_data.count_columns_on_break,
+                                                    l_report.displayed_columns);
+      l_report.count_distnt_col_on_break      := get_cols_as_table(
+                                                    l_report.ir_data.count_distnt_col_on_break,
+                                                    l_report.displayed_columns); 
 
     -- calculate total count of columns with aggregation
     l_report.agg_cols_cnt := l_report.sum_columns_on_break.count + 
@@ -1789,10 +1803,6 @@ as
       -- uwr485kv is a random name 
       l_report.report.sql_query := 'SELECT '||apex_util.table_to_string(v_query_targets,','||chr(10))||', uwr485kv.* from ('||l_report.report.sql_query||') uwr485kv';
     END IF;
-    -- plugin is always using the  restriction by maximal rows count
-    IF instr(l_report.report.sql_query,':APXWS_MAX_ROW_CNT') = 0 THEN
-      l_report.report.sql_query := 'SELECT * FROM ('|| l_report.report.sql_query ||') where rownum <= :APXWS_MAX_ROW_CNT';
-    END IF;  
 
     -- the final LIST OF SQL-QUERY-COLUMNS:
     -- [columns for row/column-highlighting],         l_report.row_highlight.count + l_report.col_highlight.count
@@ -2546,6 +2556,8 @@ as
     add(v_clob,v_buffer,'</row>'||chr(10)); 
 
     log('<<bind variables>>');
+    
+    --
     <<bind_variables>>
     FOR i IN 1..v_bind_variables.count LOOP      
       v_bind_var_name := ltrim(v_bind_variables(i),':');
@@ -2597,6 +2609,9 @@ as
          log('<<fetch>>');
            -- get column values of the row 
             v_current_row := v_current_row + 1;
+            if v_current_row > p_max_rows then
+              exit;
+            end if;
             <<query_columns>>
             FOR i IN 1..v_colls_count LOOP               
                log('column type '||l_report.desc_tab(i).col_type);
@@ -3155,7 +3170,7 @@ as
   IS
    v_version VARCHAR2(3);
   BEGIN
-     SELECT substr(version_no,1,3) 
+     SELECT replace(substr(version_no,1,4),'.','') 
      INTO v_version
      FROM apex_release
      WHERE ROWNUM <2;
@@ -3169,18 +3184,19 @@ as
   IS
     v_filename apex_appl_page_igs.download_filename%TYPE;
   BEGIN
-    SELECT download_filename
-      INTO v_filename
-      FROM apex_appl_page_igs
-    WHERE application_id = nv('APP_ID')
-      AND page_id = nv('APP_PAGE_ID')
-      AND nvl(region_name,'R'||region_id) = p_region_selector
-      AND ROWNUM <2;
+     select ig.download_filename
+     into v_filename
+     from apex_application_page_regions r,
+          apex_appl_page_igs ig
+     where (r.static_id = p_region_selector or to_char(r.region_id) = ltrim(p_region_selector,'R'))
+       and r.application_id = nv('APP_ID')
+       and r.page_id = nv('APP_PAGE_ID')
+       and ig.region_id = r.region_id; 
 
-     RETURN apex_plugin_util.replace_substitutions(nvl(v_filename,'Excel'));
+    RETURN apex_plugin_util.replace_substitutions(nvl(v_filename,'Excel'));
   EXCEPTION
     WHEN OTHERS THEN
-       RETURN 'Excel';
+       RETURN 'Excel';       
   END get_ig_file_name;
   ------------------------------------------------------------------------------
   -- is used both for interactive grids and reports
@@ -3192,7 +3208,7 @@ as
   IS
     v_javascript_code          VARCHAR2(1000);
     v_result                   apex_plugin.t_dynamic_action_render_result;
-    v_plugin_id                VARCHAR2(100);
+    v_plugin_id                VARCHAR2(300);
     v_affected_region_ir_selector apex_application_page_regions.static_id%TYPE;
     v_affected_region_ig_selector apex_application_page_regions.static_id%TYPE;
     v_is_ig                    BOOLEAN DEFAULT false;
@@ -3217,7 +3233,7 @@ as
         apex_javascript.add_onload_code(v_javascript_code,v_affected_region_ir_selector);
       ELSIF v_affected_region_ig_selector IS NOT NULL THEN
          -- add XLSX Icon to Affected IG Region
-         v_javascript_code := 'excel_ig_gpv.addDownloadXLSXiconToIG('''||v_affected_region_ig_selector
+         v_javascript_code := 'excel_ig_gpv.addDownloadXLSXiconToIG('''||v_affected_region_ig_selector         
            ||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_ig_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''');';  
          apex_javascript.add_onload_code(v_javascript_code,v_affected_region_ig_selector);
       ELSE
@@ -3235,7 +3251,7 @@ as
              v_javascript_code :=  'excel_gpv.addDownloadXLSXIcon('''||v_plugin_id||''','''||i.affected_region_selector||''','''||get_apex_version||''');';
              v_is_ir := true;
            ELSE             
-             v_javascript_code := 'excel_ig_gpv.addDownloadXLSXiconToIG('''||i.affected_region_selector||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_ig_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''');';  
+             v_javascript_code := 'excel_ig_gpv.addDownloadXLSXiconToIG('''||i.affected_region_selector||''','''||v_plugin_id||''','''||get_ig_file_name(i.affected_region_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''');';  
              v_is_ig := true;
            END IF;
            apex_javascript.add_onload_code(v_javascript_code,i.affected_region_selector);
@@ -3270,6 +3286,7 @@ as
     ELSE
       -- try to find first IR/IG on the page
       FOR i IN (SELECT nvl(static_id,'R'||TO_CHAR(region_id)) AS affected_region_selector,
+                         region_id,
                          r.source_type
                   FROM apex_application_page_regions r
                   WHERE r.page_id = nv('APP_PAGE_ID')
@@ -3282,7 +3299,7 @@ as
           IF i.source_type = 'Interactive Report' THEN
             v_result.javascript_function := 'function(){excel_gpv.getExcel('''||i.affected_region_selector||''','''||v_plugin_id||''')}';
           ELSE
-            v_result.javascript_function := 'function(){excel_ig_gpv.downloadXLSXfromIG('''||i.affected_region_selector||''','''||v_plugin_id||''','''||get_ig_file_name(v_affected_region_ig_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''')}';
+            v_result.javascript_function := 'function(){excel_ig_gpv.downloadXLSXfromIG('''||i.affected_region_selector||''','''||v_plugin_id||''','''||get_ig_file_name(i.affected_region_selector)||''',''/'||ltrim(p_plugin.file_prefix,'/')||''')}';
           END IF; 
           v_found := true;
         END LOOP;        
