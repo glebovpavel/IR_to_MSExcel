@@ -2996,7 +2996,7 @@ as
     END LOOP;    
 
     add1file( t_excel, 'xl/styles.xml', get_styles_xml);    
-    add1file( t_excel, 'xl/worksheets/Sheet1.xml', v_cells);
+    add1file( t_excel, 'xl/worksheets/sheet1.xml', v_cells);
     add1file( t_excel, 'xl/sharedStrings.xml',v_strings);
     add1file( t_excel, 'xl/_rels/workbook.xml.rels',t_sheet_rels);    
     add1file( t_excel, 'xl/workbook.xml',t_workbook);    
