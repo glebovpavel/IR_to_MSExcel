@@ -2,7 +2,7 @@
 **
 ** Author: Pavel Glebov
 ** Date: 11-2020
-** Version: 3.26
+** Version: 3.27
 **
 ** This all in one install script contains headrs and bodies of 5 packages
 **

@@ -299,16 +299,7 @@ function getRows(iGrid,propertiesFromPlugin,callback,fileName,pathIn) {
   var model = gridView.model; 
   var config; //requirejs config
   var packages; // requirejs config.packages  
-  var path=$("script[src$='IG2MSEXCEL.js']").attr("src").replace('IG2MSEXCEL.js','');   
-  var localPath;
-  
-  if(path.charAt(0) === "/") {
-     path = document.location.origin + path;
-  } else {
-     var localPath = document.location.origin + document.location.pathname; 
-     localPath = localPath.replace(/f$/, '');
-     path = localPath + path;
-  }
+  var path=$("SCRIPT[src*='IG2MSEXCEL']")[0].src.replace('IG2MSEXCEL.js','');
 
   function showCountInSpinner(cnt) {
     // concept - functionality
